@@ -1,0 +1,68 @@
+﻿{
+    "image":  "assets/characters/player/walk.png",
+    "height":  384,
+    "framesPerDirection":  4,
+    "idle":  "eight neutral standing views",
+    "frameHeight":  96,
+    "frameWidth":  64,
+    "directions":  [
+                       "Down",
+                       "Up",
+                       "Left",
+                       "Right"
+                   ],
+    "anchor":  {
+                   "y":  92,
+                   "x":  32
+               },
+    "width":  256,
+    "fps":  8,
+    "images":  {
+                   "run":  "assets/characters/player/run.png",
+                   "diagonal":  "assets/characters/player/diagonal-run.png",
+                   "walk":  "assets/characters/player/walk.png",
+                   "idle":  "assets/characters/player/idle.png",
+                   "jump":  "assets/characters/player/jump.png",
+                   "jumpDiagonal":  "assets/characters/player/jump-diagonal.png"
+               },
+    "diagonalDirections":  [
+                               "DownLeft",
+                               "DownRight",
+                               "UpLeft",
+                               "UpRight"
+                           ],
+    "runFps":  12,
+    "imageSizes":  {
+                       "jump":  {
+                                    "height":  448,
+                                    "width":  576
+                                },
+                       "idle":  {
+                                    "height":  192,
+                                    "width":  256
+                                },
+                       "jumpDiagonal":  {
+                                            "height":  448,
+                                            "width":  576
+                                        }
+                   },
+    "idleDirections":  [
+                           "Down",
+                           "Up",
+                           "Left",
+                           "Right",
+                           "DownLeft",
+                           "DownRight",
+                           "UpLeft",
+                           "UpRight"
+                       ],
+    "jumpFrame":  {
+                      "anchor":  {
+                                     "y":  108,
+                                     "x":  48
+                                 },
+                      "width":  96,
+                      "columns":  6,
+                      "height":  112
+                  }
+}

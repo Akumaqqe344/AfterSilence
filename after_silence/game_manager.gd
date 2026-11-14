@@ -9,7 +9,7 @@ const NPCs=preload("res://after_silence/core/npc_state_controller.gd")
 const Audio=preload("res://after_silence/core/audio_manager.gd")
 const Transitions=preload("res://after_silence/core/scene_transition_manager.gd")
 const World=preload("res://after_silence/world/world_view.gd")
-const Actor=preload("res://after_silence/world/actor.gd")
+const Actor=preload("res://after_silence/world/pechatai_actor.gd")
 const Enemy=preload("res://after_silence/world/pursuer.gd")
 const Story=preload("res://after_silence/story.gd")
 const Review=preload("res://after_silence/story_review.gd")
@@ -72,6 +72,7 @@ func _ready():
 			InputMap.action_add_event(item[0],event)
 	_setup_services()
 	_setup_ui()
+	_build_world("town",Vector2(600,630))
 	_main_menu()
 	if "--qa-export" in OS.get_cmdline_user_args():
 		var runner=load("res://after_silence/tests/episode_driver.gd").new()
@@ -92,11 +93,13 @@ func _mark_dirty():
 func style(bg: Color) -> StyleBoxFlat:
 	var s=StyleBoxFlat.new()
 	s.bg_color=bg
-	s.border_color=Color("a39778")
-	s.set_border_width_all(1)
-	s.set_content_margin_all(14)
-	s.corner_radius_top_left=3
-	s.corner_radius_bottom_right=3
+	s.border_color=Color("a58c6e")
+	s.set_border_width_all(2)
+	s.set_content_margin_all(10)
+	s.anti_aliasing=false
+	s.shadow_color=Color("111522aa")
+	s.shadow_size=3
+	s.shadow_offset=Vector2(2,3)
 	return s
 func _setup_ui():
 	var layer=CanvasLayer.new()
@@ -112,22 +115,30 @@ func _setup_ui():
 	theme.default_font=font
 	theme.default_font_size=15
 	theme.set_color("font_color","Label",Color("e5debf"))
-	theme.set_stylebox("normal","Button",style(Color("304d49")))
-	theme.set_stylebox("hover","Button",style(Color("476457")))
-	theme.set_stylebox("focus","Button",style(Color("526655")))
+	theme.set_stylebox("normal","Button",style(Color("342e43")))
+	theme.set_stylebox("hover","Button",style(Color("55455b")))
+	theme.set_stylebox("focus","Button",style(Color("5c4b59")))
+	theme.set_stylebox("pressed","Button",style(Color("72585e")))
 	theme.set_color("font_color","Button",Color("eddfb8"))
 	ui.theme=theme
+	var hud=load("res://after_silence/world/story_hud.gd").new()
+	hud.game=self
+	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui.add_child(hud)
 	objective=Label.new()
-	objective.position=Vector2(14,10)
-	objective.size=Vector2(610,40)
+	objective.position=Vector2(138,15)
+	objective.size=Vector2(480,37)
+	objective.add_theme_font_size_override("font_size",13)
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(objective)
 	status=Label.new()
-	status.position=Vector2(14,50)
+	status.position=Vector2(138,55)
+	status.add_theme_font_size_override("font_size",11)
 	ui.add_child(status)
 	hint=Label.new()
-	hint.position=Vector2(24,308)
-	hint.size=Vector2(592,44)
+	hint.position=Vector2(24,294)
+	hint.size=Vector2(592,23)
+	hint.add_theme_font_size_override("font_size",12)
 	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(hint)
@@ -137,13 +148,13 @@ func _setup_ui():
 	toast.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	ui.add_child(toast)
 	shade=ColorRect.new()
-	shade.color=Color(0.02,0.05,0.07,0.84)
+	shade.color=Color(.055,.045,.09,.72)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(shade)
 	card=PanelContainer.new()
 	card.position=Vector2(34,9)
 	card.size=Vector2(572,342)
-	card.add_theme_stylebox_override("panel",style(Color("1e3536")))
+	card.add_theme_stylebox_override("panel",style(Color("262235")))
 	shade.add_child(card)
 	card_scroll=ScrollContainer.new()
 	card_scroll.custom_minimum_size=Vector2(536,308)
@@ -185,7 +196,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		var portrait=TextureRect.new()
 		var atlas=AtlasTexture.new()
 		atlas.atlas=player.sheet if portrait_id=="vera" else actors[portrait_id].sheet
-		atlas.region=Rect2(5,3,22,22)
+		atlas.region=player.portrait if portrait_id=="vera" else actors[portrait_id].portrait
 		portrait.texture=atlas
 		portrait.custom_minimum_size=Vector2(48,48)
 		portrait.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
@@ -293,7 +304,7 @@ func _build_world(id: String,p: Vector2):
 	if not is_instance_valid(player):
 		player=Actor.new()
 		player.is_player=true
-		player.sheet=load("res://after_silence/assets/vera.png")
+		player.sheet=load("res://after_silence/assets/pechatai/player/walk.png")
 		player.footstep.connect(_footstep)
 		camera=Camera2D.new()
 		camera.position_smoothing_enabled=true
@@ -312,15 +323,15 @@ func _build_world(id: String,p: Vector2):
 	atmosphere.echo=state.echo
 	atmosphere.anchor=player
 	world.add_child(atmosphere)
-	world.modulate=Color("b0c2d0") if state.echo else Color.WHITE
+	world.modulate=Color("7b93b3") if state.echo else Color("b5c6b6")
 	actors.clear()
 	if id=="town":
-		_npc("nadia",Vector2(650,540),"res://after_silence/assets/nadia.png")
-		_npc("lev",Vector2(350,500),"res://after_silence/assets/lev.png")
-		_npc("pavel",Vector2(900,370),"res://after_silence/assets/pavel.png")
-		if state.flag("returned"): _npc("sonya",Vector2(780,650),"res://after_silence/assets/sonya.png")
-	elif id=="library": _npc("mara",Vector2(270,490),"res://after_silence/assets/mara.png")
-	elif state.echo: _npc("sonya",Vector2(1100,280),"res://after_silence/assets/sonya.png")
+		_npc("nadia",Vector2(650,540),"res://after_silence/assets/pechatai/npc/lora.png")
+		_npc("lev",Vector2(350,500),"res://after_silence/assets/pechatai/npc/inventor.png")
+		_npc("pavel",Vector2(900,370),"res://after_silence/assets/pechatai/npc/orest.png")
+		if state.flag("returned"): _npc("sonya",Vector2(780,650),"res://after_silence/assets/pechatai/npc/ella.png")
+	elif id=="library": _npc("mara",Vector2(270,490),"res://after_silence/assets/pechatai/npc/scientist.png")
+	elif state.echo: _npc("sonya",Vector2(1100,280),"res://after_silence/assets/pechatai/npc/ella.png")
 	enemy=null
 	if id=="forest":
 		enemy=Enemy.new()
@@ -412,6 +423,7 @@ func _unhandled_key_input(event):
 		KEY_J: _journal()
 		KEY_I: _inventory()
 		KEY_TAB: _shift()
+		KEY_SPACE: player.jump(Input.is_physical_key_pressed(KEY_SHIFT))
 		KEY_ESCAPE: _pause()
 func interact(id: String):
 	if id=="": return

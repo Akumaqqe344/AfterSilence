@@ -1,0 +1,315 @@
+{
+  "source": "C:/Users/сиксевен/Desktop/Pechatai",
+  "source_commit": "9fe814e08fdb1f708fa327eff5110943546bc781",
+  "authorization": "User explicitly requested reuse of their Pechatai assets",
+  "files": [
+    {
+      "file": "interior/bookshelf.png",
+      "sha256": "EF8085498DB9B966EF53FFF4A0C0A31B280124B6394E33D0D05E1852AFA250FE"
+    },
+    {
+      "file": "interior/bookshelf.png.import",
+      "sha256": "CC6DB784166FDAD644C05DB7BA38D0A74D508CA16E96C28ECCB77A77BC515A3E"
+    },
+    {
+      "file": "interior/chair.png",
+      "sha256": "A83477BD37F3B06E4F886B3D836B69897B0BB5B8FCEBB223958520010630AAC1"
+    },
+    {
+      "file": "interior/chair.png.import",
+      "sha256": "5B574AE1C3191BD56BA203364DD950715BE414644E57CFABE333B4EB4428712F"
+    },
+    {
+      "file": "interior/clock.png",
+      "sha256": "E9E51F06DE1BAA55B3B58ACC53AA1A9D70E7D685F74B69224871CEA5DEEACDF8"
+    },
+    {
+      "file": "interior/clock.png.import",
+      "sha256": "13815D841AC2D638A9032D6E34F1A3E4E7DAD801E7692E9556F54B443470B00C"
+    },
+    {
+      "file": "interior/desk.png",
+      "sha256": "FF1A4D35BE2728A24460F3366FA67E8CFB26E28219DC40EEDF50FF3919E27EDE"
+    },
+    {
+      "file": "interior/desk.png.import",
+      "sha256": "63F556E5107CF6835C3F708789A6F2967DA8C823AA7B4823717036490AE74E8E"
+    },
+    {
+      "file": "interior/floor.png",
+      "sha256": "942C7D54F6A159519C0CB181F25EDA935730E52006B1755BEF2B43A490DE9776"
+    },
+    {
+      "file": "interior/floor.png.import",
+      "sha256": "07C7E5474933A37A0DCF08B2364A036CB79E2E2BCDC440F1EF8F9030D85707F4"
+    },
+    {
+      "file": "interior/lamp.png",
+      "sha256": "CAD4CF694537B4730DB2742F04941490ECF62F6D6AA3FE5D6C20857F8CBBB7A7"
+    },
+    {
+      "file": "interior/lamp.png.import",
+      "sha256": "489C76AE22A71BA582A6FFB1D23EF1AC0969975769A5B9E99108522A19A04B34"
+    },
+    {
+      "file": "interior/mirror.png",
+      "sha256": "50D52E37E606D229FB848561919E6CEC811447AFA89D9D011026B540B602B591"
+    },
+    {
+      "file": "interior/mirror.png.import",
+      "sha256": "F74DC2D8F06E663EDB6D7D35242610F62976FB8795C6919290E748A848025912"
+    },
+    {
+      "file": "interior/plant.png",
+      "sha256": "AD67C65B1E1272B535BA52BADF9E1419718B14FB7D45DC4566B59CC4BF4D9595"
+    },
+    {
+      "file": "interior/plant.png.import",
+      "sha256": "AF6CFEF7E731DD667EA40DBF784D8881DC0FB39787566515FB4806C0246EE465"
+    },
+    {
+      "file": "interior/rug.png",
+      "sha256": "AA92CAA6BE78624543680F8C1D11330E43E198748E0D125ACD95718D07DAB462"
+    },
+    {
+      "file": "interior/rug.png.import",
+      "sha256": "4368EA545BE44CC4FD71CF22F1BA4FC65D584C062F5D896A0D67A9458C38F452"
+    },
+    {
+      "file": "interior/table.png",
+      "sha256": "AFE11C591B1FCD85D3DDD2B017148536FCC16429592717A0B0410EFF433AAB34"
+    },
+    {
+      "file": "interior/table.png.import",
+      "sha256": "170DC26163EEB80103157DFB546D19144DC3936446420600DA4278416F09E0EA"
+    },
+    {
+      "file": "interior/window.png",
+      "sha256": "B624DDF6076021C5D6BABE6E3F74FF42758150E67B5C8CC8A4657FC0A8F536C6"
+    },
+    {
+      "file": "interior/window.png.import",
+      "sha256": "5681A7A9751921AF07192D11D706959617F01A9C4BD4C37109A0C3E7AFC35D2E"
+    },
+    {
+      "file": "npc/ella.png",
+      "sha256": "818D4DB3F15597E53E01918F6F2080D67B426D1BEAD95C3F38E57B252DC734E0"
+    },
+    {
+      "file": "npc/ella.png.import",
+      "sha256": "3A9E78F6EB79F0E96DF807A45A732ABEC4059327C68DE4879AFF77358631864F"
+    },
+    {
+      "file": "npc/inventor.png",
+      "sha256": "F6ED52D7417D4556ECE9564EC72A6F5A2F9F054F23AD3870030325BD47BA0C43"
+    },
+    {
+      "file": "npc/inventor.png.import",
+      "sha256": "B05AD2D0F6766E58571FFCAA7AC7A07068AC0DE0EA4F7B1BF80B7F74B078DF81"
+    },
+    {
+      "file": "npc/lora.png",
+      "sha256": "1F2BADDFA6CCF4F416A5653A4765F94D3C65ACD2005729603940D187B6341FB6"
+    },
+    {
+      "file": "npc/lora.png.import",
+      "sha256": "847888C123BD9C63141056BDF1082E4436BD3B15CFC0E6EAFC3CF76AC6EB15C2"
+    },
+    {
+      "file": "npc/orest.png",
+      "sha256": "D2506FA7CE969EBD6A3D1987C873D5D3CD3D8EF5810D3D379735AFA043B8256A"
+    },
+    {
+      "file": "npc/orest.png.import",
+      "sha256": "116CDA1A988F89887674706FCAA8CA4D63528C011D3567A89F2F6F3DF84FE882"
+    },
+    {
+      "file": "npc/scientist.png",
+      "sha256": "64BDA281F3E7403FBEA2C46E2BA04148480C68FFC195D9E96857E4056B291E2D"
+    },
+    {
+      "file": "npc/scientist.png.import",
+      "sha256": "51D4403159858F50F92B091E0FF00EBF59A105A6A87B0C687AD78878FDDE75C0"
+    },
+    {
+      "file": "player/diagonal-run.png",
+      "sha256": "61F9D4368E68782F9E27862AA79502F57561CAA43A1F523D06251C55CD5DC003"
+    },
+    {
+      "file": "player/diagonal-run.png.import",
+      "sha256": "A7EE7D9181AC8EEE80F42AF22D56E03805CA082FEA0A8B5E32BBC2E98EE7893E"
+    },
+    {
+      "file": "player/idle.png",
+      "sha256": "ED4DEADDDC43C6869604FEC70BDE9FA261744FB920AEC6C8331E781ECD6DF694"
+    },
+    {
+      "file": "player/idle.png.import",
+      "sha256": "4DBF707784A49A040A85B170F560951F5345CB4D30451301E50F39D0197E0258"
+    },
+    {
+      "file": "player/jump-diagonal.png",
+      "sha256": "BA8DE3B1D21AF645EACA58097D27CC8E428289970FEAD9C8DB774EAA1BA9EC9E"
+    },
+    {
+      "file": "player/jump-diagonal.png.import",
+      "sha256": "06B651ABE72FA9BE9AFA23DD99F31BFCB0577A666D1024E36C6C5D9A22F24354"
+    },
+    {
+      "file": "player/jump.png",
+      "sha256": "976ABBC2E330EAAAD17A3E5441AC452F1951807A7087E77A960944224CE1535B"
+    },
+    {
+      "file": "player/jump.png.import",
+      "sha256": "F6CA47E3E2D3780D3A0E5690638EBD99CBDFB2808B3FA56ADB26CF15EBEADBE5"
+    },
+    {
+      "file": "player/manifest.json",
+      "sha256": "F403287D3928E33BC40019EC994BF55BFF45D34A36E628FA1756831CF923B985"
+    },
+    {
+      "file": "player/run.png",
+      "sha256": "42A04F9D16A4CE04F7F563774934C41C5B5935074BD3F944A5817AF9FEA8261F"
+    },
+    {
+      "file": "player/run.png.import",
+      "sha256": "255C8CE3140FB4FB79970A69B48307A162115AC354E67245ECBFBE86F829D6B6"
+    },
+    {
+      "file": "player/source.png",
+      "sha256": "6C96FA019D20ADBF6434D75AE48F80C33E9A2B03609B359405C72365ABAB08EE"
+    },
+    {
+      "file": "player/source.png.import",
+      "sha256": "62799607FAA7554414B478154EB82A70FC086C88638D4A408D78152192DF00E8"
+    },
+    {
+      "file": "player/walk.png",
+      "sha256": "58896CCEF63F392B7729A56B2A759539E1C3F55A42C2C7198F36036FC7A4F0CF"
+    },
+    {
+      "file": "player/walk.png.import",
+      "sha256": "28E08D97926255D33E30508133637111CA6690D5F6D12E0CF0B88D6997316014"
+    },
+    {
+      "file": "world/bush.png",
+      "sha256": "B7013BDEC520EDA664AB3C227F6784582417608DA68E1DABE8723F82E2F1668B"
+    },
+    {
+      "file": "world/bush.png.import",
+      "sha256": "A2F0CD8FB7B34BAA872D8C2E3C3991273661485E726B9296A166D1BC688C3A64"
+    },
+    {
+      "file": "world/dirt.png",
+      "sha256": "E24F39EF6539BF91CE83458F4452907652D3FBA59832324984DD4ACEA29774FA"
+    },
+    {
+      "file": "world/dirt.png.import",
+      "sha256": "0C96BBD22F82D98ACF483C6265761EEA14F467FC2644D48BBB9268CD10EBDE21"
+    },
+    {
+      "file": "world/flowers.png",
+      "sha256": "6B8F22815C5F3A93C8FE2AE5D16A2C642B8B026668FF2086147EC83428EB0867"
+    },
+    {
+      "file": "world/flowers.png.import",
+      "sha256": "15559DBF79E23109B551447EAA7E06054EE89C21BF04064E3220F2A9FD860465"
+    },
+    {
+      "file": "world/grass.png",
+      "sha256": "E02BC4CEFBEDEB3DD877D89C8545904454E98741441C97174192826A2CA76A38"
+    },
+    {
+      "file": "world/grass.png.import",
+      "sha256": "4B263FCD4DFA1584ED925897D9A8E55D11F5DCF10E5AAAFEC474A4DCD5634B47"
+    },
+    {
+      "file": "world/house-0.png",
+      "sha256": "BA240E77CE6A30140012259DC6404A70E1452D7861972338CDCC7E90C9EB4BCD"
+    },
+    {
+      "file": "world/house-0.png.import",
+      "sha256": "175FE6EBB7AE5D27E529DDBF5173D5970FF28D84467F6B3D0D1142F5FD2599F1"
+    },
+    {
+      "file": "world/house-1.png",
+      "sha256": "7BCEB65835DE9FD0D54BB7140BFDA6A0CCB2D11E975756FE9EC0C5637E9A4449"
+    },
+    {
+      "file": "world/house-1.png.import",
+      "sha256": "4DDD5AC58488FFDEFEE8F8451262ADAE6040BF85B738E338994A1951F5C39081"
+    },
+    {
+      "file": "world/house-2.png",
+      "sha256": "5676D5575B79B5553225D6D6ED071F74F9D7CC855E75B01B0AB6E2174F135F67"
+    },
+    {
+      "file": "world/house-2.png.import",
+      "sha256": "E26865996E3C37E84E69D92C51D037F2B058CA30A4C5ED014DA71BBFEC21D471"
+    },
+    {
+      "file": "world/house-3.png",
+      "sha256": "8CFEBA06CA95F33E62FB559C6284F99CD3B0E55D5039C3203921015F53E4B272"
+    },
+    {
+      "file": "world/house-3.png.import",
+      "sha256": "A93C7FD73F06FF63A4BECE0347ED521016C15AE40238BDADB3AC4C8BA93E3F0F"
+    },
+    {
+      "file": "world/lamp.png",
+      "sha256": "E6E629DE0CDF004ED6DB32B53C39FD0D748CF6FBCA5394FC37D2D7A752AE7B14"
+    },
+    {
+      "file": "world/lamp.png.import",
+      "sha256": "2D8076C7459A82BD516E4747E0A3F65EEC128E7BCA828DF4094656D17213C8C2"
+    },
+    {
+      "file": "world/rock.png",
+      "sha256": "EA1133735484D2DE1221D76E7ADCE388D998468E173CEC280828A7DD7DF510BB"
+    },
+    {
+      "file": "world/rock.png.import",
+      "sha256": "9DA7E06104ED2618ECD79CFF6511402FE0FDA0C0322DC0B498569E7E62193841"
+    },
+    {
+      "file": "world/sanctuary.png",
+      "sha256": "15EC9AB2F6938801988539FF19D83B960C420872DDE8DD6EA3C14A004C21611D"
+    },
+    {
+      "file": "world/sanctuary.png.import",
+      "sha256": "15EF8DA1C263B4BC068FF543FCBDD73BFF807A479A336F9242C5E0E06AE57B4E"
+    },
+    {
+      "file": "world/tree-0.png",
+      "sha256": "6138D195D2346F7B0C793B38698361821B98FAE88837EA7DE9B7F7010C5B3375"
+    },
+    {
+      "file": "world/tree-0.png.import",
+      "sha256": "805E2D4587E29B4E7C4CA3299F9BCE727E4D8A7DD64D2010C05E222B50DC5299"
+    },
+    {
+      "file": "world/tree-1.png",
+      "sha256": "B6921DC48A5ABC388094CA422395C94DA7DA747EB4BA6EBEF1847D728A4F0E56"
+    },
+    {
+      "file": "world/tree-1.png.import",
+      "sha256": "8529BA27E8F7D9CF90538D5A6D05421DC68C3D1C4AEFAA7831B7FD400FF7EB2E"
+    },
+    {
+      "file": "world/tree-2.png",
+      "sha256": "CC094561584CD42092DC68AFFB528A2756ECC1665E9729466F165DEB10DD9C12"
+    },
+    {
+      "file": "world/tree-2.png.import",
+      "sha256": "F50290FE700EC2F48840BBEBDB7061DFCCC43C8D5A62678A355342B81B105C4F"
+    },
+    {
+      "file": "world/water.png",
+      "sha256": "9299C0D721E630C8F63E4FF3492833692CF65858154D4B01717A0BCA7FDC94A0"
+    },
+    {
+      "file": "world/water.png.import",
+      "sha256": "65950FD61F1549D22A048386EBA5C13C21AD9755F285AB3293A00625214A7E9F"
+    }
+  ]
+}

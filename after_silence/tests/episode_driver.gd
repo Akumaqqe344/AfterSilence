@@ -47,6 +47,7 @@ func profile(label: String):
 	profiles.append({"scene":label,"frames":count,"fps":count/elapsed,"frame_p95_ms":times[int(count*.95)-1],"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0})
 func shot(name: String):
 	if DisplayServer.get_name()=="headless": return
+	await create_timer(.04).timeout
 	if game.modal: game.body.visible_characters=-1
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(output_dir.path_join(name+".png"))
@@ -74,6 +75,24 @@ func run():
 	await create_timer(.4).timeout
 	Input.action_release("as_right")
 	check(game.player.position.x>origin.x+20,"real physics movement")
+	await create_timer(.15).timeout
+	check(game.player.velocity.length()<1,"Pechatai deceleration reaches rest")
+	Input.action_press("as_right")
+	Input.action_press("as_down")
+	await create_timer(.2).timeout
+	check(game.player.velocity.length()<=181,"diagonal input is normalized")
+	check(game.player.diagonal==1,"diagonal selects DownRight atlas row")
+	Input.action_release("as_right")
+	Input.action_release("as_down")
+	await create_timer(.15).timeout
+	check(game.player.jump(),"Pechatai short jump starts")
+	await create_timer(.1).timeout
+	check(game.player.elevation>5,"jump has parabolic elevation")
+	check(not game.player.jump(),"jump cannot restart in air")
+	await create_timer(.5).timeout
+	check(game.player.elevation==0,"jump lands on ground")
+	for actor in game.actors.values():
+		check(actor.portrait.size.y>8 and actor.portrait.end.y<=actor.sheet.get_height(),"NPC portrait follows occupied pixels")
 	game._talk("nadia")
 	await shot("dialogue")
 	var paused_position=game.player.position
@@ -81,6 +100,7 @@ func run():
 	await create_timer(.15).timeout
 	Input.action_release("as_right")
 	check(game.player.position.distance_to(paused_position)<1,"dialogue freezes movement")
+	check(not game.player.jump(),"dialogue blocks jumping")
 	press("promise")
 	check(game.state.item("key")==1 and game.state.flag("promise"),"promise and key")
 	game._talk("lev")

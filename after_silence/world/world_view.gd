@@ -9,7 +9,6 @@ var obstacles: Array[Rect2] = []
 var interactables: Array = []
 var zone = "town"
 var echo = false
-var tree_texture = preload("res://after_silence/assets/oak.png")
 var paths: Array=[]
 var glow_texture: Texture2D
 func build(id: String, distorted: bool):
@@ -37,7 +36,7 @@ func build(id: String, distorted: bool):
 		for x in range(int(dimensions.x/16)):
 			var tile = 2 if id=="library" else 0
 			if id!="library" and on_path(Vector2(x*16+8,y*16+8)): tile=1
-			terrain.set_cell(Vector2i(x,y),0,Vector2i(tile,0))
+			terrain.set_cell(Vector2i(x,y),tile,Vector2i(x%20,y%20))
 	var detail=Ground.new()
 	detail.zone=id
 	detail.distorted=echo
@@ -68,23 +67,18 @@ func build(id: String, distorted: bool):
 			for x in range(maxi(0,a.x-1),mini(int(dimensions.x/16),b.x+2)):
 				if r.grow(5).has_point(Vector2(x*16+8,y*16+8)): grid.set_point_solid(Vector2i(x,y))
 func make_tiles() -> TileSet:
-	var image=Image.create(64,16,false,Image.FORMAT_RGBA8)
-	var colors=[Color("657a59"),Color("a28a69"),Color("827864"),Color("334d57")]
-	if echo: colors=[Color("4e6262"),Color("86777f"),Color("605b70"),Color("263b50")]
-	for i in range(4):
-		for y in range(16):
-			for x in range(16):
-				var seed_value=posmod(x*31+y*17+x*y*7,71)
-				var color=colors[i].lightened(0.035 if seed_value<3 else 0.0).darkened(0.035 if seed_value>68 else 0.0)
-				if i==2 and y==15: color=color.darkened(.09)
-				image.set_pixel(i*16+x,y,color)
-	var source=TileSetAtlasSource.new()
-	source.texture=ImageTexture.create_from_image(image)
-	source.texture_region_size=Vector2i(16,16)
-	for i in range(4): source.create_tile(Vector2i(i,0))
 	var tiles=TileSet.new()
 	tiles.tile_size=Vector2i(16,16)
-	tiles.add_source(source,0)
+	for i in range(3):
+		var texture=load("res://after_silence/assets/pechatai/"+["world/grass","world/dirt","interior/floor"][i]+".png")
+		var image=texture.get_image()
+		image.resize(320,320,Image.INTERPOLATE_NEAREST)
+		var source=TileSetAtlasSource.new()
+		source.texture=ImageTexture.create_from_image(image)
+		source.texture_region_size=Vector2i(16,16)
+		for y in range(20):
+			for x in range(20): source.create_tile(Vector2i(x,y))
+		tiles.add_source(source,i)
 	return tiles
 func boundary(r: Rect2):
 	obstacles.append(r)
@@ -102,15 +96,24 @@ func prop(kind: String, p: Vector2, variant: int=0):
 	node.position=p
 	node.variant=variant
 	if kind=="tree":
-		node.tex=load("res://after_silence/assets/fir.png") if variant%3==1 else tree_texture
-		node.size=node.tex.get_size()
+		node.tex=load("res://after_silence/assets/pechatai/world/tree-"+str(posmod(variant,3))+".png")
+		node.size=Vector2(100,110)
 		node.tint=Color("9fa5bc") if echo else Color.WHITE
 	elif kind=="house":
-		node.tex=load("res://after_silence/assets/"+("townhouse" if variant%2 else "cottage")+".png")
-		node.size=node.tex.get_size()
-	elif kind in ["well","flowers","rock","library"]:
-		node.tex=load("res://after_silence/assets/"+kind+".png")
-		node.size=node.tex.get_size()
+		node.tex=load("res://after_silence/assets/pechatai/world/house-"+str(variant%4)+".png")
+		node.size=Vector2(176,160)
+	elif kind=="library":
+		node.tex=load("res://after_silence/assets/pechatai/world/house-2.png")
+		node.size=Vector2(176,170)
+	elif kind in ["flowers","rock","well","stone"]:
+		var file="sanctuary" if kind=="well" else "rock" if kind=="stone" else kind
+		node.tex=load("res://after_silence/assets/pechatai/world/"+file+".png")
+		node.size=Vector2(60,40) if kind in ["rock","stone"] else Vector2(100,70) if kind=="well" else Vector2(40,20)
+	elif kind in ["shelf","mirror","lamp","desk","rug","plant","window","clock"]:
+		var file="bookshelf" if kind=="shelf" else kind
+		node.tex=load("res://after_silence/assets/pechatai/interior/"+file+".png")
+		node.size=node.tex.get_size()*2
+		if kind=="clock": node.size=Vector2(38,62)
 	sorter.add_child(node)
 	if kind=="house": boundary(Rect2(p+Vector2(-74,-68),Vector2(148,68)))
 	elif kind=="shelf": boundary(Rect2(p+Vector2(-38,-16),Vector2(76,16)))
@@ -169,6 +172,11 @@ func build_library():
 		if echo and p.x==350: p+=Vector2(80,95)
 		prop("shelf",p)
 	spot("catalog",Vector2(350,280),"note")
+	prop("desk",Vector2(650,550))
+	boundary(Rect2(614,530,72,20))
+	prop("window",Vector2(480,130))
+	prop("lamp",Vector2(370,470))
+	prop("plant",Vector2(820,575))
 	spot("clock",Vector2(650,330),"clock")
 	spot("diagram",Vector2(780,460))
 	spot("mirror",Vector2(480,390),"mirror")
