@@ -2,7 +2,24 @@ extends RefCounted
 const Homes=preload("res://after_silence/world/homes.gd")
 const PROFILE={"nadia":["town",Vector2(650,540),"home_nadia","lora"],"lev":["town",Vector2(350,500),"home_lev","inventor"],"mara":["library",Vector2(270,490),"home_nadia","scientist"],"pavel":["town",Vector2(900,370),"home_pavel","orest"],"sonya":["town",Vector2(780,650),"home_sonya","ella"]}
 var state
+var routine=preload("res://after_silence/core/routine_schedule.gd").new()
+func task(id: String) -> Array:
+	if state.flag("weather_rain") and state.clock>=7 and state.clock<20:
+		return [7,20,"library",260+PROFILE.keys().find(id)*65,490,"shelter"]
+	if id=="pavel" and state.flag("safe_patrol") and (state.clock>=20 or state.clock<7):
+		return [20,7,"town",600,600,"guard"]
+	if id=="lev" and state.clock>=16 and state.clock<18 and (state.flag("district_orchard") or state.flag("rift_q03_done")):
+		return [16,18,"orchard",600,500,"work"]
+	if id=="sonya" and state.clock>=15 and state.clock<18 and (state.flag("district_harbor") or state.flag("rift_q05_done")):
+		return [15,18,"harbor",600,500,"writing"]
+	return routine.current(id,fposmod(state.clock-PROFILE.keys().find(id)*.02,24))
 func _init(s): state = s
+func behavior(id: String) -> String:
+	if (state.echo or state.pressure>=3) and not state.flag("calm_"+id): return "alarm" if id=="pavel" else "fear"
+	if id=="nadia" and state.charges<=1: return "help"
+	if id=="pavel" and state.flag("safe_patrol") and (state.clock>=20 or state.clock<7): return "search"
+	if task(id)[5]=="sleep": return "home"
+	return "routine"
 func destination(id: String, home: Vector2, time: float) -> Vector2:
 	var offset = {"nadia":0.0,"lev":1.0,"mara":2.0,"pavel":3.0,"sonya":4.0}.get(id,0.0)
 	var phase = int((time + offset*.2) / 6.0) % 3
@@ -47,7 +64,20 @@ func update(game, dt: float, enabled: bool):
 			if game.actors.has(id): _wander(game,id,Vector2(1100,280),dt)
 			continue
 		var r=state.residents[id]
-		var desired=PROFILE[id][2] if night else PROFILE[id][0]
+		var activity=task(id)
+		var desired=activity[2]
+		# A schedule never sends residents through a district gate that is closed.
+		if desired in ["orchard","harbor"] and not game.adventure.unlocked(desired): desired="town"
+		var mode=behavior(id)
+		if r.get("mode","")!=mode:
+			r.previous_mode=r.get("mode","routine")
+			r.mode=mode
+			r.mode_since=state.play_seconds
+		if mode in ["alarm","search"]:
+			r.last_seen=[game.player.position.x,game.player.position.y]
+		if mode=="fear":
+			desired=PROFILE[id][2]
+			activity=[20,7,desired,320,300,"sleep"]
 		if r.get("destination",r.zone)!=desired:
 			r.elapsed=0.0
 			r.destination=desired
@@ -55,19 +85,33 @@ func update(game, dt: float, enabled: bool):
 		if r.zone!=game.state.zone:
 			if r.zone!=desired and r.elapsed>25:
 				r.zone=desired
-				var p=Vector2(320,350) if night else PROFILE[id][1]
+				var p=Vector2(activity[3],activity[4])
 				r.x=p.x;r.y=p.y;r.elapsed=0.0
 			continue
 		if not game.actors.has(id): continue
 		var actor=game.actors[id]
 		r.x=actor.position.x;r.y=actor.position.y
 		if r.zone==desired:
-			_wander(game,id,Vector2(320,300) if night else PROFILE[id][1],dt)
+			if mode=="help" and actor.position.distance_to(game.player.position)<200:
+				_walk(game,actor,game.player.position,dt,55)
+				if actor.position.distance_to(game.player.position)<85:
+					state.charges=3
+					game.living.remember(id,"help")
+					game._notify(game.t("Надя помогла восстановить силы.","Nadia restored your energy."))
+			elif mode in ["search","alarm"]:
+				var search_point=Vector2(600,500)+Vector2(sin(state.play_seconds*.04)*180,cos(state.play_seconds*.04)*100)
+				if mode=="alarm" and r.has("last_seen"): search_point=Vector2(r.last_seen[0],r.last_seen[1])
+				_walk(game,actor,search_point,dt,60)
+			else: _wander(game,id,Vector2(activity[3],activity[4]),dt)
 			continue
 		var goal=Vector2(320,422) if r.zone in Homes.IDS else Vector2(480,590) if r.zone=="library" else Vector2(600,180) if desired=="library" else Homes.door(PROFILE[id][2],state.echo)
+		if r.zone in ["orchard","harbor"]: goal=Vector2(600,740)
+		elif r.zone=="town" and desired in ["orchard","harbor"]: goal=Vector2(1710,500) if desired=="orchard" else Vector2(600,1200)
 		if actor.position.distance_to(goal)<22:
 			var next_zone="town" if r.zone!="town" else desired
 			var p=Homes.door(r.zone,state.echo) if r.zone in Homes.IDS else Vector2(600,210) if r.zone=="library" else Vector2(320,395) if desired in Homes.IDS else Vector2(480,575)
+			if desired in ["orchard","harbor"] and r.zone=="town": p=Vector2(600,700)
+			elif r.zone in ["orchard","harbor"]: p=Vector2(1670,500) if r.zone=="orchard" else Vector2(600,1150)
 			r.zone=next_zone;r.x=p.x;r.y=p.y;r.elapsed=0
 			game.actors.erase(id)
 			actor.queue_free()
@@ -90,8 +134,14 @@ func _walk(game,actor,goal: Vector2,dt: float,speed: float):
 		var id=game.actors.find_key(actor)
 		var lines={"nadia":["Не потеряйте записи.","Keep your notes safe."],"lev":["Сначала отключим ток.","Power off first."],"mara":["Проверим второй экземпляр.","Check the second copy."],"pavel":["Я выслушаю свидетелей.","I will hear the witnesses."],"sonya":["Не называйте меня вслух.","Please keep my name quiet."]}
 		caption.text=lines[id][1] if state.language=="en" else lines[id][0]
+		var mode=behavior(id)
+		if mode=="fear": caption.text=game.t("Пойду домой…","Going home…")
+		elif mode=="alarm": caption.text=game.t("Проверю площадь!","Checking the square!")
+		elif mode=="search": caption.text=game.t("Дорога под охраной.","The road is safe.")
+		elif state.last_memories.get(id,"")!="": caption.text=game.t("Я помню нашу встречу.","I remember our meeting.")
 	actor.npc_speed=speed
-	actor.enabled=actor.position.distance_to(game.player.position)>76
+	var actor_id=game.actors.find_key(actor)
+	actor.enabled=actor.position.distance_to(game.player.position)>76 or behavior(actor_id)=="fear"
 	if not actor.enabled:
 		var d=game.player.position-actor.position
 		actor.facing=(3 if d.x>0 else 2) if absf(d.x)>absf(d.y) else (0 if d.y>0 else 1)

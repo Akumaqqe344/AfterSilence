@@ -13,6 +13,8 @@ var _cursor:Sprite2D
 var _lastFocus=null
 
 func _ready():
+	# Standard focus outlines remain available for keyboard navigation.
+	set_process(false)
 	layer=90
 	process_mode=Node.PROCESS_MODE_ALWAYS
 	_cursor=Sprite2D.new()
@@ -20,7 +22,7 @@ func _ready():
 	_cursor.centered=false
 	_cursor.visible=false
 	add_child(_cursor)
-	get_tree().node_added.connect(_on_node_added)
+	# AudioManager supplies the single soft confirmation cue.
 
 func _process(_delta):
 	var focus=get_viewport().gui_get_focus_owner()

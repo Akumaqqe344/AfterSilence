@@ -1,0 +1,599 @@
+{
+  "version": 1,
+  "quests": [
+    {
+      "title": [
+        "Письмо из завтрашнего дня",
+        "A letter from tomorrow"
+      ],
+      "brief": [
+        "Лев получил письмо от себя: к вечеру он исчезнет. Проведи его к почте сквозь меняющиеся улицы.",
+        "Lev received a letter from himself: he will vanish tonight. Escort him to the post office through shifting streets."
+      ],
+      "mode": "route",
+      "choices": [
+        [
+          "warn",
+          "Предупредить соседей",
+          "Warn the neighbors",
+          "nadia",
+          1
+        ],
+        [
+          "mail",
+          "Доставить письмо",
+          "Deliver the letter",
+          "lev",
+          1
+        ]
+      ],
+      "id": "rift_01",
+      "short": "Проведи Льва к почте.",
+      "stop": [
+        600,
+        600
+      ],
+      "requires": ""
+    },
+    {
+      "title": [
+        "Праздник под дождём",
+        "Festival in the rain"
+      ],
+      "brief": [
+        "Площадь помнит праздник, которого никто не видит. Войди в ритм и найди того, кто знает о бедствии.",
+        "The square remembers a festival nobody can see. Follow its rhythm and find the guest who knows about the disaster."
+      ],
+      "mode": "rhythm",
+      "choices": [
+        [
+          "public",
+          "Остановить гостя при всех",
+          "Confront the guest in public",
+          "pavel",
+          -1
+        ],
+        [
+          "quiet",
+          "Поговорить наедине",
+          "Speak in private",
+          "sonya",
+          1
+        ],
+        [
+          "follow",
+          "Проследить за ним",
+          "Follow the guest",
+          "mara",
+          1
+        ]
+      ],
+      "id": "rift_02",
+      "short": "Сыграй мелодию праздника.",
+      "stop": [
+        600,
+        445
+      ],
+      "requires": "rift_01"
+    },
+    {
+      "title": [
+        "Ночь без дверей",
+        "A night without doors"
+      ],
+      "brief": [
+        "Комнаты меняют эпоху. Включай нужные проходы, пока дом не исчез.",
+        "Rooms shift between eras. Open the right passages before the house disappears."
+      ],
+      "mode": "switch",
+      "choices": [
+        [
+          "open",
+          "Оставить проход семье",
+          "Keep the passage open",
+          "sonya",
+          1
+        ],
+        [
+          "close",
+          "Закрыть разлом ради дома",
+          "Seal the rift to save the house",
+          "nadia",
+          1
+        ]
+      ],
+      "id": "rift_03",
+      "short": "Открой проход в доме.",
+      "stop": [
+        260,
+        330
+      ],
+      "requires": "rift_02"
+    },
+    {
+      "title": [
+        "Два Льва",
+        "Two versions of Lev"
+      ],
+      "brief": [
+        "Молодой и старый Лев спорят у механизма. Стабилизируй контуры, пока искры не дошли до улицы.",
+        "Young and old Lev disagree over the device. Stabilize its circuits before sparks reach the street."
+      ],
+      "mode": "circuit",
+      "choices": [
+        [
+          "young",
+          "Поддержать молодого",
+          "Back the younger Lev",
+          "lev",
+          -1
+        ],
+        [
+          "old",
+          "Поддержать старшего",
+          "Back the older Lev",
+          "pavel",
+          1
+        ],
+        [
+          "limit",
+          "Ограничить мощность",
+          "Limit the device's power",
+          "lev",
+          2
+        ]
+      ],
+      "id": "rift_04",
+      "short": "Почини провода Льва.",
+      "stop": [
+        960,
+        330
+      ],
+      "requires": "rift_03"
+    },
+    {
+      "title": [
+        "Человек на мосту",
+        "The man on the bridge"
+      ],
+      "brief": [
+        "Павел держит мост закрытым. Отрази ночные атаки вместе с ним, затем реши судьбу переправы.",
+        "Pavel keeps the bridge closed. Defend it together, then decide who controls the crossing."
+      ],
+      "mode": "defense",
+      "choices": [
+        [
+          "open",
+          "Открыть мост",
+          "Open the bridge",
+          "nadia",
+          1
+        ],
+        [
+          "guard",
+          "Оставить общую охрану",
+          "Keep a joint watch",
+          "lev",
+          1
+        ]
+      ],
+      "id": "rift_05",
+      "short": "Защити мост от стража.",
+      "stop": [
+        1080,
+        500
+      ],
+      "requires": "rift_04"
+    },
+    {
+      "title": [
+        "Мама вернулась",
+        "Mother returned"
+      ],
+      "brief": [
+        "Мальчик перестал узнавать мать после разлома. Повтори знакомый ему ритм воспоминаний.",
+        "A boy no longer knows his mother after the rift. Repeat the rhythm of the memories he trusts."
+      ],
+      "mode": "memory",
+      "choices": [
+        [
+          "restore",
+          "Вернуть доверие матери",
+          "Rebuild trust with his mother",
+          "nadia",
+          1
+        ],
+        [
+          "farewell",
+          "Дать прошлому попрощаться",
+          "Let the past say goodbye",
+          "sonya",
+          1
+        ],
+        [
+          "both",
+          "Оставить обеих пока рядом",
+          "Keep both here for now",
+          "mara",
+          -1
+        ]
+      ],
+      "id": "rift_06",
+      "short": "Собери пары воспоминаний.",
+      "stop": [
+        260,
+        770
+      ],
+      "requires": "rift_05"
+    },
+    {
+      "title": [
+        "Завтрашний сын",
+        "Tomorrow's son"
+      ],
+      "brief": [
+        "Надя встретила взрослого сына из будущего. Проведи его через сад, пока дорожки меняются.",
+        "Nadia met her future son. Guide him across the garden while its paths change."
+      ],
+      "mode": "route",
+      "choices": [
+        [
+          "truth",
+          "Сказать Наде правду",
+          "Tell Nadia the truth",
+          "nadia",
+          1
+        ],
+        [
+          "meeting",
+          "Устроить им встречу",
+          "Let them meet",
+          "sonya",
+          1
+        ],
+        [
+          "silence",
+          "Сохранить его выбор",
+          "Respect his choice",
+          "mara",
+          1
+        ]
+      ],
+      "id": "rift_07",
+      "short": "Проведи мальчика через сад.",
+      "stop": [
+        960,
+        770
+      ],
+      "requires": "rift_06"
+    },
+    {
+      "title": [
+        "Суд над врачом",
+        "The healer's trial"
+      ],
+      "brief": [
+        "Толпа обвиняет Надю. Успокой площадь раньше, чем разлом ответит на крики.",
+        "The crowd blames Nadia. Calm the square before the rift answers their shouting."
+      ],
+      "mode": "herbs",
+      "choices": [
+        [
+          "defend",
+          "Остаться с Надей",
+          "Stand beside Nadia",
+          "nadia",
+          2
+        ],
+        [
+          "evacuate",
+          "Вывести её из толпы",
+          "Lead her away",
+          "sonya",
+          1
+        ],
+        [
+          "young",
+          "Выслушать молодую Надю",
+          "Hear the younger Nadia",
+          "mara",
+          1
+        ]
+      ],
+      "id": "rift_08",
+      "short": "Помоги Наде: собери травы.",
+      "stop": [
+        1450,
+        840
+      ],
+      "requires": "rift_07"
+    },
+    {
+      "title": [
+        "Поезд без рельсов",
+        "The train without tracks"
+      ],
+      "brief": [
+        "Вагоны принадлежат разным годам. Переключи пути, чтобы люди добрались до безопасного вагона.",
+        "The carriages belong to different years. Set the switches so passengers reach the safe carriage."
+      ],
+      "mode": "switch",
+      "choices": [
+        [
+          "present",
+          "Вернуть людей в настоящее",
+          "Bring everyone to the present",
+          "nadia",
+          1
+        ],
+        [
+          "past",
+          "Дать доехать до прошлого",
+          "Let them reach the past",
+          "mara",
+          1
+        ]
+      ],
+      "id": "rift_09",
+      "short": "Переведи стрелки поезда.",
+      "stop": [
+        600,
+        170
+      ],
+      "requires": "rift_08"
+    },
+    {
+      "title": [
+        "Осада собственного города",
+        "Siege of our own town"
+      ],
+      "brief": [
+        "Две версии города приняли друг друга за врагов. Защити улицы и останови удары до первой потери.",
+        "Two versions of town mistake each other for enemies. Hold the streets and stop the blows before anyone is lost."
+      ],
+      "mode": "defense",
+      "choices": [
+        [
+          "truce",
+          "Развести стороны без боя",
+          "Separate both sides",
+          "sonya",
+          2
+        ],
+        [
+          "houses",
+          "Удержать жилые дома",
+          "Defend the homes",
+          "nadia",
+          1
+        ]
+      ],
+      "id": "rift_10",
+      "short": "Останови медного стража.",
+      "stop": [
+        1450,
+        500
+      ],
+      "requires": "rift_09"
+    },
+    {
+      "title": [
+        "Ребёнок в разломе",
+        "The child inside the rift"
+      ],
+      "brief": [
+        "В центре разлома — юная Алина. Её страх меняет улицы. Выдержи всплески, не нападая на неё.",
+        "Young Alina is inside the rift. Her fear reshapes the streets. Endure the surges without attacking her."
+      ],
+      "mode": "defense",
+      "choices": [
+        [
+          "trust",
+          "Завоевать доверие Алины",
+          "Earn Alina's trust",
+          "sonya",
+          2
+        ],
+        [
+          "fight",
+          "Подавить разлом силой",
+          "Suppress the rift by force",
+          "pavel",
+          -1
+        ],
+        [
+          "bring",
+          "Позвать близкого человека",
+          "Bring someone she knows",
+          "nadia",
+          1
+        ]
+      ],
+      "id": "rift_11",
+      "short": "Успокой лесного стража.",
+      "stop": [
+        1450,
+        1080
+      ],
+      "requires": "rift_10"
+    },
+    {
+      "title": [
+        "Последний день берега",
+        "The shore's last day"
+      ],
+      "brief": [
+        "Обе эпохи сходятся на площади. Проведи жителей к укрытию и реши, каким станет город.",
+        "Both eras converge on the square. Lead the residents to safety and decide what town becomes."
+      ],
+      "mode": "route",
+      "choices": [
+        [
+          "close",
+          "Закрыть разлом",
+          "Seal the rift",
+          "nadia",
+          0
+        ],
+        [
+          "both",
+          "Оставить обе эпохи",
+          "Keep both eras",
+          "mara",
+          0
+        ],
+        [
+          "child",
+          "Доверить разлом Алине",
+          "Trust Alina with the rift",
+          "sonya",
+          0
+        ],
+        [
+          "return",
+          "Вернуться ко дню бедствия",
+          "Return to the disaster day",
+          "lev",
+          0
+        ]
+      ],
+      "id": "rift_12",
+      "short": "Помоги трём жителям уйти.",
+      "stop": [
+        600,
+        850
+      ],
+      "requires": "rift_11"
+    }
+  ],
+  "outcomes": {
+    "01_warn": [
+      "Соседи укрылись до исчезновения улицы.",
+      "Neighbors found shelter before the street vanished."
+    ],
+    "01_mail": [
+      "Письмо дошло; Лев знает время исчезновения.",
+      "The letter arrived; Lev knows when he vanishes."
+    ],
+    "02_public": [
+      "Толпа запомнила лицо гостя, но он скрылся.",
+      "The crowd saw the guest's face, but he escaped."
+    ],
+    "02_quiet": [
+      "Гость рассказал Соне о следующем разломе.",
+      "The guest told Sonya about the next rift."
+    ],
+    "02_follow": [
+      "Мара нашла путь, которым уходил гость.",
+      "Mara found the guest's escape route."
+    ],
+    "03_open": [
+      "Семья может встретиться через проход.",
+      "The family can meet across the passage."
+    ],
+    "03_close": [
+      "Дом перестал менять комнаты местами.",
+      "The house stopped shifting its rooms."
+    ],
+    "04_young": [
+      "Молодой Лев ускорил машину, рискуя улицей.",
+      "Young Lev sped up the machine, risking the street."
+    ],
+    "04_old": [
+      "Старший Лев погасил опасный контур.",
+      "Older Lev shut down the dangerous circuit."
+    ],
+    "04_limit": [
+      "Лев оставил разлому только безопасную мощность.",
+      "Lev limited the rift to safe power."
+    ],
+    "05_open": [
+      "Жители снова переходят мост.",
+      "Residents cross the bridge again."
+    ],
+    "05_guard": [
+      "Ночная охрана моста стала общей.",
+      "The night watch at the bridge is shared."
+    ],
+    "06_restore": [
+      "Мальчик снова узнал голос матери.",
+      "The boy recognized his mother's voice again."
+    ],
+    "06_farewell": [
+      "Мать из прошлого успела попрощаться.",
+      "The mother from the past said goodbye."
+    ],
+    "06_both": [
+      "Обе матери остались; семье нужно время.",
+      "Both mothers stayed; the family needs time."
+    ],
+    "07_truth": [
+      "Надя знает, кем станет её сын.",
+      "Nadia knows who her son will become."
+    ],
+    "07_meeting": [
+      "Надя и сын встретились без свидетелей.",
+      "Nadia and her son met in private."
+    ],
+    "07_silence": [
+      "Сын сохранил право рассказать всё сам.",
+      "Her son kept the right to speak for himself."
+    ],
+    "08_defend": [
+      "Площадь позволила Наде лечить раненых.",
+      "The square let Nadia treat the wounded."
+    ],
+    "08_evacuate": [
+      "Надя ушла из толпы невредимой.",
+      "Nadia left the crowd unharmed."
+    ],
+    "08_young": [
+      "Молодая Надя назвала забытое имя пациента.",
+      "Young Nadia named a forgotten patient."
+    ],
+    "09_present": [
+      "Пассажиры вышли в настоящем.",
+      "The passengers arrived in the present."
+    ],
+    "09_past": [
+      "Пассажиры вернулись к незавершённому дню.",
+      "The passengers returned to an unfinished day."
+    ],
+    "10_truce": [
+      "Обе версии города сложили оружие.",
+      "Both versions of town laid down their weapons."
+    ],
+    "10_houses": [
+      "Дома целы, но спор двух эпох не закончен.",
+      "The homes stand, but the two eras still disagree."
+    ],
+    "11_trust": [
+      "Алина услышала Веру и ослабила разлом.",
+      "Alina heard Vera and eased the rift."
+    ],
+    "11_fight": [
+      "Разлом подавлен, Алина снова закрылась.",
+      "The rift was subdued; Alina withdrew again."
+    ],
+    "11_bring": [
+      "Надя помогла Алине выйти из страха.",
+      "Nadia helped Alina face her fear."
+    ],
+    "12_close": [
+      "Проход закрылся; берег стал тихим.",
+      "The passage closed; the shore grew quiet."
+    ],
+    "12_both": [
+      "Две эпохи научились делить один город.",
+      "Two eras learned to share one town."
+    ],
+    "12_child": [
+      "Алина удержала проход без чужой власти.",
+      "Alina held the passage on her own terms."
+    ],
+    "12_return": [
+      "Город получил второй шанс изменить бедствие.",
+      "Town received another chance to change the disaster."
+    ]
+  }
+}

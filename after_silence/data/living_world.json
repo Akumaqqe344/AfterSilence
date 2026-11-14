@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "events": [
+    {"id":"orchard_delivery","zone":"orchard","absence":90,"requires":{"flags":["district_orchard"]},"effect":"delivery_arrived","text":["Лев оставил посылку у сада.","Lev left a parcel by the orchard."]},
+    {"id":"harbor_lights","zone":"harbor","absence":120,"requires":{"flags":["district_harbor"]},"effect":"harbor_lit","text":["Жители зажгли огни на пристани.","Residents lit the harbor lanterns."]}
+  ],
+  "rumors": [
+    {"npc":"nadia","zone":"orchard","point":[600,420],"text":["У колодца в саду можно отдохнуть.","You can rest at the orchard well."]},
+    {"npc":"lev","zone":"town","point":[1710,500],"text":["На востоке ждёт садовый посёлок.","An orchard settlement lies east."]},
+    {"npc":"mara","zone":"library","point":[480,490],"text":["В библиотеке сохранилась вторая запись.","The library holds a second record."]},
+    {"npc":"pavel","zone":"harbor","point":[600,500],"text":["Южная дорога ведёт к пристани.","The south road leads to the harbor."]},
+    {"npc":"sonya","zone":"town","point":[600,600],"text":["На площади люди встречаются в полдень.","People meet in the square at noon."]}
+  ],
+  "homes": {
+    "home_nadia":{"owner":"nadia","objects":[["medicine","Лекарства","Medicine","Надя приготовила перевязку.","Nadia prepared a dressing.",480,190],["album","Альбом","Album","На снимке все стоят рядом.","Everyone stands together in the photo.",300,190]]},
+    "home_lev":{"owner":"lev","objects":[["tools","Инструменты","Tools","Каждому ключу — своё место.","Every wrench has its place.",480,292],["plan","Чертёж","Plan","На плане две независимые цепи.","The plan shows two separate circuits.",300,190]]},
+    "home_pavel":{"owner":"pavel","objects":[["medal","Знак стража","Guard badge","Павел бережёт старый знак.","Pavel keeps his old badge.",480,130],["log","Журнал","Logbook","Здесь отмечены ночные обходы.","Night patrols are recorded here.",300,190]]},
+    "home_sonya":{"owner":"sonya","objects":[["drawing","Рисунок","Drawing","Соня нарисовала мост и огни.","Sonya drew a bridge and lights.",300,190],["letter","Письмо","Letter","На конверте: «Спасибо, что выслушала».","The envelope says: Thank you for listening.",480,190]]}
+  },
+  "requests": [
+    {"id":"night_watch","npc":"pavel","requires":{"hours":[20,7],"relation":{"pavel":1},"flags":["rumor_pavel"],"items":{"keepsake":1}},"take":"keepsake","effect":"safe_patrol","text":["Оставь знак у фонаря. Я прослежу за дорогой.","Leave the token at the lantern. I will watch the road."]}
+  ],
+  "outcomes": [
+    {"requires":{"flags":["rift_q04_done"]},"effect":"town_power","npc":"lev","memory":"power"},
+    {"requires":{"flags":["rift_q05_done"]},"effect":"bridge_repaired","npc":"pavel","memory":"bridge"},
+    {"requires":{"flags":["rift_q08_done"]},"effect":"clinic_ready","npc":"nadia","memory":"clinic"}
+  ]
+}

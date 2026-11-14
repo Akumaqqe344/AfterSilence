@@ -1,0 +1,14 @@
+{
+  "requests": [
+    {"id":"herbs","title":["Травы для Нади","Herbs for Nadia"],"zone":"town","points":[[330,546],[410,550],[490,546]],"kind":"herb","reward":"orchard","npc":"nadia"},
+    {"id":"tools","title":["Инструменты для Льва","Tools for Lev"],"zone":"orchard","points":[[320,500],[600,450],[880,500]],"kind":"key","reward":"harbor","npc":"lev"},
+    {"id":"letters","title":["Письма с пристани","Letters from the harbor"],"zone":"harbor","points":[[320,540],[690,460],[880,540]],"kind":"letter","reward":"friends","npc":"sonya"}
+  ],
+  "schedule": {
+    "nadia":[[7,10,"town",650,540,"medicine"],[10,14,"library",480,490,"research"],[14,17,"town",650,540,"medicine"],[17,20,"town",600,600,"meeting"]],
+    "lev":[[7,12,"town",350,500,"work"],[12,14,"town",600,600,"meeting"],[14,20,"town",350,500,"work"]],
+    "mara":[[7,12,"library",270,490,"research"],[12,14,"town",600,600,"meeting"],[14,20,"library",270,490,"research"]],
+    "pavel":[[7,12,"town",900,370,"guard"],[12,14,"town",600,600,"meeting"],[14,20,"town",900,370,"guard"]],
+    "sonya":[[7,12,"town",780,650,"writing"],[12,14,"library",650,490,"research"],[14,20,"town",780,650,"writing"]]
+  }
+}

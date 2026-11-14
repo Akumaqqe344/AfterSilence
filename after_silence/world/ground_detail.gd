@@ -2,10 +2,27 @@ extends Node2D
 var zone="town"
 var distorted=false
 var dimensions=Vector2.ZERO
-var water=preload("res://after_silence/assets/pechatai/world/water.png")
-var rug=preload("res://after_silence/assets/pechatai/interior/rug.png")
+var water=preload("res://after_silence/assets/art100/water.png")
+var rug=preload("res://after_silence/assets/art100/rug.png")
+const Water=preload("res://after_silence/world/watercourse.gd")
+func draw_shore():
+	for y in range(16,int(dimensions.y),4):
+		for x in range(16,int(dimensions.x),4):
+			var p=Vector2(x+2,y+2)
+			var depth=Water.depth(zone,p)
+			if depth< -16: continue
+			var rect=Rect2(x,y,4,4)
+			if depth< -8: draw_rect(rect,Color("718c55"))
+			elif depth<0: draw_rect(rect,Color("bbac75"))
+			else:
+				draw_texture_rect_region(water,rect,Rect2(posmod(x,80),posmod(y,80),4,4))
+				if depth<3: draw_rect(Rect2(x,y,4,1),Color("84b6a0"))
+			if depth< -6 and posmod(x*13+y*7,41)==0:
+				draw_line(p,p+Vector2(-2,-9),Color("526e3c"),2)
+				draw_line(p+Vector2(3,0),p+Vector2(4,-12),Color("8fa65b"),2)
 func _draw():
-	if zone.begins_with("home_"):
+	if zone in ["town","harbor"]: draw_shore()
+	if zone.begins_with("home_") or zone=="shop":
 		for rect in [Rect2(0,0,640,64),Rect2(0,64,64,416),Rect2(576,64,64,416),Rect2(64,448,512,32)]: draw_rect(rect,Color("172126"))
 		for rect in [Rect2(64,64,512,16),Rect2(64,80,16,352),Rect2(560,80,16,352),Rect2(80,432,208,16),Rect2(352,432,208,16)]:
 			draw_rect(rect,Color("574b45"))
@@ -17,19 +34,8 @@ func _draw():
 		for x in range(100,880,32): draw_line(Vector2(x,98),Vector2(x,127),Color("817660"))
 		for x in [80,864]: draw_rect(Rect2(x,95,16,515),Color("574b45"))
 		for x in [96,525]: draw_rect(Rect2(x,610,339,16),Color("574b45"))
-		draw_texture_rect(rug,Rect2(395,330,170,200),false)
+		draw_texture_rect(rug,Rect2(432,380,96,64),false)
 		return
-	if zone=="town":
-		paint_ellipse(Vector2(1080,150),Vector2(100,65),Color("759289"))
-		paint_ellipse(Vector2(1080,150),Vector2(93,58),Color("375c66") if not distorted else Color("384c66"))
-		var points=PackedVector2Array()
-		var uv=PackedVector2Array()
-		for i in range(32):
-			var unit=Vector2.from_angle(TAU*i/32)
-			points.append(Vector2(1080,150)+unit*Vector2(93,58))
-			uv.append((unit+Vector2.ONE)*.5)
-		draw_polygon(points,PackedColorArray([Color.WHITE]),uv,water)
-		for i in range(9): draw_line(Vector2(1010+i*16,140+posmod(i*7,33)),Vector2(1020+i*16,140+posmod(i*7,33)),Color("7dada7"))
 func paint_ellipse(center: Vector2,radius: Vector2,color: Color):
 	draw_set_transform(center,0,radius)
 	draw_circle(Vector2.ZERO,1,color)

@@ -4,9 +4,18 @@ var tex: Texture2D
 var tint = Color.WHITE
 var size = Vector2(48,72)
 var variant = 0
+var lit=true
+var focused=false
+func light_anchor() -> Vector2:
+	if kind=="street_lamp": return Vector2(0,-size.y*.78)
+	if kind=="trace": return Vector2(size.x*.29,-size.y*.54)
+	return Vector2(0,-size.y*.75)
 func _draw():
 	if tex:
-		draw_texture_rect(tex,Rect2(-size.x/2,-size.y,size.x,size.y),false,tint)
+		var color=tint
+		if not lit and kind in ["lamp","street_lamp","trace"]: color*=Color(.48,.55,.62)
+		draw_texture_rect(tex,Rect2(-floor(size.x/2),-size.y,size.x,size.y),false,color)
+		if focused: draw_rect(Rect2(-floor(size.x/2)-2,-size.y-2,size.x+4,size.y+4),Color("bce3ac"),false,1)
 		return
 	if kind == "house":
 		draw_rect(Rect2(-74,-72,148,72),Color("b59b78")*tint)
@@ -48,8 +57,33 @@ func _draw():
 		draw_colored_polygon(PackedVector2Array([Vector2(-23,0),Vector2(-30,-19),Vector2(-8,-34),Vector2(22,-25),Vector2(29,0)]),Color("677979"))
 		draw_line(Vector2(-23,-19),Vector2(-8,-29),Color("afbcad"),3)
 	elif kind == "trace":
-		draw_arc(Vector2(0,-6),18,0,TAU,20,Color("9dcfc6"),2)
-		draw_line(Vector2(-9,-17),Vector2(9,-2),Color("d6e4cf"),2)
+		draw_rect(Rect2(-3,-38,6,38),Color("624d3a"))
+		draw_rect(Rect2(-3,-38,25,4),Color("a58b5c"))
+		draw_rect(Rect2(12,-34,2,7),Color("405752"))
+		draw_rect(Rect2(6,-27,16,19),Color("354c48"))
+		draw_rect(Rect2(9,-24,10,12),Color("f2ce7a"))
+		draw_rect(Rect2(12,-22,4,8),Color("ffebad"))
+	elif kind in ["photo","poster","catalog","schematic"]:
+		var paper=Color("c1aa7c") if kind=="schematic" else Color("dfd6b6")
+		draw_rect(Rect2(-12,-22,24,22),Color("5b4c3e"))
+		draw_rect(Rect2(-10,-20,20,18),paper)
+		if kind=="photo":
+			draw_rect(Rect2(-7,-17,14,10),Color("648b85"))
+			draw_rect(Rect2(-2,-16,5,6),Color("cbaa85"))
+			draw_rect(Rect2(-4,-10,9,3),Color("5d6552"))
+		elif kind=="schematic":
+			for x in [-6,0,6]:
+				draw_rect(Rect2(x,-17,2,10),Color("667e77"))
+				draw_rect(Rect2(x,-15,5,2),Color("667e77"))
+		else:
+			for y in [-17,-12,-7]: draw_rect(Rect2(-7,y,14,2),Color("8c6b54"))
+	elif kind=="ribbon":
+		for i in range(5): draw_rect(Rect2(-11+i*4,-15+posmod(i,2)*3,6,5),Color("be778e"))
+	elif kind=="key":
+		draw_rect(Rect2(-10,-17,9,9),Color("d1b66f"))
+		draw_rect(Rect2(-7,-14,3,3),Color("5e654b"))
+		draw_rect(Rect2(-2,-14,14,3),Color("d1b66f"))
+		draw_rect(Rect2(6,-14,3,7),Color("d1b66f"))
 	else:
 		draw_rect(Rect2(-7,-11,14,11),Color("d9c293"))
 		draw_line(Vector2(-4,-7),Vector2(4,-7),Color("73605b"),1)

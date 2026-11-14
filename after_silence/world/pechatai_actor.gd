@@ -64,6 +64,12 @@ func _physics_process(dt):
 	elif enabled:
 		if is_player:
 			direction=Input.get_vector("as_left","as_right","as_up","as_down")
+			if has_meta("click_route"):
+				var route: PackedVector2Array=get_meta("click_route")
+				if direction!=Vector2.ZERO: route.clear()
+				while route.size()>0 and position.distance_to(route[0])<6: route.remove_at(0)
+				if route.size()>0: direction=position.direction_to(route[0])
+				set_meta("click_route",route)
 			running=Input.is_physical_key_pressed(KEY_SHIFT)
 		elif position.distance_to(target)>3: direction=position.direction_to(target)
 	var speed=SPEED*(1.65 if running else 1.0) if is_player else npc_speed

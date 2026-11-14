@@ -1,0 +1,10 @@
+{
+ "version":1,
+ "residents":{
+  "nadia":[[7,10,"town",650,540,"medicine"],[10,14,"library",480,490,"research"],[14,17,"town",650,540,"medicine"],[17,20,"town",600,600,"meeting"],[20,7,"home_nadia",320,300,"sleep"]],
+  "lev":[[7,12,"town",350,500,"work"],[12,14,"town",600,600,"meeting"],[14,20,"town",350,500,"work"],[20,7,"home_lev",320,300,"sleep"]],
+  "mara":[[7,12,"library",270,490,"research"],[12,14,"town",600,600,"meeting"],[14,20,"library",270,490,"research"],[20,7,"home_nadia",360,300,"sleep"]],
+  "pavel":[[7,12,"town",900,370,"guard"],[12,14,"town",600,600,"meeting"],[14,20,"town",900,370,"guard"],[20,7,"home_pavel",320,300,"sleep"]],
+  "sonya":[[7,12,"town",780,650,"writing"],[12,14,"library",650,490,"research"],[14,20,"town",780,650,"writing"],[20,7,"home_sonya",320,300,"sleep"]]
+ }
+}

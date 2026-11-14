@@ -1,0 +1,285 @@
+{
+  "props": {
+    "bandage": {
+      "file": "bandage.png",
+      "size": [
+        24,
+        20
+      ]
+    },
+    "bed": {
+      "file": "bed.png",
+      "size": [
+        68,
+        104
+      ]
+    },
+    "book": {
+      "file": "book.png",
+      "size": [
+        24,
+        28
+      ]
+    },
+    "bridge": {
+      "file": "bridge.png",
+      "size": [
+        64,
+        84
+      ]
+    },
+    "bush": {
+      "file": "bush.png",
+      "size": [
+        60,
+        44
+      ]
+    },
+    "chair": {
+      "file": "chair.png",
+      "size": [
+        40,
+        56
+      ]
+    },
+    "chest": {
+      "file": "chest.png",
+      "size": [
+        48,
+        36
+      ]
+    },
+    "clock": {
+      "file": "clock.png",
+      "size": [
+        44,
+        84
+      ]
+    },
+    "desk": {
+      "file": "desk.png",
+      "size": [
+        80,
+        64
+      ]
+    },
+    "flowers": {
+      "file": "flowers.png",
+      "size": [
+        40,
+        28
+      ]
+    },
+    "herb": {
+      "file": "herb.png",
+      "size": [
+        24,
+        24
+      ]
+    },
+    "house-0": {
+      "file": "house-0.png",
+      "size": [
+        176,
+        160
+      ]
+    },
+    "house-1": {
+      "file": "house-1.png",
+      "size": [
+        176,
+        160
+      ]
+    },
+    "house-2": {
+      "file": "house-2.png",
+      "size": [
+        176,
+        160
+      ]
+    },
+    "house-3": {
+      "file": "house-3.png",
+      "size": [
+        176,
+        160
+      ]
+    },
+    "key": {
+      "file": "key.png",
+      "size": [
+        16,
+        28
+      ]
+    },
+    "lamp": {
+      "file": "lamp.png",
+      "size": [
+        24,
+        32
+      ]
+    },
+    "letter": {
+      "file": "letter.png",
+      "size": [
+        24,
+        18
+      ]
+    },
+    "medal": {
+      "file": "medal.png",
+      "size": [
+        20,
+        20
+      ]
+    },
+    "medicine": {
+      "file": "medicine.png",
+      "size": [
+        32,
+        32
+      ]
+    },
+    "mirror": {
+      "file": "mirror.png",
+      "size": [
+        48,
+        88
+      ]
+    },
+    "photo": {
+      "file": "photo.png",
+      "size": [
+        24,
+        24
+      ]
+    },
+    "plan": {
+      "file": "plan.png",
+      "size": [
+        36,
+        28
+      ]
+    },
+    "plant": {
+      "file": "plant.png",
+      "size": [
+        40,
+        48
+      ]
+    },
+    "poster": {
+      "file": "poster.png",
+      "size": [
+        52,
+        52
+      ]
+    },
+    "relay": {
+      "file": "relay.png",
+      "size": [
+        48,
+        56
+      ]
+    },
+    "ribbon": {
+      "file": "ribbon.png",
+      "size": [
+        24,
+        24
+      ]
+    },
+    "rock": {
+      "file": "rock.png",
+      "size": [
+        56,
+        44
+      ]
+    },
+    "rug": {
+      "file": "rug.png",
+      "size": [
+        96,
+        64
+      ]
+    },
+    "shelf": {
+      "file": "shelf.png",
+      "size": [
+        76,
+        84
+      ]
+    },
+    "street_lamp": {
+      "file": "street_lamp.png",
+      "size": [
+        24,
+        72
+      ]
+    },
+    "table": {
+      "file": "table.png",
+      "size": [
+        72,
+        60
+      ]
+    },
+    "tools": {
+      "file": "tools.png",
+      "size": [
+        28,
+        28
+      ]
+    },
+    "trace": {
+      "file": "trace.png",
+      "size": [
+        36,
+        64
+      ]
+    },
+    "tree-0": {
+      "file": "tree-0.png",
+      "size": [
+        100,
+        110
+      ]
+    },
+    "tree-1": {
+      "file": "tree-1.png",
+      "size": [
+        88,
+        116
+      ]
+    },
+    "tree-2": {
+      "file": "tree-2.png",
+      "size": [
+        100,
+        110
+      ]
+    },
+    "well": {
+      "file": "well.png",
+      "size": [
+        80,
+        80
+      ]
+    },
+    "window": {
+      "file": "window.png",
+      "size": [
+        56,
+        56
+      ]
+    },
+    "workbench": {
+      "file": "workbench.png",
+      "size": [
+        88,
+        80
+      ]
+    }
+  },
+  "version": 1
+}

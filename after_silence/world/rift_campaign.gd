@@ -1,63 +1,27 @@
 extends Control
 
 const PORTRAIT=preload("res://after_silence/assets/pechatai/player/idle.png")
-const GRASS=preload("res://after_silence/assets/pechatai/world/grass.png")
-const DIRT=preload("res://after_silence/assets/pechatai/world/dirt.png")
-const WATER=preload("res://after_silence/assets/pechatai/world/water.png")
-const FLOOR=preload("res://after_silence/assets/pechatai/interior/floor.png")
+const GRASS=preload("res://after_silence/assets/art100/grass.png")
+const DIRT=preload("res://after_silence/assets/art100/dirt.png")
+const WATER=preload("res://after_silence/assets/art100/water.png")
+const FLOOR=preload("res://after_silence/assets/art100/floor.png")
 const LEV=preload("res://after_silence/assets/pechatai/npc/inventor.png")
 const NADIA=preload("res://after_silence/assets/pechatai/npc/lora.png")
 const SONYA=preload("res://after_silence/assets/pechatai/npc/ella.png")
+const Catalog=preload("res://after_silence/core/quest_catalog.gd")
 const ARENA=Rect2(64,111,512,207)
-const QUESTS=[
-	{"title":["Письмо из завтрашнего дня","A letter from tomorrow"],"brief":["Лев получил письмо от себя: к вечеру он исчезнет. Проведи его к почте сквозь меняющиеся улицы.","Lev received a letter from himself: he will vanish tonight. Escort him to the post office through shifting streets."],"mode":"route","choices":[["warn","Предупредить соседей","Warn the neighbors","nadia",1],["mail","Доставить письмо","Deliver the letter","lev",1]]},
-	{"title":["Праздник под дождём","Festival in the rain"],"brief":["Площадь помнит праздник, которого никто не видит. Войди в ритм и найди того, кто знает о бедствии.","The square remembers a festival nobody can see. Follow its rhythm and find the guest who knows about the disaster."],"mode":"rhythm","choices":[["public","Остановить гостя при всех","Confront the guest in public","pavel",-1],["quiet","Поговорить наедине","Speak in private","sonya",1],["follow","Проследить за ним","Follow the guest","mara",1]]},
-	{"title":["Ночь без дверей","A night without doors"],"brief":["Комнаты меняют эпоху. Включай нужные проходы, пока дом не исчез.","Rooms shift between eras. Open the right passages before the house disappears."],"mode":"switch","choices":[["open","Оставить проход семье","Keep the passage open","sonya",1],["close","Закрыть разлом ради дома","Seal the rift to save the house","nadia",1]]},
-	{"title":["Два Льва","Two versions of Lev"],"brief":["Молодой и старый Лев спорят у механизма. Стабилизируй контуры, пока искры не дошли до улицы.","Young and old Lev disagree over the device. Stabilize its circuits before sparks reach the street."],"mode":"switch","choices":[["young","Поддержать молодого","Back the younger Lev","lev",-1],["old","Поддержать старшего","Back the older Lev","pavel",1],["limit","Ограничить мощность","Limit the device's power","lev",2]]},
-	{"title":["Человек на мосту","The man on the bridge"],"brief":["Павел держит мост закрытым. Отрази ночные атаки вместе с ним, затем реши судьбу переправы.","Pavel keeps the bridge closed. Defend it together, then decide who controls the crossing."],"mode":"defense","choices":[["open","Открыть мост","Open the bridge","nadia",1],["guard","Оставить общую охрану","Keep a joint watch","lev",1]]},
-	{"title":["Мама вернулась","Mother returned"],"brief":["Мальчик перестал узнавать мать после разлома. Повтори знакомый ему ритм воспоминаний.","A boy no longer knows his mother after the rift. Repeat the rhythm of the memories he trusts."],"mode":"rhythm","choices":[["restore","Вернуть доверие матери","Rebuild trust with his mother","nadia",1],["farewell","Дать прошлому попрощаться","Let the past say goodbye","sonya",1],["both","Оставить обеих пока рядом","Keep both here for now","mara",-1]]},
-	{"title":["Завтрашний сын","Tomorrow's son"],"brief":["Надя встретила взрослого сына из будущего. Проведи его через сад, пока дорожки меняются.","Nadia met her future son. Guide him across the garden while its paths change."],"mode":"route","choices":[["truth","Сказать Наде правду","Tell Nadia the truth","nadia",1],["meeting","Устроить им встречу","Let them meet","sonya",1],["silence","Сохранить его выбор","Respect his choice","mara",1]]},
-	{"title":["Суд над врачом","The healer's trial"],"brief":["Толпа обвиняет Надю. Успокой площадь раньше, чем разлом ответит на крики.","The crowd blames Nadia. Calm the square before the rift answers their shouting."],"mode":"rhythm","choices":[["defend","Остаться с Надей","Stand beside Nadia","nadia",2],["evacuate","Вывести её из толпы","Lead her away","sonya",1],["young","Выслушать молодую Надю","Hear the younger Nadia","mara",1]]},
-	{"title":["Поезд без рельсов","The train without tracks"],"brief":["Вагоны принадлежат разным годам. Переключи пути, чтобы люди добрались до безопасного вагона.","The carriages belong to different years. Set the switches so passengers reach the safe carriage."],"mode":"switch","choices":[["present","Вернуть людей в настоящее","Bring everyone to the present","nadia",1],["past","Дать доехать до прошлого","Let them reach the past","mara",1]]},
-	{"title":["Осада собственного города","Siege of our own town"],"brief":["Две версии города приняли друг друга за врагов. Защити улицы и останови удары до первой потери.","Two versions of town mistake each other for enemies. Hold the streets and stop the blows before anyone is lost."],"mode":"defense","choices":[["truce","Развести стороны без боя","Separate both sides","sonya",2],["houses","Удержать жилые дома","Defend the homes","nadia",1]]},
-	{"title":["Ребёнок в разломе","The child inside the rift"],"brief":["В центре разлома — юная Алина. Её страх меняет улицы. Выдержи всплески, не нападая на неё.","Young Alina is inside the rift. Her fear reshapes the streets. Endure the surges without attacking her."],"mode":"defense","choices":[["trust","Завоевать доверие Алины","Earn Alina's trust","sonya",2],["fight","Подавить разлом силой","Suppress the rift by force","pavel",-1],["bring","Позвать близкого человека","Bring someone she knows","nadia",1]]},
-	{"title":["Последний день берега","The shore's last day"],"brief":["Обе эпохи сходятся на площади. Проведи жителей к укрытию и реши, каким станет город.","Both eras converge on the square. Lead the residents to safety and decide what town becomes."],"mode":"route","choices":[["close","Закрыть разлом","Seal the rift","nadia",0],["both","Оставить обе эпохи","Keep both eras","mara",0],["child","Доверить разлом Алине","Trust Alina with the rift","sonya",0],["return","Вернуться ко дню бедствия","Return to the disaster day","lev",0]]}
-]
+const Guardian=preload("res://after_silence/world/pixel_guardian.gd")
+static var STOPS: Array=Catalog.points()
+static var SHORT: Array=Catalog.summaries()
+var easy_mode=true
+var board: Array=[]
+var picked: Array=[]
+var matched: Array=[]
+var reveal_time=0.0
+var click_target=Vector2.ZERO
+static var QUESTS: Array=Catalog.data.quests
 
-const OUTCOMES={
-	"01_warn":["Соседи укрылись до исчезновения улицы.","Neighbors found shelter before the street vanished."],
-	"01_mail":["Письмо дошло; Лев знает время исчезновения.","The letter arrived; Lev knows when he vanishes."],
-	"02_public":["Толпа запомнила лицо гостя, но он скрылся.","The crowd saw the guest's face, but he escaped."],
-	"02_quiet":["Гость рассказал Соне о следующем разломе.","The guest told Sonya about the next rift."],
-	"02_follow":["Мара нашла путь, которым уходил гость.","Mara found the guest's escape route."],
-	"03_open":["Семья может встретиться через проход.","The family can meet across the passage."],
-	"03_close":["Дом перестал менять комнаты местами.","The house stopped shifting its rooms."],
-	"04_young":["Молодой Лев ускорил машину, рискуя улицей.","Young Lev sped up the machine, risking the street."],
-	"04_old":["Старший Лев погасил опасный контур.","Older Lev shut down the dangerous circuit."],
-	"04_limit":["Лев оставил разлому только безопасную мощность.","Lev limited the rift to safe power."],
-	"05_open":["Жители снова переходят мост.","Residents cross the bridge again."],
-	"05_guard":["Ночная охрана моста стала общей.","The night watch at the bridge is shared."],
-	"06_restore":["Мальчик снова узнал голос матери.","The boy recognized his mother's voice again."],
-	"06_farewell":["Мать из прошлого успела попрощаться.","The mother from the past said goodbye."],
-	"06_both":["Обе матери остались; семье нужно время.","Both mothers stayed; the family needs time."],
-	"07_truth":["Надя знает, кем станет её сын.","Nadia knows who her son will become."],
-	"07_meeting":["Надя и сын встретились без свидетелей.","Nadia and her son met in private."],
-	"07_silence":["Сын сохранил право рассказать всё сам.","Her son kept the right to speak for himself."],
-	"08_defend":["Площадь позволила Наде лечить раненых.","The square let Nadia treat the wounded."],
-	"08_evacuate":["Надя ушла из толпы невредимой.","Nadia left the crowd unharmed."],
-	"08_young":["Молодая Надя назвала забытое имя пациента.","Young Nadia named a forgotten patient."],
-	"09_present":["Пассажиры вышли в настоящем.","The passengers arrived in the present."],
-	"09_past":["Пассажиры вернулись к незавершённому дню.","The passengers returned to an unfinished day."],
-	"10_truce":["Обе версии города сложили оружие.","Both versions of town laid down their weapons."],
-	"10_houses":["Дома целы, но спор двух эпох не закончен.","The homes stand, but the two eras still disagree."],
-	"11_trust":["Алина услышала Веру и ослабила разлом.","Alina heard Vera and eased the rift."],
-	"11_fight":["Разлом подавлен, Алина снова закрылась.","The rift was subdued; Alina withdrew again."],
-	"11_bring":["Надя помогла Алине выйти из страха.","Nadia helped Alina face her fear."],
-	"12_close":["Проход закрылся; берег стал тихим.","The passage closed; the shore grew quiet."],
-	"12_both":["Две эпохи научились делить один город.","Two eras learned to share one town."],
-	"12_child":["Алина удержала проход без чужой власти.","Alina held the passage on her own terms."],
-	"12_return":["Город получил второй шанс изменить бедствие.","Town received another chance to change the disaster."]
-}
+static var OUTCOMES: Dictionary=Catalog.data.outcomes
 
 var game
 var active=false
@@ -120,6 +84,25 @@ func start(owner) -> void:
 	index=0
 	while index<QUESTS.size() and game.state.flag("rift_q%02d_done"%(index+1)): index+=1
 	if index>=QUESTS.size(): finish();return
+	if preload("res://after_silence/core/minigame_checkpoint.gd").apply(self,game.state.minigame): return
+	if index>0: begin_travel()
+	else: show_intro()
+
+func play_mode() -> String:
+	return QUESTS[index].mode
+
+func begin_travel():
+	active=false
+	visible=false
+	phase="travel"
+	game._close()
+	game._build_world("town",Vector2(600,600) if index==1 else STOPS[index-1]+Vector2(0,36))
+	game.objective.text=game.t("Иди к огоньку • E: ","Follow the light • E: ")+pair(QUESTS[index].title)
+	game._save(false)
+
+func arrive():
+	active=true
+	visible=true
 	show_intro()
 
 func clear_actions() -> void:
@@ -149,7 +132,7 @@ func show_intro() -> void:
 	clear_actions()
 	var quest=QUESTS[index]
 	title_label.text="%02d / 12  %s"%[index+1,pair(quest.title)]
-	brief_label.text=pair(quest.brief)
+	brief_label.text=SHORT[index] if game.state.language=="ru" else pair(quest.brief).split(". ")[0]+"."
 	status_label.text="ESC · ПАУЗА" if game.state.language=="ru" else "ESC · PAUSE"
 	if index>0:
 		for previous in QUESTS[index-1].choices:
@@ -160,6 +143,8 @@ func show_intro() -> void:
 	queue_redraw()
 
 func start_play() -> void:
+	game.state.minigame.clear()
+	game.living.focus("boss" if play_mode()=="defense" else "memory")
 	phase="play"
 	clear_actions()
 	elapsed=0
@@ -174,6 +159,11 @@ func start_play() -> void:
 	beat=0
 	beat_age=0
 	mask=0
+	board=[1,2,3,4,1,2,3,4] if play_mode()=="memory" else [1,3,2,1] if play_mode()=="circuit" else [0,0,0,0,0,0]
+	picked.clear()
+	matched.clear()
+	reveal_time=0.0
+	click_target=Vector2.ZERO
 	wave=0
 	lane=1
 	guard_age=0
@@ -182,7 +172,10 @@ func start_play() -> void:
 	queue_redraw()
 
 func instruction() -> String:
-	match QUESTS[index].mode:
+	match play_mode():
+		"memory": return "Найди одинаковые картинки • мышь или 1–8" if game.state.language=="ru" else "MATCH PAIRS • CLICK OR 1–8"
+		"circuit": return "Поверни провода в одну линию • мышь или 1–4" if game.state.language=="ru" else "ROTATE WIRES INTO A LINE • CLICK OR 1–4"
+		"herbs": return "Собери зелёные листья • мышь или 1–6" if game.state.language=="ru" else "PICK GREEN LEAVES • CLICK OR 1–6"
 		"route": return "WASD · ПУТЬ   ПРОБЕЛ · УКЛОНЕНИЕ" if game.state.language=="ru" else "WASD · MOVE   SPACE · DODGE"
 		"rhythm": return "НАЖИМАЙ ПОКАЗАННУЮ КЛАВИШУ В РИТМЕ" if game.state.language=="ru" else "PRESS THE SHOWN KEY ON THE BEAT"
 		"switch": return "1–4 · ПЕРЕКЛЮЧИТЬ   E · ПРОВЕРИТЬ" if game.state.language=="ru" else "1–4 · TOGGLE   E · CONFIRM"
@@ -196,6 +189,24 @@ func rhythm_key() -> int:
 	return patterns.get(index,[KEY_W,KEY_A,KEY_S,KEY_D,KEY_W,KEY_A,KEY_S,KEY_D])[mini(beat,7)]
 
 func _input(event: InputEvent) -> void:
+	if active and phase=="play" and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
+		var point=get_local_mouse_position()
+		if ARENA.has_point(point):
+			match play_mode():
+				"memory","circuit","herbs":
+					for cell in range(board.size()):
+						if cell_rect(cell).has_point(point): board_input(cell);break
+				"route": click_target=point
+				"rhythm": rhythm_input(rhythm_key())
+				"defense": lane=clampi(int((point.y-139)/56),0,2);guard_age=1.8
+				"switch":
+					for bit in range(4):
+						if Rect2(109+bit*113,172,76,76).has_point(point): mask^=1<<bit
+					if mask==switch_target():
+						switch_round+=1;mask=0
+						if switch_round>=switch_targets().size(): succeed()
+			get_viewport().set_input_as_handled()
+		return
 	if not active or not event is InputEventKey or not event.pressed or event.echo: return
 	if event.physical_keycode==KEY_ESCAPE:
 		if phase=="pause": phase=before_pause;show_phase()
@@ -206,7 +217,9 @@ func _input(event: InputEvent) -> void:
 		start_play()
 		get_viewport().set_input_as_handled()
 	elif phase=="play":
-		match QUESTS[index].mode:
+		match play_mode():
+			"memory","circuit","herbs":
+				if event.physical_keycode>=KEY_1 and event.physical_keycode<=KEY_8: board_input(int(event.physical_keycode-KEY_1))
 			"route":
 				if event.physical_keycode==KEY_SPACE and dodge_cooldown<=0: invulnerable=.45;dodge_cooldown=1.2
 			"rhythm": rhythm_input(event.physical_keycode)
@@ -233,7 +246,7 @@ func show_phase() -> void:
 
 func show_pause() -> void:
 	clear_actions()
-	brief_label.text="Событие остановлено. Прогресс сохраняется после выбора." if game.state.language=="ru" else "Event paused. Progress is saved after each decision."
+	brief_label.text="Пауза. При выходе сохранится и эта мини-игра." if game.state.language=="ru" else "Paused. This minigame is saved when you leave."
 	status_label.text=""
 	add_action("ПРОДОЛЖИТЬ" if game.state.language=="ru" else "CONTINUE",func():phase=before_pause;show_phase())
 	add_action("В ГЛАВНОЕ МЕНЮ" if game.state.language=="ru" else "MAIN MENU",func():game._save(false);active=false;visible=false;game._main_menu())
@@ -243,15 +256,20 @@ func _physics_process(dt: float) -> void:
 	if not active or phase!="play": return
 	dt=minf(dt,.05)
 	elapsed+=dt
-	remaining-=dt
+	if not easy_mode: remaining-=dt
 	invulnerable=maxf(0,invulnerable-dt)
 	dodge_cooldown=maxf(0,dodge_cooldown-dt)
 	guard_age=maxf(0,guard_age-dt)
-	match QUESTS[index].mode:
+	if reveal_time>0:
+		reveal_time-=dt
+		if reveal_time<=0: picked.clear()
+	match play_mode():
 		"route": update_route(dt)
 		"rhythm":
 			beat_age+=dt
-			if beat_age>=rhythm_duration(): beat_age=0;damage();beat+=1
+			if beat_age>=rhythm_duration():
+				beat_age=0;damage()
+				if not easy_mode: beat+=1
 			if beat>=8: succeed()
 		"switch": pass
 		"defense": update_defense(dt)
@@ -259,7 +277,10 @@ func _physics_process(dt: float) -> void:
 	queue_redraw()
 
 func update_route(dt: float) -> void:
-	player_pos+=Input.get_vector("as_left","as_right","as_up","as_down")*167.0*dt
+	var motion=Input.get_vector("as_left","as_right","as_up","as_down")
+	if motion!=Vector2.ZERO: click_target=Vector2.ZERO
+	if click_target!=Vector2.ZERO: player_pos=player_pos.move_toward(click_target,167.0*dt)
+	else: player_pos+=motion*167.0*dt
 	player_pos=player_pos.clamp(ARENA.position+Vector2(14,16),ARENA.end-Vector2(14,16))
 	if index==0:
 		escort_pos=escort_pos.move_toward(player_pos,120.0*dt)
@@ -285,7 +306,7 @@ func update_route(dt: float) -> void:
 
 func rhythm_input(code: int) -> void:
 	var keys=[KEY_W,KEY_A,KEY_S,KEY_D]
-	if code not in keys or beat_age<rhythm_duration()*.38: return
+	if code not in keys or (not easy_mode and beat_age<rhythm_duration()*.38): return
 	if code==rhythm_key():
 		beat+=1
 		if beat>=8: succeed();return
@@ -302,7 +323,9 @@ func update_defense(dt: float) -> void:
 	beat_age+=dt
 	if beat_age<1.45: return
 	beat_age=0
-	if lane!=incoming_lane() or guard_age<=0: damage()
+	if lane!=incoming_lane() or guard_age<=0:
+		damage()
+		if easy_mode: return
 	wave+=1
 	if wave>=defense_waves(): succeed()
 
@@ -316,7 +339,60 @@ func incoming_lane() -> int:
 
 func damage() -> void:
 	health-=1
+	if easy_mode:
+		health=maxi(1,health)
+		return
 	if health<=0: fail()
+
+func cell_rect(cell: int) -> Rect2:
+	var columns=4 if play_mode()!="herbs" else 3
+	var width=100 if columns==4 else 130
+	return Rect2(100+(cell%columns)*width,140+int(cell/columns)*80,width-12,68)
+
+func board_input(cell: int):
+	if phase!="play" or cell<0 or cell>=board.size(): return
+	match play_mode():
+		"memory":
+			if reveal_time>0 or cell in matched or cell in picked: return
+			picked.append(cell)
+			if picked.size()==2:
+				if board[picked[0]]==board[picked[1]]:
+					matched.append_array(picked);picked.clear()
+					if matched.size()==8: succeed()
+				else: reveal_time=1.0
+		"circuit":
+			board[cell]=(board[cell]+1)%4
+			if board.all(func(turn): return turn%2==0): succeed()
+		"herbs":
+			if cell%2==0: board[cell]=1
+			if board[0]+board[2]+board[4]==3: succeed()
+	game.audio.ping(game.state.volume)
+	queue_redraw()
+
+func draw_board():
+	var font=get_theme_default_font()
+	for cell in range(board.size()):
+		var rect=cell_rect(cell)
+		draw_rect(rect,Color("354b4a"))
+		draw_rect(rect,Color("9bb59b"),false,2)
+		var center=rect.get_center()
+		draw_string(font,rect.position+Vector2(5,13),str(cell+1),HORIZONTAL_ALIGNMENT_LEFT,-1,8,Color("f0dbaa"))
+		if play_mode()=="memory":
+			if cell not in picked and cell not in matched:
+				draw_rect(Rect2(center-Vector2(15,15),Vector2(30,30)),Color("6c8582"))
+			else:
+				var portraits=[LEV,NADIA,SONYA,PORTRAIT]
+				draw_texture_rect_region(portraits[board[cell]-1],Rect2(center-Vector2(22,25),Vector2(44,50)),Rect2(0,0,64,64))
+		elif play_mode()=="circuit":
+			var horizontal=board[cell]%2==0
+			draw_rect(Rect2(center-Vector2(32,5) if horizontal else center-Vector2(5,23),Vector2(64,10) if horizontal else Vector2(10,46)),Color("d9ac73"))
+			draw_rect(Rect2(center-Vector2(5,5),Vector2(10,10)),Color("f4d897"))
+		else:
+			if board[cell]==0:
+				var color=Color("a2cf79") if cell%2==0 else Color("b986a7")
+				draw_rect(Rect2(center+Vector2(-2,0),Vector2(4,22)),Color("9b815a"))
+				for offset in [Vector2(-17,-10),Vector2(1,-18),Vector2(-13,4)]: draw_rect(Rect2(center+offset,Vector2(17,12)),color)
+			else: draw_string(font,center+Vector2(-8,5),"OK",HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("bce3ac"))
 
 func fail() -> void:
 	phase="fail"
@@ -340,6 +416,7 @@ func support() -> int:
 	return score
 
 func available(id: String) -> bool:
+	if easy_mode and index in [9,10]: return true
 	if index==9 and id=="truce": return health==3
 	if index==10 and id=="trust": return health==3
 	if index!=11: return true
@@ -359,9 +436,11 @@ func show_decision() -> void:
 	queue_redraw()
 
 func choose(option: Array) -> void:
+	game.living.restore_camera()
 	if not available(option[0]): return
 	game.state.set_flag("rift_choice_%02d_%s"%[index+1,option[0]])
 	game.state.set_flag("rift_q%02d_done"%(index+1))
+	game.state.tokens=mini(999,game.state.tokens+1)
 	if option[3] in game.state.relations: game.npcs.change_relation(option[3],int(option[4]))
 	index+=1
 	if index>=QUESTS.size():
@@ -369,7 +448,7 @@ func choose(option: Array) -> void:
 		finish()
 	else:
 		game._save(false)
-		show_intro()
+		begin_travel()
 
 func finish() -> void:
 	active=false
@@ -394,20 +473,22 @@ func _draw() -> void:
 	draw_rect(Rect2(17,17,74,3),Color("95ded1"))
 	if phase!="play": return
 	draw_rect(ARENA,Color("10242a"))
-	match QUESTS[index].mode:
+	match play_mode():
+		"memory","circuit","herbs": draw_texture_rect(FLOOR,ARENA,true,Color("697e80"))
 		"route":
-			draw_texture_rect_region(GRASS,ARENA,Rect2(242,120,512,207),Color("9caea7"))
-			draw_texture_rect_region(DIRT,Rect2(ARENA.position.x,ARENA.position.y+69,ARENA.size.x,72),Rect2(116,250,512,72),Color("8a9a94"))
-			if index==11: draw_texture_rect_region(WATER,Rect2(ARENA.position.x,ARENA.end.y-37,ARENA.size.x,37),Rect2(0,0,512,37),Color("829ca9"))
-		"switch": draw_texture_rect_region(FLOOR if index!=8 else DIRT,ARENA,Rect2(0,0,512,207),Color("697e80"))
-		"rhythm": draw_texture_rect_region(FLOOR if index==5 else DIRT if index==7 else GRASS,ARENA,Rect2(365,220,512,207),Color("718c91"))
-		"defense": draw_texture_rect_region(WATER if index==4 else GRASS if index==10 else DIRT,ARENA,Rect2(180,310,512,207),Color("71888b"))
+			draw_texture_rect(GRASS,ARENA,true,Color("9caea7"))
+			draw_texture_rect(DIRT,Rect2(ARENA.position.x,ARENA.position.y+69,ARENA.size.x,72),true,Color("8a9a94"))
+			if index==11: draw_texture_rect(WATER,Rect2(ARENA.position.x,ARENA.end.y-37,ARENA.size.x,37),true,Color("829ca9"))
+		"switch": draw_texture_rect(FLOOR if index!=8 else DIRT,ARENA,true,Color("697e80"))
+		"rhythm": draw_texture_rect(FLOOR if index==5 else DIRT if index==7 else GRASS,ARENA,true,Color("718c91"))
+		"defense": draw_texture_rect(WATER if index==4 else GRASS if index==10 else DIRT,ARENA,true,Color("71888b"))
 	draw_rect(ARENA,Color("07151bbb"))
 	draw_rect(ARENA,Color("488e88"),false,2)
 	var font=get_theme_default_font()
 	var accent=Color("9adad0")
+	if play_mode() in ["memory","circuit","herbs"]: draw_board()
 	draw_string(font,Vector2(67,95),"%02d / 12   ♥ %d   %02d"%[index+1,health,maxi(0,ceili(remaining))],HORIZONTAL_ALIGNMENT_LEFT,-1,8,accent)
-	match QUESTS[index].mode:
+	match play_mode():
 		"route":
 			if index==6:
 				for gate in range(3):
@@ -475,3 +556,4 @@ func _draw() -> void:
 				if i==lane: draw_circle(Vector2(145,y+22),15,Color("b7e2c9") if guard_age>0 else Color("84b5aa"))
 				if i==incoming_lane(): draw_circle(Vector2(495-330*minf(1,beat_age/1.45),y+22),12,Color("d88595"))
 			draw_string(font,Vector2(405,99),"%d / %d"%[wave,defense_waves()],HORIZONTAL_ALIGNMENT_LEFT,-1,8,accent)
+			Guardian.paint(self,Vector2(512,157),0 if index==4 else 1 if index==9 else 2,guard_age>0)

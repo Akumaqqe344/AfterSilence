@@ -39,6 +39,7 @@ func run() -> void:
 			check(Rift.OUTCOMES.has("%02d_%s"%[event_index+1,option[0]]),"event %02d outcome %s"%[event_index+1,option[0]])
 	await screenshot("rift_menu")
 	game._new_rift_game()
+	check(not game.audio.ambient.playing,"no looping ambient drone")
 	await get_tree().process_frame
 	check(get_viewport().gui_get_focus_owner()==game.rift.actions.get_child(0),"intro button has keyboard focus")
 	await screenshot("rift_intro")
@@ -49,15 +50,40 @@ func run() -> void:
 	var choices=["warn","follow","open","limit","guard","restore","truth","defend","present","truce","trust","child"]
 	for i in range(Rift.QUESTS.size()):
 		var r=game.rift
+		if i>0:
+			check(r.phase=="travel" and not r.active,"walk between events")
+			check(game.world.path_between(game.player.position,Rift.STOPS[i]).size()>0,"event reachable")
+			if i==7:
+				game._build_world("library",Vector2(480,580))
+				game._build_world("town",Vector2(600,600))
+				check(game.world.interactables.any(func(spot): return spot.id=="rift_next"),"objective survives leaving town")
+				game._toggle_zoom()
+				await screenshot("adventure_map")
+				check(game.camera.zoom.x<1.0,"zoom out works")
+				game._toggle_zoom()
+			game.interact("rift_next")
 		check(r.index==i and r.phase=="intro","event %02d intro"%(i+1))
 		r.start_play()
+		if i==3: await screenshot("adventure_circuit")
+		if i==5: await screenshot("adventure_memory")
+		if i==7: await screenshot("adventure_herbs")
 		if i==0: await screenshot("rift_route")
 		if i==1: await screenshot("rift_rhythm")
 		if i==2: await screenshot("rift_switch")
 		if i==4: await screenshot("rift_defense")
 		if i==11: await screenshot("rift_finale")
 		check(r.phase=="play","event %02d playable"%(i+1))
-		match Rift.QUESTS[i].mode:
+		match r.play_mode():
+			"memory":
+				for pair_index in range(4):
+					r.board_input(pair_index);r.board_input(pair_index+4)
+			"circuit":
+				for cell in range(4):
+					while r.board[cell]%2!=0: r.board_input(cell)
+			"herbs":
+				r.board_input(1)
+				check(r.board[1]==0,"unsafe herb stays in garden")
+				for cell in [0,2,4]: r.board_input(cell)
 			"route":
 				var start=r.player_pos
 				Input.action_press("as_right")
@@ -109,7 +135,7 @@ func run() -> void:
 		check(r.phase=="decision","event %02d completed by mechanics"%(i+1))
 		if i in [9,10]:
 			r.health=2
-			check(not r.available(choices[i]),"peaceful choice needs clean defense")
+			check(r.available(choices[i]),"easy mode preserves peaceful choice after mistakes")
 			r.health=3
 		check(r.available(choices[i]),"event %02d expected choice available"%(i+1))
 		for option in Rift.QUESTS[i].choices:
@@ -123,7 +149,7 @@ func run() -> void:
 			game._main_menu()
 			game._load_game()
 			await get_tree().create_timer(.7).timeout
-			check(game.rift.active and game.rift.index==6,"reload resumes event seven")
+			check(game.rift.phase=="travel" and game.rift.index==6,"reload resumes travel to event seven")
 			check(game.quests.stage()==7,"journal resumes event seven")
 	await get_tree().process_frame
 	check(game.state.flag("rift_finished"),"story finished")

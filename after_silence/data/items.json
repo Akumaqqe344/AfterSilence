@@ -1,0 +1,8 @@
+{
+ "fuse":{"title":["Предохранитель","Fuse"],"category":["Инструменты","Tools"],"source":["Лев","Lev"],"description":["Для света или насоса.","For the light or pump."],"art":"key"},
+ "lens":{"title":["Линза памяти","Memory lens"],"category":["Сюжетные вещи","Story"],"source":["Архив","Archive"],"description":["Открывает отголосок.","Reveals the echo."],"art":"medal"},
+ "key":{"title":["Ключ","Key"],"category":["Инструменты","Tools"],"source":["Надя","Nadia"],"description":["Ключ от архива.","The archive key."],"art":"key"},
+ "ribbon":{"title":["Лента","Ribbon"],"category":["Личные вещи","Keepsakes"],"source":["Соня","Sonya"],"description":["Память об обещании.","A reminder of a promise."],"art":"ribbon"},
+ "bandage":{"title":["Перевязка","Dressing"],"category":["Лекарства","Medicine"],"source":["Тайник","Stash"],"description":["Восстанавливает силы.","Restores energy."],"art":"bandage"},
+ "keepsake":{"title":["Памятный знак","Keepsake"],"category":["Личные вещи","Keepsakes"],"source":["Жители","Residents"],"description":["Пригодится ночному дозору.","Useful for night patrol."],"art":"medal"}
+}

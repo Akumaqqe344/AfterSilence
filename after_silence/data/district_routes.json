@@ -1,0 +1,4 @@
+{
+ "orchard":{"from_town":[600,700],"return_town":[1670,500],"entry":[1710,500]},
+ "harbor":{"from_town":[600,700],"return_town":[600,1150],"entry":[600,1200]}
+}

@@ -4,6 +4,7 @@ signal struck
 signal hurt
 const PORTRAIT=preload("res://after_silence/assets/pechatai/player/idle.png")
 const ARENA=Rect2(52,106,536,214)
+const Guardian=preload("res://after_silence/world/pixel_guardian.gd")
 var boss_id="relay"
 var english=false
 var active=false
@@ -20,6 +21,19 @@ var invulnerable=0.0
 var bullets: Array=[]
 var flash=0.0
 var note=""
+var ai: SelectorComposite
+var blackboard: Blackboard
+func _ready():
+	ai=SelectorComposite.new()
+	ai.name="BossPhaseSelector"
+	blackboard=Blackboard.new()
+	add_child(blackboard)
+	for mode in ["windup","attack","exposed"]:
+		var leaf=preload("res://after_silence/core/boss_phase_leaf.gd").new()
+		leaf.phase_name=mode
+		leaf.name=mode
+		ai.add_child(leaf)
+	add_child(ai)
 func start(id: String, en: bool) -> void:
 	boss_id=id
 	english=en
@@ -44,7 +58,9 @@ func jump() -> bool:
 	jump_age=0.0
 	return true
 func pattern() -> int:
-	return (wave+1)%3 if boss_id=="watcher" else wave%3
+	return (wave+1+combat_stage())%3 if boss_id=="watcher" else (wave+combat_stage())%3
+func combat_stage() -> int:
+	return clampi(3-boss_hp,0,2)
 func _input(event: InputEvent) -> void:
 	if not active or not event is InputEventKey or not event.pressed or event.echo: return
 	if event.physical_keycode==KEY_SPACE:
@@ -80,12 +96,17 @@ func _physics_process(dt: float) -> void:
 	var motion=Input.get_vector("as_left","as_right","as_up","as_down")
 	player_pos+=motion*192.0*dt
 	player_pos=player_pos.clamp(ARENA.position+Vector2(12,14),ARENA.end-Vector2(12,14))
+	blackboard.set_value("dt",dt)
+	ai.tick(self,blackboard)
+	ai.after_run(self,blackboard)
+	queue_redraw()
+func tick_phase(dt: float) -> void:
 	if phase=="windup":
 		if phase_age<.1: target=player_pos
 		if phase_age>=(.7 if boss_id=="watcher" else .85):
 			phase="attack"
 			phase_age=0.0
-			if pattern()==1:
+			if pattern()==1 or combat_stage()==2:
 				for i in range(-4 if boss_id=="watcher" else -3,5 if boss_id=="watcher" else 4):
 					bullets.append({"pos":Vector2(320,138),"velocity":Vector2.from_angle(PI/2+i*.21)*(215.0 if boss_id=="watcher" else 175.0)})
 	elif phase=="attack":
@@ -136,20 +157,15 @@ func _draw() -> void:
 		elif pattern()==2: draw_rect(Rect2(ARENA.position.x,target.y-21,ARENA.size.x,42),warning)
 		else:
 			for i in range(-3,4): draw_line(Vector2(320,138),Vector2(320,138)+Vector2.from_angle(PI/2+i*.21)*210,warning,4)
+		if combat_stage()==2 and pattern()!=1:
+			for i in range(-3,4): draw_line(Vector2(320,138),Vector2(320,138)+Vector2.from_angle(PI/2+i*.21)*210,warning,2)
 	if phase=="attack":
 		if pattern()==0 and phase_age<.7: draw_rect(Rect2(target.x-23,ARENA.position.y,46,ARENA.size.y),accent)
 		if pattern()==2 and phase_age<.7: draw_rect(Rect2(ARENA.position.x,target.y-21,ARENA.size.x,42),accent)
 	for bullet in bullets: draw_circle(bullet.pos,7,accent)
 	var boss=Vector2(320,148)
 	var pulse=sin(Time.get_ticks_msec()*.006)*4.0
-	for i in range(8):
-		var direction=Vector2.from_angle(i*TAU/8+phase_age*.3)
-		draw_line(boss+direction*35,boss+direction*(53+pulse),accent,3)
-	draw_arc(boss,48+pulse,0,TAU,48,accent.darkened(.45),2)
-	draw_circle(boss,37,accent if phase=="exposed" else Color("314d53"))
-	draw_circle(boss,26,Color("101a22"))
-	draw_circle(boss+Vector2(-9,-3),4,accent)
-	draw_circle(boss+Vector2(9,-3),4,accent)
+	Guardian.paint(self,boss+Vector2(0,round(pulse)),1 if boss_id=="watcher" else 0,phase=="exposed")
 	var bob=4*jump_age*(.44-jump_age)/(.44*.44)*20 if jump_age<.44 else 0.0
 	draw_texture_rect_region(PORTRAIT,Rect2(player_pos+Vector2(-24,-45-bob),Vector2(48,52)),Rect2(4,2,56,61),Color.WHITE if invulnerable<=0 or int(invulnerable*10)%2==0 else Color("a4c7c2"))
 	draw_rect(Rect2(52,59,160,8),Color("294148"))
@@ -157,6 +173,7 @@ func _draw() -> void:
 	draw_rect(Rect2(428,59,160,8),Color("294148"))
 	draw_rect(Rect2(428,59,160*player_hp/3.0,8),Color("9ecbb1"))
 	var font=get_theme_default_font()
+	draw_string(font,Vector2(260,78),("ФАЗА " if not english else "PHASE ")+str(combat_stage()+1),HORIZONTAL_ALIGNMENT_LEFT,-1,9,accent)
 	draw_string(font,Vector2(52,45),"НАБЛЮДАТЕЛЬ" if boss_id=="watcher" and not english else "WATCHER" if boss_id=="watcher" else "СТОРОЖ РЕЛЕ" if not english else "RELAY GUARDIAN",HORIZONTAL_ALIGNMENT_LEFT,-1,10,accent)
 	draw_string(font,Vector2(52,342),note,HORIZONTAL_ALIGNMENT_LEFT,-1,8,Color("d2e7dc"))
 	if flash>0: draw_rect(Rect2(Vector2.ZERO,size),Color(1,1,1,flash*.25))

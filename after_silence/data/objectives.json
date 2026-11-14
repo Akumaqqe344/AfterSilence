@@ -1,0 +1,11 @@
+{
+ "version":1,
+ "quests":[
+  {"id":"garden","title":["Травы для Нади","Herbs for Nadia"],"requires":{},"goals":[{"kind":"find","prefix":"collect_herbs_","count":3}],"effects":{"flags":["district_orchard"]}},
+  {"id":"pier","title":["Помощь мастерской","Workshop help"],"requires":{"flags":["objective_garden"]},"goals":[{"kind":"find","prefix":"collect_tools_","count":3}],"effects":{"flags":["district_harbor"]}},
+  {"id":"letters","title":["Почта города","Town mail"],"requires":{"flags":["objective_pier"]},"goals":[{"kind":"find","prefix":"collect_letters_","count":3}],"effects":{"flags":["district_friends"]}},
+  {"id":"tomorrow","title":["Завтрашняя встреча","Tomorrow's meeting"],"requires":{},"goals":[{"kind":"talk","flag":"rumor_nadia"},{"kind":"choose","flag":"nadia_meeting"}],"effects":{"flags":["meeting_promised"]}},
+  {"id":"explorer","title":["Дорога к друзьям","Road to friends"],"requires":{"flags":["objective_letters"]},"goals":[{"kind":"visit","zone":"orchard"},{"kind":"visit","zone":"harbor"}],"effects":{"flags":["friends_reunited"],"items":{"keepsake":1}}},
+  {"id":"first_memory","title":["Первая память","First memory"],"requires":{},"goals":[{"kind":"minigame","flag":"rift_q01_done"}],"effects":{"flags":["first_memory_saved"]}}
+ ]
+}
