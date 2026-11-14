@@ -47,8 +47,8 @@ func profile(label: String):
 	profiles.append({"scene":label,"frames":count,"fps":count/elapsed,"frame_p95_ms":times[int(count*.95)-1],"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0})
 func shot(name: String):
 	if DisplayServer.get_name()=="headless": return
-	await create_timer(.04).timeout
 	if game.modal: game.body.visible_characters=-1
+	await create_timer(.32 if game.modal else .04).timeout
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(output_dir.path_join(name+".png"))
 func route_to(id: String):
@@ -64,6 +64,13 @@ func run():
 		root.add_child(game)
 	await process_frame
 	game.saves.path="user://qa_full_episode.json"
+	check(game.modal_backdrop.menu_mode,"main menu layout")
+	await shot("menu")
+	press("settings")
+	check(not game.modal_backdrop.menu_mode,"settings layout")
+	await shot("settings")
+	press("back")
+
 	press("new")
 	await wait_world()
 	await create_timer(1.5).timeout

@@ -36,6 +36,9 @@ var veil: ColorRect
 var card: PanelContainer
 var card_scroll: ScrollContainer
 var column: VBoxContainer
+var modal_backdrop: Control
+var modal_tween: Tween
+
 var body: RichTextLabel
 var objective: Label
 var status: Label
@@ -91,17 +94,24 @@ func _setup_services():
 		add_child(audio)
 func _mark_dirty():
 	dirty=true
-func style(bg: Color) -> StyleBoxFlat:
+func style(bg: Color, accent: bool=false) -> StyleBoxFlat:
 	var s=StyleBoxFlat.new()
 	s.bg_color=bg
-	s.border_color=Color("a58c6e")
-	s.set_border_width_all(2)
-	s.set_content_margin_all(10)
+	s.border_color=Color("67c5bd") if accent else Color("315550")
+	s.set_border_width_all(1)
+	s.border_width_left=3 if accent else 1
+	s.set_content_margin_all(5)
 	s.anti_aliasing=false
-	s.shadow_color=Color("111522aa")
-	s.shadow_size=3
-	s.shadow_offset=Vector2(2,3)
 	return s
+func choice_style(active: bool, pressed: bool=false) -> StyleBoxFlat:
+	var s=StyleBoxFlat.new()
+	s.bg_color=Color("58b2aa") if pressed else Color("327d78") if active else Color.TRANSPARENT
+	s.border_color=Color("8fe3d6") if active else Color.TRANSPARENT
+	s.border_width_left=3 if active else 0
+	s.set_content_margin_all(5)
+	s.anti_aliasing=false
+	return s
+
 func _setup_ui():
 	var layer=CanvasLayer.new()
 	add_child(layer)
@@ -112,15 +122,17 @@ func _setup_ui():
 	var theme=Theme.new()
 	var font=SystemFont.new()
 	font.font_names=PackedStringArray(["Segoe UI","DejaVu Sans"])
-	font.antialiasing=TextServer.FONT_ANTIALIASING_NONE
+	font.antialiasing=TextServer.FONT_ANTIALIASING_GRAY
 	theme.default_font=font
 	theme.default_font_size=15
-	theme.set_color("font_color","Label",Color("e5debf"))
-	theme.set_stylebox("normal","Button",style(Color("342e43")))
-	theme.set_stylebox("hover","Button",style(Color("55455b")))
-	theme.set_stylebox("focus","Button",style(Color("5c4b59")))
-	theme.set_stylebox("pressed","Button",style(Color("72585e")))
-	theme.set_color("font_color","Button",Color("eddfb8"))
+	theme.set_color("font_color","Label",Color("dce9e3"))
+	theme.set_stylebox("normal","Button",choice_style(false))
+	theme.set_stylebox("hover","Button",choice_style(true))
+	theme.set_stylebox("focus","Button",choice_style(true))
+	theme.set_stylebox("pressed","Button",choice_style(true,true))
+	theme.set_color("font_color","Button",Color("e2eeea"))
+	theme.set_color("font_hover_color","Button",Color.WHITE)
+	theme.set_color("font_focus_color","Button",Color.WHITE)
 	ui.theme=theme
 	var hud=load("res://after_silence/world/story_hud.gd").new()
 	hud.game=self
@@ -154,24 +166,27 @@ func _setup_ui():
 	toast.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	ui.add_child(toast)
 	shade=ColorRect.new()
-	shade.color=Color(.055,.045,.09,.72)
+	shade.color=Color.TRANSPARENT
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(shade)
+	modal_backdrop=load("res://after_silence/ui/modal_backdrop.gd").new()
+	modal_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.add_child(modal_backdrop)
 	card=PanelContainer.new()
-	card.position=Vector2(34,9)
-	card.size=Vector2(572,342)
-	card.add_theme_stylebox_override("panel",style(Color("262235")))
+	card.add_theme_stylebox_override("panel",style(Color(.025,.047,.052,.91)))
 	shade.add_child(card)
 	card_scroll=ScrollContainer.new()
-	card_scroll.custom_minimum_size=Vector2(536,308)
+	card_scroll.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	card_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL
+	card_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
 	card_scroll.follow_focus=true
 	card.add_child(card_scroll)
 	column=VBoxContainer.new()
 	column.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	column.add_theme_constant_override("separation",9)
+	column.add_theme_constant_override("separation",7)
 	card_scroll.add_child(column)
 	veil=ColorRect.new()
-	veil.color=Color("101c29")
+	veil.color=Color("071319")
 	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	veil.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	veil.modulate.a=0
@@ -183,28 +198,45 @@ func _setup_ui():
 	veil.add_child(loading)
 func choice(id: String,ru: String,en: String,action: Callable) -> Dictionary:
 	return {"id":id,"label":t(ru,en),"run":action}
-func _dialog(id: String,title: String,text: String,actions: Array,animated: bool=true):
+func _dialog(id: String,title: String,text: String,actions: Array,animated: bool=true,main_layout: bool=false):
 	modal=true
 	shade.show()
 	buttons.clear()
+	if is_instance_valid(modal_tween): modal_tween.kill()
+	modal_backdrop.menu_mode=main_layout
+	modal_backdrop.english=state.language=="en"
+
+	modal_backdrop.age=0
+	modal_backdrop.tick=0
+	modal_backdrop.queue_redraw()
+	var target=Vector2(30,34) if main_layout else Vector2(34,32)
+	card.position=target+Vector2(0,9)
+	card.size=Vector2(320,281) if main_layout else Vector2(572,294)
+	var panel_style=style(Color(.025,.047,.052,.91))
+	if main_layout:
+		panel_style.bg_color=Color.TRANSPARENT
+		panel_style.set_border_width_all(0)
+	card.add_theme_stylebox_override("panel",panel_style)
+
+	card.modulate.a=0
 	for child in column.get_children():
 		column.remove_child(child)
 		child.queue_free()
 	var header=Label.new()
 	header.text=title
-	header.add_theme_color_override("font_color",Color("e2c78b"))
-	header.add_theme_font_size_override("font_size",23)
+	header.add_theme_color_override("font_color",Color("c7ebe5"))
+	header.add_theme_font_size_override("font_size",27 if main_layout else 22)
 	header.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var portrait_id=id.split("_")[0]
 	if id=="intro": portrait_id="vera"
-	if portrait_id in actors or portrait_id=="vera":
+	if not main_layout and (portrait_id in actors or portrait_id=="vera"):
 		var row=HBoxContainer.new()
 		var portrait=TextureRect.new()
 		var atlas=AtlasTexture.new()
 		atlas.atlas=player.sheet if portrait_id=="vera" else actors[portrait_id].sheet
 		atlas.region=player.portrait if portrait_id=="vera" else actors[portrait_id].portrait
 		portrait.texture=atlas
-		portrait.custom_minimum_size=Vector2(48,48)
+		portrait.custom_minimum_size=Vector2(42,42)
 		portrait.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
 		portrait.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		row.add_child(portrait)
@@ -217,8 +249,10 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	body.text=text
 	body.fit_content=true
 	body.scroll_active=false
-	body.custom_minimum_size=Vector2(500,60)
+	body.custom_minimum_size=Vector2(0,20 if main_layout else 24)
 	body.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	body.add_theme_color_override("default_color",Color("a9c6bd"))
+	body.add_theme_font_size_override("normal_font_size",13 if main_layout else 14)
 	column.add_child(body)
 	var seen=dialogues.was_seen(id)
 	if id!="": dialogues.record(id,title,text)
@@ -228,9 +262,10 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	for i in range(actions.size()):
 		var item=actions[i]
 		var button=Button.new()
-		button.text=str(i+1)+"   "+item.label
+		button.text=("%02d   "%(i+1) if not main_layout else "")+item.label
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
-		button.custom_minimum_size=Vector2(0,30)
+		button.custom_minimum_size=Vector2(0,31 if main_layout else 32)
+		button.add_theme_font_size_override("font_size",16 if main_layout else 14)
 		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		button.pressed.connect(func():
 			if body.visible_characters>=0 and body.visible_characters<body.get_total_character_count():
@@ -246,6 +281,9 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		column.add_child(skip)
 	if not actions.is_empty(): buttons[actions[0].id].grab_focus()
 	card_scroll.scroll_vertical=0
+	modal_tween=create_tween().set_parallel(true)
+	modal_tween.tween_property(card,"position",target,.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	modal_tween.tween_property(card,"modulate:a",1.0,.22)
 func _story(id: String,actions: Array=[]):
 	var d=Story.SCENES[id] if id in Story.SCENES else Review.SCENES[id]
 	if actions.is_empty(): actions=[choice("close","Продолжить","Continue",_close)]
@@ -262,7 +300,8 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("ПОСЛЕ ТИШИНЫ","AFTER SILENCE"),t("Эпизод I · Имена под водой\nПсихологическое расследование о памяти, чужих обещаниях и праве не знать.\nWASD / стрелки — движение; Shift — бег; E — взаимодействие; Tab — отголосок; J — журнал; I — предметы; Esc — пауза.\nНикакой печати слов.","Episode I · Names Underwater\nA mystery about memory, promises and the right not to know.\nWASD / arrows: move; Shift: run; E: interact; Tab: echo; J: journal; I: inventory; Esc: pause.\nNo typing mechanics."),[choice("new","Новая история","New story",_new_game),choice("load","Продолжить сохранение","Continue saved story",_load_game),choice("settings","Настройки / Settings","Settings / Настройки",_settings),choice("quit","Выход","Quit",func():get_tree().quit())],false)
+	_dialog("",t("ПОСЛЕ ТИШИНЫ","AFTER SILENCE"),t("ЭПИЗОД I  /  ИМЕНА ПОД ВОДОЙ","EPISODE I  /  NAMES UNDERWATER"),[choice("load","Продолжить","Continue",_load_game),choice("new","Новая история","New story",_new_game),choice("settings","Настройки","Settings",_settings),choice("quit","Выход","Exit",func():get_tree().quit())],false,true)
+	if not FileAccess.file_exists(saves.path) and not FileAccess.file_exists(saves.path+".bak"): buttons["new"].grab_focus()
 func _new_game():
 	var lang=state.language
 	var volume=state.volume
