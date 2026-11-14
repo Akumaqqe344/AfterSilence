@@ -18,9 +18,13 @@ const Cutscenes=preload("res://after_silence/core/cutscene_director.gd")
 const Atmosphere=preload("res://after_silence/world/atmosphere.gd")
 const Achievements=preload("res://after_silence/core/achievements.gd")
 const BossBattle=preload("res://after_silence/world/boss_battle.gd")
+const Rift=preload("res://after_silence/world/rift_campaign.gd")
+
 
 var state=State.new()
 var saves=Saves.new()
+var archive_saves: RefCounted
+var rift_saves=Saves.new()
 var evidence
 var inventory
 var quests
@@ -33,6 +37,8 @@ var player
 var camera: Camera2D
 var enemy
 var battle: Control
+var rift: Control
+
 
 var actors: Dictionary={}
 var ui: Control
@@ -71,7 +77,10 @@ func named(id: String) -> String:
 func _ready():
 	get_tree().auto_accept_quit=false
 	RenderingServer.set_default_clear_color(Color("182e32"))
+	archive_saves=saves
+	rift_saves.path="user://rift_slot.json"
 	if "--qa" in OS.get_cmdline_user_args(): saves.path="user://qa_episode.json"
+	if "--qa" in OS.get_cmdline_user_args(): rift_saves.path="user://qa_rift_slot.json"
 	for id in ["as_left","as_right","as_up","as_down"]:
 		if not InputMap.has_action(id): InputMap.add_action(id)
 	for item in [["as_left",KEY_A,KEY_LEFT],["as_right",KEY_D,KEY_RIGHT],["as_up",KEY_W,KEY_UP],["as_down",KEY_S,KEY_DOWN]]:
@@ -87,6 +96,10 @@ func _ready():
 		var runner=load("res://after_silence/tests/episode_driver.gd").new()
 		runner.game=self
 		get_tree().root.add_child.call_deferred(runner)
+	if "--qa-rift-export" in OS.get_cmdline_user_args():
+		var rift_runner=load("res://after_silence/tests/rift_driver.gd").new()
+		rift_runner.game=self
+		get_tree().root.add_child.call_deferred(rift_runner)
 func _setup_services():
 	evidence=Evidence.new(state)
 	inventory=Inventory.new(state)
@@ -206,6 +219,11 @@ func _setup_ui():
 	battle.hurt.connect(func(): audio.ping(state.volume))
 
 	ui.add_child(battle)
+	rift=Rift.new()
+	rift.visible=false
+	rift.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui.add_child(rift)
+
 
 	var loading=Label.new()
 	loading.text=t("Город вспоминает…","The town remembers…")
@@ -315,9 +333,35 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("ПОСЛЕ ТИШИНЫ","AFTER SILENCE"),t("ЭПИЗОД I  /  ИМЕНА ПОД ВОДОЙ","EPISODE I  /  NAMES UNDERWATER"),[choice("load","Продолжить","Continue",_load_game),choice("new","Новая история","New story",_new_game),choice("settings","Настройки","Settings",_settings),choice("quit","Выход","Exit",func():get_tree().quit())],false,true)
-	if not FileAccess.file_exists(saves.path) and not FileAccess.file_exists(saves.path+".bak"): buttons["new"].grab_focus()
+	_dialog("",t("ПОСЛЕ ТИШИНЫ","AFTER SILENCE"),t("РАЗЛОМ ПАМЯТИ  /  12 СОБЫТИЙ","MEMORY RIFT  /  12 EVENTS"),[choice("load","Продолжить","Continue",_continue_rift),choice("rift","Новая история","New story",_new_rift_game),choice("archive","Архив: Имена под водой","Archive: Names Underwater",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выход","Exit",func():get_tree().quit())],false,true)
+	if not rift_saves.exists(): buttons["rift"].grab_focus()
+func _archive_menu():
+	in_menu=true
+	_dialog("",t("АРХИВ","ARCHIVE"),t("ИМЕНА ПОД ВОДОЙ","NAMES UNDERWATER"),[choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_main_menu)],false,true)
+func _continue_rift():
+	saves=rift_saves
+	_load_game()
+func _continue_archive():
+	saves=archive_saves
+	_load_game()
+func _new_rift_game():
+	saves=rift_saves
+	var lang=state.language
+	var volume=state.volume
+	state=State.new()
+	state.language=lang
+	state.volume=volume
+	_setup_services()
+	state.set_flag("rift_mode")
+	in_menu=false
+	modal=false
+	shade.hide()
+	_build_world("town",Vector2(600,600))
+	rift.start(self)
+	_save(false)
+
 func _new_game():
+	saves=archive_saves
 	var lang=state.language
 	var volume=state.volume
 	state=State.new()
@@ -340,6 +384,8 @@ func _load_game():
 	modal=false
 	shade.hide()
 	await _travel(state.zone,state.position)
+	if state.flag("rift_mode") and not state.flag("rift_finished"): rift.start(self)
+
 func _save(notify: bool=true):
 	if in_menu or not is_instance_valid(player): return
 	state.position=player.position
@@ -418,14 +464,14 @@ func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	actor.add_child(caption)
 	actor.set_meta("caption",caption)
 func _physics_process(dt):
-	if is_instance_valid(objective): objective.visible=not modal and not in_menu
+	if is_instance_valid(objective): objective.visible=not modal and not in_menu and not rift.active
 	shift_cooldown=maxf(0,shift_cooldown-dt)
 	if modal and is_instance_valid(body) and body.visible_characters>=0:
 		type_progress+=dt*42
 		body.visible_characters=int(type_progress)
 		if body.visible_characters>=body.get_total_character_count(): body.visible_characters=-1
 	if not is_instance_valid(player): return
-	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active
+	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active and not rift.active
 	player.enabled=enabled
 	if is_instance_valid(enemy):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
@@ -489,6 +535,8 @@ func _object_name(id: String) -> String:
 func _unhandled_key_input(event):
 	if not event.is_pressed() or event.is_echo(): return
 	if transitions.busy: return
+	if rift.active: return
+
 	if battle.active:
 		if event.physical_keycode==KEY_SPACE: battle.jump()
 		elif event.physical_keycode==KEY_E: battle.counter()
@@ -505,8 +553,8 @@ func _unhandled_key_input(event):
 	match event.physical_keycode:
 		KEY_E: interact(_nearest())
 		KEY_J: _journal()
-		KEY_I: _inventory()
-		KEY_TAB: _shift()
+		KEY_I: if not state.flag("rift_mode"): _inventory()
+		KEY_TAB: if not state.flag("rift_mode"): _shift()
 		KEY_SPACE: player.jump(Input.is_physical_key_pressed(KEY_SHIFT))
 		KEY_ESCAPE: _pause()
 func interact(id: String):
@@ -516,6 +564,9 @@ func interact(id: String):
 	if id=="leave_home":
 		_travel("town",Homes.door(state.zone,state.echo));return
 	if id=="home_memory":
+		if state.flag("rift_mode"):
+			_notify(t("Здесь хранятся воспоминания жителей. Теперь их можно расспросить лично.","The residents' memories are here. You can ask them in person now."))
+			return
 		var index=Homes.IDS.find(state.zone)
 		var notes=[t("На столе Нади карточки без фамилий. Она оставляет место для того, что ещё нельзя утверждать наверняка.","Nadia keeps unsigned charts, leaving room for what cannot yet be known."),t("Лев аккуратно подписал две цепи: насос и колокол. На полях — время следующего осмотра проводки.","Lev labelled two circuits: pump and bell. A wiring inspection is scheduled in the margin."),t("В доме Павла часы идут вперёд, но лист с датой собрания перевёрнут. Чернила на краях ещё видны.","Pavel's clock keeps moving, but the meeting record lies face down. Ink remains along its edges."),t("Соня оставила чашку и чистый лист. Здесь можно написать свою историю, когда появятся слова.","Sonya left a cup beside a blank page, waiting for words of her own.")]
 		state.set_flag("visited_"+state.zone)
@@ -523,6 +574,10 @@ func interact(id: String):
 	player.inspect_time=.6
 	audio.ping(state.volume)
 	if id in actors: _talk(id);return
+	if state.flag("rift_mode") and id not in ["to_library","to_forest","to_town","well"]:
+		_notify(t("История этой вещи уже записана в архиве.","This object's story is already in the archive."))
+		return
+
 	if id in Story.CLUES and id!="clock":
 		if id=="signature" and not state.echo:
 			_dialog("",_object_name(id),t("Страница кажется чистой. Под косым светом проступает вдавленный след подписи.","The page seems blank. Slanting light reveals an impression of a signature."),[choice("close","Назад","Back",_close)])
@@ -532,10 +587,10 @@ func interact(id: String):
 		return
 	match id:
 		"to_library":
-			if state.flag("nadia_met"): _travel("library",Vector2(480,575))
+			if state.flag("rift_finished") or state.flag("nadia_met"): _travel("library",Vector2(480,575))
 			else: _notify(t("Сначала поговорите с Надей у колодца.","Speak to Nadia by the well first."))
 		"to_forest":
-			if state.flag("catalog") and state.flag("clock_solved"): _travel("forest",Vector2(700,940))
+			if state.flag("rift_finished") or state.flag("catalog") and state.flag("clock_solved"): _travel("forest",Vector2(700,940))
 			else: _notify(t("Лесная дорога возвращает к площади. Найдите список и восстановите время события.","The trail returns to the square. Find the list and restore the time."))
 		"to_town":
 			if state.zone=="forest" and state.flag("sonya_met"): state.set_flag("returned")
@@ -562,7 +617,18 @@ func interact(id: String):
 func _clue(id: String):
 	var c=Story.CLUES[id]
 	_dialog("clue_"+id,c[1] if state.language=="en" else c[0],c[3] if state.language=="en" else c[2],[choice("journal","Сопоставить в журнале","Connect in journal",_journal),choice("close","Продолжить","Continue",_close)])
+func _rift_talk(id: String):
+	var lines={
+		"nadia":[t("После суда врачей больше не прогоняют от площади.","After the trial, physicians are welcome at the square."),t("Я помню, как ты осталась рядом.","I remember you stayed beside me.")],
+		"lev":[t("Механизм остановлен. Письмо всё ещё у меня.","The device is stable. I still have the letter."),t("Ограниченная мощность дала нам время.","The limited output gave us time.")],
+		"mara":[t("В архиве теперь две версии событий.","The archive now keeps both accounts."),t("Следить было правильнее, чем обвинять.","Following was wiser than accusing.")],
+		"pavel":[t("Мост открыт. Ночь больше не повторяется.","The bridge is open. That night no longer repeats."),t("Мы охраняем мост вместе.","We guard the bridge together.")],
+		"sonya":[t("Алина больше не одна в разломе.","Alina is no longer alone inside the rift."),t("Я записала её историю без чужих догадок.","I recorded her story without guesses.")]
+	}
+	var special=state.flag({"nadia":"rift_choice_08_defend","lev":"rift_choice_04_limit","mara":"rift_choice_02_follow","pavel":"rift_choice_05_guard","sonya":"rift_choice_11_trust"}.get(id,""))
+	_dialog("rift_talk_"+id,named(id),lines.get(id,[t("Город снова меняется, но люди помнят друг друга.","Town still changes, but its people remember one another.")])[1 if special else 0],[choice("close","Продолжить","Continue",_close)],false)
 func _talk(id: String):
+	if state.flag("rift_mode"): _rift_talk(id);return
 	if state.flag("ending") and id=="nadia":
 		_story("nadia_public" if state.flag("ending_public") else "nadia_sealed");return
 	if state.flag("returned") and not state.flag("ending"):
@@ -707,6 +773,21 @@ func _light_socket():
 		elif not inventory.install_fuse("library_light"): _notify(t("Нужна деталь Льва.","You need Lev's part."))
 		_close()),choice("close","Назад","Back",_close)],false)
 func _journal():
+	if state.flag("rift_mode"):
+		var completed=0
+		var event_lines=[]
+		var quest_steps=quests.steps()
+		for event_index in range(Rift.QUESTS.size()):
+			var step=quest_steps[event_index]
+			if step[0]: completed+=1
+			event_lines.append(("◆  " if step[0] else "◇  ")+t(step[1],step[2]))
+			if step[0]:
+				for option in Rift.QUESTS[event_index].choices:
+					var outcome_id="%02d_%s"%[event_index+1,option[0]]
+					if state.flag("rift_choice_"+outcome_id): event_lines.append("    "+Story.pair(Rift.OUTCOMES[outcome_id],state.language))
+		var progress=t("СОБЫТИЯ ","EVENTS ")+str(completed)+"/12\n\n"+"\n".join(event_lines)
+		_dialog("",t("История разлома","The rift story"),progress,[choice("achievements","Достижения","Achievements",_achievements),choice("close","На карту","Return",_close)],false)
+		return
 	var names=PackedStringArray()
 	for id in state.links: names.append(_object_name(id))
 	var text=t("ЦЕЛЬ · ","OBJECTIVE · ")+Story.pair(quests.objective(),state.language)+"\n\n"

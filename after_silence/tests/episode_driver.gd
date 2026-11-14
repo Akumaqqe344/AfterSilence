@@ -81,6 +81,7 @@ func run():
 	await shot("settings")
 	press("back")
 
+	press("archive")
 	press("new")
 	await wait_world()
 	await create_timer(1.5).timeout

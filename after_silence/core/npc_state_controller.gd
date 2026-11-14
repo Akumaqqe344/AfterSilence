@@ -24,6 +24,7 @@ func initialize():
 func position_of(r: Dictionary) -> Vector2:
 	return Vector2(r.x,r.y)
 func visible_here(id: String, zone: String) -> bool:
+	if id=="sonya" and state.flag("rift_finished"): return state.residents[id].zone==zone
 	if id=="sonya" and not state.flag("returned"): return zone=="forest" and state.echo
 	return state.residents[id].zone==zone
 func populate(game):
@@ -31,7 +32,7 @@ func populate(game):
 	for id in PROFILE:
 		if not visible_here(id,game.state.zone) or game.actors.has(id): continue
 		var p=position_of(state.residents[id])
-		if id=="sonya" and not state.flag("returned"): p=Vector2(1100,280)
+		if id=="sonya" and not state.flag("returned") and not state.flag("rift_finished"): p=Vector2(1100,280)
 		game._npc(id,p,"res://after_silence/assets/pechatai/npc/"+PROFILE[id][3]+".png")
 func update(game, dt: float, enabled: bool):
 	initialize()
@@ -42,7 +43,7 @@ func update(game, dt: float, enabled: bool):
 		return
 	var night=state.clock>=20 or state.clock<7
 	for id in PROFILE:
-		if id=="sonya" and not state.flag("returned"):
+		if id=="sonya" and not state.flag("returned") and not state.flag("rift_finished"):
 			if game.actors.has(id): _wander(game,id,Vector2(1100,280),dt)
 			continue
 		var r=state.residents[id]

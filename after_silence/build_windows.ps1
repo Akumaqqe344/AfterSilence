@@ -13,6 +13,7 @@ Invoke-CheckedGodot 'work/import-release.log' @('--headless','--editor','--path'
 if (-not $SkipTests) {
     Invoke-CheckedGodot 'work/gut-all.log' @('--headless','--path','.','-s','addons/gut/gut_cmdln.gd','-gdir=res://test/unit/,res://after_silence/tests/','-gexit')
     Invoke-CheckedGodot 'work/episode-test.log' @('--headless','--path','.','--script','after_silence/tests/run_episode.gd','--','--qa')
+    Invoke-CheckedGodot 'work/rift-test.log' @('--headless','--path','.','--script','after_silence/tests/run_rift.gd','--','--qa')
 }
 Copy-Item -LiteralPath after_silence/export_windows.cfg -Destination export_presets.cfg -Force
 Invoke-CheckedGodot 'work/export-windows.log' @('--headless','--path','.','--export-release','After Silence Windows','after_silence/build/AfterSilence.exe')

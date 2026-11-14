@@ -23,9 +23,10 @@ func _ready():
 		add_child(button)
 		actions.append(button)
 func _process(_dt):
-	visible=not game.modal and not game.in_menu
+	visible=not game.modal and not game.in_menu and not game.rift.active
 	for button in actions:
 		var entry=button.get_meta("entry")
+		button.visible=not game.state.flag("rift_mode") or entry[0] in ["J","Esc"]
 		button.text=entry[0]
 		button.tooltip_text=game.t(entry[1],entry[2])
 		button.disabled=game.transitions.busy or game.cutscenes.running
@@ -33,6 +34,7 @@ func _process(_dt):
 func _draw():
 	var clock="%02d:%02d"%[int(game.state.clock),int(fmod(game.state.clock,1)*60)]
 	draw_string(get_theme_default_font(),Vector2(540,23),clock,HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("e3decd"))
+	if game.state.flag("rift_mode"): return
 	for i in range(3):
 		var p=Vector2(586+i*15,20)
 		var color=Color("b2d9cb") if i<game.state.charges else Color("514b5c")

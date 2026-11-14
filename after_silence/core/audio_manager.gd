@@ -33,11 +33,15 @@ func wave(echo: bool, effect: bool = false) -> AudioStreamWAV:
 	cache[key]=result
 	return result
 func set_scene(echo: bool, volume: float, location: String="town"):
+	ambient.stop()
+	ambient.stream=null
 	zone=location
 	ambient.stream = wave(echo)
 	ambient.volume_db = linear_to_db(maxf(volume*0.28,0.0001))
 	ambient.play()
 func ping(volume: float):
+	cue.stop()
+	cue.stream=null
 	cue.stream = wave(false,true)
 	cue.volume_db = linear_to_db(maxf(volume*0.3,0.0001))
 	cue.play()

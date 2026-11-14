@@ -1,7 +1,12 @@
 extends RefCounted
+const Rift=preload("res://after_silence/world/rift_campaign.gd")
 var state
 func _init(s): state = s
 func stage() -> int:
+	if state.flag("rift_mode"):
+		for i in range(Rift.QUESTS.size()):
+			if not state.flag("rift_q%02d_done"%(i+1)): return i+1
+		return Rift.QUESTS.size()+1
 	if state.flag("ending"): return 7
 	if state.flag("returned"): return 6
 	if state.flag("sonya_met"): return 5
@@ -10,6 +15,7 @@ func stage() -> int:
 	if state.flag("nadia_met"): return 2
 	return 1
 func target_npc() -> String:
+	if state.flag("rift_mode"): return ""
 	if stage()==1: return "nadia"
 	if stage()==2 and not state.flag("mara_met"): return "mara"
 	if stage()==3 and not state.flag("fuse_given"): return "lev"
@@ -22,6 +28,11 @@ func target_npc() -> String:
 		if "coverup" in state.links and "witness" in state.links: return "pavel"
 	return ""
 func steps() -> Array:
+	if state.flag("rift_mode"):
+		var result=[]
+		for i in range(Rift.QUESTS.size()):
+			result.append([state.flag("rift_q%02d_done"%(i+1)),Rift.QUESTS[i].title[0],Rift.QUESTS[i].title[1]])
+		return result
 	match stage():
 		1: return [[state.flag("nadia_met"),"Узнать у Нади, кто помнит Алину","Ask Nadia who remembers Alina"]]
 		2: return [[state.flag("mara_met"),"Получить доступ к архиву Мары","Gain access to Mara's archive"],["date" in state.links,"Связать афишу и часы","Link the poster and the clock"],[state.flag("catalog"),"Расшифровать порядок в каталоге","Decode the catalogue sequence"],[state.flag("clock_solved"),"Восстановить время отключения сигнала","Restore the time of the signal cut"]]
@@ -31,6 +42,9 @@ func steps() -> Array:
 		6: return [[state.flag("nadia_review"),"Сверить рассказ Сони с карточкой Нади","Compare Sonya's story with Nadia's chart"],["survival" in state.links,"Проверить, что Алина пережила отключение","Establish that Alina survived the signal cut"],[state.flag("lev_review") and state.flag("mara_review"),"Записать версии Льва и Мары","Record Lev's and Mara's accounts"],["coverup" in state.links and "witness" in state.links,"Связать список, фотографию и подпись","Connect the register, photo and signature"],[state.flag("boss_watcher_defeated"),"Разорвать сигнал наблюдателя","Break the Watcher's signal"]]
 		_: return [[state.flag("ending"),"История завершена; проверьте достижения","Story complete; review achievements"]]
 func objective() -> Array:
+	if state.flag("rift_mode"):
+		if state.flag("rift_finished"): return ["История завершена. Исследуйте город и поговорите с жителями.","Story complete. Explore town and talk to its residents."]
+		return Rift.QUESTS[mini(stage()-1,Rift.QUESTS.size()-1)].brief
 	if stage()==3 and not state.flag("boss_relay_defeated"): return ["Сторож реле: избегайте подсвеченных атак, подойдите после третьей и нажмите E","Relay guardian: dodge marked attacks; after the third, approach and press E"]
 	if stage()==6:
 		if not state.flag("nadia_review"): return ["Покажите Наде рассказ Сони: проверьте утро после воды","Show Sonya's testimony to Nadia; verify the morning after"]
