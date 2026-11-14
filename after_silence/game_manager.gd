@@ -27,6 +27,8 @@ var archive_saves: RefCounted
 var rift_saves=Saves.new()
 var event_saves=Saves.new()
 var events_controller
+var journey=preload("res://after_silence/world/journey.gd").new(self)
+var event_window
 var evidence
 var inventory
 var quests
@@ -85,6 +87,8 @@ var objectives
 func t(ru: String,en: String) -> String:
 	return en if state.language=="en" else ru
 func named(id: String) -> String:
+	var characters=preload("res://after_silence/world/npc_event_director.gd").CHARACTERS
+	if characters.has(id): return t(characters[id][0],characters[id][1])
 	return Story.pair(Story.NAMES.get(id,[id,id]),state.language)
 func _ready():
 	get_tree().auto_accept_quit=false
@@ -116,6 +120,9 @@ func _ready():
 	events_controller=preload("res://after_silence/world/npc_event_director.gd").new()
 	events_controller.game=self
 	ui.add_child(events_controller)
+	event_window=preload("res://after_silence/world/event_window.gd").new()
+	event_window.game=self
+	ui.add_child(event_window)
 	_build_world("town",Vector2(600,630))
 	_main_menu()
 	if "--qa-events-export" in OS.get_cmdline_user_args():
@@ -281,6 +288,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	if is_instance_valid(modal_tween): modal_tween.kill()
 	modal_backdrop.menu_mode=main_layout
 	modal_backdrop.english=state.language=="en"
+	modal_backdrop.journey_mode=state.flag("event_campaign") and not main_layout
 
 	modal_backdrop.age=0
 	modal_backdrop.tick=0
@@ -288,7 +296,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	var target=Vector2(30,34) if main_layout else Vector2(34,32)
 	card.position=target+Vector2(0,9)
 	card.size=Vector2(320,281) if main_layout else Vector2(572,294)
-	var panel_style=style(Color(.025,.047,.052,.91))
+	var panel_style=style(Color("19372e") if state.flag("event_campaign") and not main_layout else Color(.025,.047,.052,.91))
 	if main_layout:
 		panel_style.bg_color=Color.TRANSPARENT
 		panel_style.set_border_width_all(0)
@@ -312,7 +320,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		atlas.atlas=player.sheet if portrait_id=="vera" else actors[portrait_id].sheet
 		atlas.region=player.portrait if portrait_id=="vera" else actors[portrait_id].portrait
 		portrait.texture=atlas
-		portrait.custom_minimum_size=Vector2(42,42)
+		portrait.custom_minimum_size=Vector2(64,64) if state.flag("event_campaign") else Vector2(42,42)
 		portrait.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
 		portrait.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		row.add_child(portrait)
@@ -351,7 +359,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 			item.run.call())
 		column.add_child(button)
 		buttons[item.id]=button
-	if seen and animated:
+	if seen and animated and not state.flag("event_campaign"):
 		var skip=Label.new()
 		skip.text=t("Уже прочитано · текст показан целиком","Previously read · full text shown")
 		column.add_child(skip)
@@ -376,7 +384,7 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("ПОСЛЕ ТИШИНЫ","AFTER SILENCE"),t("ГОРОД ПОМНИТ / 9 СОБЫТИЙ","THE TOWN REMEMBERS / 9 EVENTS"),[choice("events_load","Продолжить","Continue",func():saves=event_saves;_load_game()),choice("events_new","Новая история","New story",_new_event_game),choice("archive","Архив прежних историй","Previous stories",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выход","Exit",func():get_tree().quit())],false,true)
+	_dialog("",t("ПОСЛЕ ТИШИНЫ","AFTER SILENCE"),t("ПУТЕШЕСТВИЕ / 12 СОБЫТИЙ","THE JOURNEY / 12 EVENTS"),[choice("events_load","Продолжить","Continue",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_new_event_game),choice("archive","Архив прежних историй","Previous stories",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выход","Exit",func():get_tree().quit())],false,true)
 	if not event_saves.exists(): buttons["events_new"].grab_focus()
 func _archive_menu():
 	in_menu=true
@@ -390,6 +398,8 @@ func _new_event_game():
 	state.set_flag("event_campaign");state.set_flag("rift_mode")
 	state.set_flag("nadia_met");state.set_flag("catalog");state.set_flag("clock_solved")
 	in_menu=false;modal=false;shade.hide();adventure.expanded=false
+	if event_window.active: event_window.close()
+	_build_world("town",Vector2(600,645))
 	events_controller.start()
 	_save(false)
 func _continue_rift():
@@ -554,7 +564,7 @@ func _physics_process(dt):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
 		enemy.visible=state.flag("sonya_met") and not state.flag("returned")
 		enemy.pressure=state.pressure
-	npcs.update(self,dt,enabled and not state.flag("event_campaign"))
+	npcs.update(self,dt,enabled)
 	if not enabled: return
 	state.clock=fposmod(state.clock+dt/60,24)
 	state.play_seconds+=dt
@@ -616,7 +626,7 @@ func _nearest() -> String:
 		if d<distance: distance=d;result=spot.id
 	return result
 func can_interact(id: String) -> bool:
-	if state.flag("event_campaign") and is_instance_valid(events_controller) and events_controller.phase!="finished" and id in Homes.IDS+["to_town","to_library","to_forest","visit_shop","visit_orchard","visit_harbor","district_return"]: return false
+	if state.flag("event_campaign") and is_instance_valid(event_window) and event_window.active: return false
 	if state.flag("event_campaign") and (id.begins_with("collect_") or id in ["rift_next","hotspot_lamp"]): return false
 	if id in ["hotspot_window","hotspot_furniture"] and state.flag("examined_"+state.zone+"_"+id): return false
 	if not state.flag("rift_mode"): return true
@@ -645,6 +655,10 @@ func _unhandled_key_input(event):
 	if not event.is_pressed() or event.is_echo(): return
 	if transitions.busy: return
 	if rift.active: return
+	if state.flag("event_campaign") and event_window.active:
+		if event.physical_keycode==KEY_SPACE: player.jump(Input.is_physical_key_pressed(KEY_SHIFT))
+		elif event.physical_keycode in [KEY_T,KEY_J,KEY_H,KEY_I]: event_window.toggle_pause()
+		return
 
 	if battle.active:
 		if event.physical_keycode==KEY_SPACE: battle.jump()
@@ -660,6 +674,7 @@ func _unhandled_key_input(event):
 		elif event.physical_keycode==KEY_ESCAPE and not in_menu: _close()
 		return
 	match event.physical_keycode:
+		KEY_T: if state.flag("event_campaign"): journey.open()
 		KEY_H: _quest_help()
 		KEY_Z: _toggle_zoom()
 		KEY_E: interact(_nearest())
@@ -668,15 +683,21 @@ func _unhandled_key_input(event):
 		KEY_TAB: if not state.flag("rift_mode"): _shift()
 		KEY_SPACE: player.jump(Input.is_physical_key_pressed(KEY_SHIFT))
 		KEY_ESCAPE: _pause()
+func _travel_window():
+	if state.flag("event_campaign"): journey.open()
 func _toggle_zoom():
 	if not is_instance_valid(camera): return
 	camera.position=Vector2.ZERO
 	wide_camera=not wide_camera
 	camera.zoom=Vector2.ONE*(0.65 if wide_camera else 1.0)
 func _quest_help():
-	if state.flag("event_campaign"): events_controller.journal();return
+	if state.flag("event_campaign"): journey.open();return
 	_dialog("",t("Куда идти?","Where to go?"),shop.hint()+"\n"+t("Золотая отметка на карте — следующее событие. E — действие.","The gold map marker is the next event. E: interact."),[choice("map","Показать карту","Show map",func():_close();adventure.expanded=true),choice("close","Понятно","Got it",_close)],false)
 func interact(id: String):
+	if state.flag("event_campaign"):
+		var destinations={"to_library":"library","to_forest":"forest","home_lev":"home_lev","home_sonya":"home_sonya"}
+		if destinations.has(id) and not journey.zone_allowed(destinations[id]):
+			_notify(t("Путь пока закрыт. T — причина открытия.","This route is closed. T shows how it opens."));return
 	if is_instance_valid(adventure) and adventure.handle(id): return
 	if id=="rift_next": rift.arrive();return
 	if id=="": return
@@ -974,4 +995,5 @@ func _settings():
 func _notification(what):
 	if what==NOTIFICATION_WM_CLOSE_REQUEST:
 		_save(false)
+		if is_instance_valid(event_window) and event_window.active: event_window.close()
 		get_tree().quit()

@@ -20,8 +20,26 @@ var invulnerable=0.0
 var rule=""
 var repair_hold=false
 var look_dir=Vector2.RIGHT
+var moving_world=false
+var epoch=0
+var gates: Array=[]
+var original_tint=Color.WHITE
+var extra_actor
+var initiator
 func start(owner,kind: String,actor,origin: Vector2):
 	game=owner;mode=kind;npc=actor;center=origin
+	initiator=actor
+	if mode=="stealth":
+		extra_actor=game.Actor.new();extra_actor.sheet=load("res://after_silence/assets/pechatai/npc/inventor.png")
+		extra_actor.npc_color=Color("c9c7dd");extra_actor.position=game.world.recover(center+Vector2(0,-30));extra_actor.enabled=false;extra_actor.scripted=true
+		game.world.sorter.add_child(extra_actor);npc=extra_actor
+	original_tint=game.world.modulate
+	if mode=="epochs":
+		for i in range(2):
+			var body=StaticBody2D.new();body.position=center+Vector2(-65 if i==0 else 65,-75)
+			var shape=CollisionShape2D.new();var rect=RectangleShape2D.new();rect.size=Vector2(12,80);shape.shape=rect
+			body.add_child(shape);add_child(body);gates.append(shape)
+		set_epoch(0)
 	npc.scripted=true
 	if mode=="evacuation":
 		for i in range(3):
@@ -33,7 +51,7 @@ func start(owner,kind: String,actor,origin: Vector2):
 func checkpoint() -> Dictionary:
 	var people=[]
 	for person in followers: people.append({"position":[person.position.x,person.position.y],"rescued":person.get_meta("rescued",false)})
-	return {"mode":mode,"elapsed":elapsed,"progress":progress,"hp":hp,"step":step,"alert":alert,"heat":heat,"recruited":recruited.duplicate(),"followers":people,"npc":[npc.position.x,npc.position.y]}
+	return {"epoch":epoch,"mode":mode,"elapsed":elapsed,"progress":progress,"hp":hp,"step":step,"alert":alert,"heat":heat,"recruited":recruited.duplicate(),"followers":people,"npc":[npc.position.x,npc.position.y]}
 func restore(data: Dictionary):
 	for key in ["elapsed","progress","alert","heat"]: set(key,float(data.get(key,0)))
 	hp=int(data.get("hp",5));step=int(data.get("step",0))
@@ -46,10 +64,16 @@ func restore(data: Dictionary):
 		followers[i].set_meta("rescued",people[i].rescued)
 		followers[i].visible=not people[i].rescued
 	last_wave=int(elapsed/2.2)-1
+	if mode=="epochs": set_epoch(int(data.get("epoch",0)))
+func set_epoch(value: int):
+	epoch=value%2
+	for i in range(gates.size()): gates[i].set_deferred("disabled",i==epoch)
+	game.world.modulate=Color("99b7af") if epoch else Color("d1c7a2")
 func route_point(i: int) -> Vector2:
 	var points=[Vector2(0,-100),Vector2(155,-100),Vector2(0,140),Vector2(0,0)]
 	if game.state.zone=="forest": points=[Vector2(0,0),Vector2(160,0),Vector2(0,160),Vector2(0,280)]
 	elif game.state.zone=="library": points=[Vector2(0,110),Vector2(120,0),Vector2(0,-130),Vector2(-110,0)]
+	elif game.state.zone.begins_with("home_"): points=[Vector2(0,-100),Vector2(140,-100),Vector2(-140,0),Vector2(0,50)]
 	return game.world.recover(center+points[posmod(i,4)])
 func move_actor(actor,goal: Vector2,dt: float,speed: float=72):
 	actor.scripted=true;actor.npc_speed=speed
@@ -57,12 +81,18 @@ func move_actor(actor,goal: Vector2,dt: float,speed: float=72):
 	actor.target=path[1] if path.size()>1 else goal
 	if actor==npc and actor.target.distance_to(actor.position)>2: look_dir=(actor.target-actor.position).normalized()
 func _physics_process(dt):
+	if game.modal and is_instance_valid(extra_actor): extra_actor.scripted=false
 	if not active or not game.state.flag("event_campaign") or game.modal or game.in_menu or game.transitions.busy: return
+	if not is_instance_valid(npc):
+		active=false;game.events_controller.prepare(false)
+		game._notify(game.t("Встреча восстановлена. Поговори с другом.","The meeting was restored. Talk to your friend."));return
 	tick(minf(dt,.05))
 func tick(dt: float):
 	if not active: return
 	elapsed+=dt;guard=maxf(0,guard-dt);invulnerable=maxf(0,invulnerable-dt)
 	var player=game.player
+	var limits=Rect2(center-Vector2(235,145),Vector2(470,330))
+	if not limits.has_point(player.position): player.position=game.world.recover(player.position.clamp(limits.position,limits.end))
 	match mode:
 		"escort":
 			if npc.position.distance_to(player.position)<135:
@@ -81,7 +111,7 @@ func tick(dt: float):
 			alert=clampf(alert+dt*(1 if seen else -.65),0,3)
 			if not seen and delta.length()<210: progress+=dt
 			if alert>=2.5: hit();alert=0
-		"switches","route":
+		"switches","epochs","route":
 			if mode=="route" and player.position.distance_to(route_point(step))<34: progress+=1;step+=1
 		"defense","dodge":
 			var wave=int(elapsed/2.2)
@@ -112,7 +142,7 @@ func tick(dt: float):
 	if elapsed>=110: lose()
 	queue_redraw()
 func goal() -> float:
-	return {"escort":4,"rhythm":30,"stealth":30,"switches":8,"route":8,"defense":14,"evacuation":3,"dodge":5,"repair":24}.get(mode,1)
+	return {"escort":4,"rhythm":30,"stealth":30,"switches":8,"epochs":8,"route":8,"defense":14,"evacuation":3,"dodge":5,"repair":24}.get(mode,1)
 func interact():
 	if not active or game.modal: return
 	var p=game.player.position
@@ -122,6 +152,9 @@ func interact():
 			else: hit()
 		"switches":
 			if p.distance_to(route_point(step))<65: progress+=1;step+=1;game.audio.ping(game.state.volume)
+		"epochs":
+			set_epoch(1-epoch)
+			if p.distance_to(route_point(step))<65: progress+=1;step+=1
 		"defense": guard=.7
 		"dodge":
 			var opening=int(elapsed/6.6)+1
@@ -147,6 +180,10 @@ func win():
 	if not active: return
 	active=false;completed.emit()
 func _exit_tree():
+	if moving_world: return
+	if is_instance_valid(initiator): initiator.scripted=false
+	if is_instance_valid(extra_actor): extra_actor.queue_free()
+	if is_instance_valid(game) and is_instance_valid(game.world): game.world.modulate=original_tint
 	if is_instance_valid(npc): npc.scripted=false;npc.modulate=Color.WHITE
 	for actor in followers:
 		if is_instance_valid(actor): actor.queue_free()
@@ -154,10 +191,12 @@ func _draw():
 	if not active: return
 	var font=game.ui.theme.default_font
 	var tint=Color("89d8ca")
-	if mode in ["escort","route","switches"]:
+	if mode in ["escort","route","switches","epochs"]:
 		var p=route_point(step)
 		draw_rect(Rect2(p-Vector2(15,10),Vector2(30,20)),tint,false,2)
 		if mode=="switches": draw_texture_rect(preload("res://after_silence/assets/art100/relay.png"),Rect2(p-Vector2(16,44),Vector2(32,40)),false)
+	if mode=="epochs":
+		for i in range(2): draw_rect(Rect2(center+Vector2(-71 if i==0 else 59,-115),Vector2(12,80)),Color(.8,.55,.4,.2 if i==epoch else .9))
 	if mode=="rhythm":
 		var ready=absf(fmod(elapsed,1.0)-.5)<.28
 		draw_arc(npc.position+Vector2(0,-75),14+fmod(elapsed,1.0)*15,0,TAU,24,tint if ready else Color("e283a0"),2)

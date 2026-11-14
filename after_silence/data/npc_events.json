@@ -1,14 +1,485 @@
 {
- "version":1,
- "events":[
- {"id":"letter","npc":"lev","zone":"town","mode":"escort","title":["Письмо Льва","Lev's letter"],"context":["Лев прячет письмо и оглядывается. Подожди рядом.","Lev hides a letter and looks around. Wait nearby."],"rule":["Иди рядом с Львом. Обходи красные вспышки.","Stay near Lev. Avoid red flashes."],"next":["Лев услышал Соню на площади.","Lev heard Sonya in the square."],"choices":[["share","Предупредить соседей","Warn the neighbors","nadia",1],["keep","Сберечь письмо","Keep the letter","lev",1]]},
- {"id":"song","npc":"sonya","zone":"town","mode":"rhythm","title":["Песня под дождём","Song in the rain"],"context":["Соня отбивает знакомый ритм. Послушай её.","Sonya taps a familiar rhythm. Listen."],"rule":["Нажимай E, когда кольцо становится бирюзовым.","Press E when the ring turns teal."],"next":["Мара узнала мелодию и ждёт в библиотеке.","Mara recognized the tune and waits in the library."],"choices":[["public","Спеть вместе","Sing together","sonya",1],["quiet","Сохранить мелодию в тайне","Keep the tune private","mara",1]]},
- {"id":"watch","npc":"mara","zone":"library","mode":"stealth","title":["Тихое наблюдение","Quiet observation"],"context":["Мара проверяет полки. Понаблюдай, не перебивая.","Mara checks the shelves. Observe without interrupting."],"rule":["Держись за спиной. Не входи в красный сектор.","Stay behind. Avoid the red vision cone."],"next":["Мара нашла схему. Теперь Лев может проверить механизм.","Mara found a diagram. Lev can test the mechanism."],"choices":[["copy","Сделать копию схемы","Copy the diagram","lev",1],["protect","Оставить оригинал Маре","Leave the original with Mara","mara",1]]},
- {"id":"machine","npc":"lev","zone":"town","mode":"switches","title":["Три контура","Three circuits"],"context":["Лев спорит с собой над схемой. Дай ему закончить.","Lev argues over his diagram. Let him finish."],"rule":["Подойди к подсвеченному механизму и нажми E.","Approach the highlighted mechanism and press E."],"next":["Механизм заработал. Павлу нужна помощь у перехода.","The mechanism works. Pavel needs help at the crossing."],"choices":[["limit","Ограничить мощность","Limit power","lev",1],["full","Дать свет соседям","Share power with neighbors","nadia",1]]},
- {"id":"shelter","npc":"pavel","zone":"town","mode":"defense","title":["Под защитой","Under protection"],"context":["Павел прикрывает проход. Он ждёт помощника.","Pavel guards the passage. He needs help."],"rule":["Встань между вспышкой и Павлом. E — защитить.","Stand between the flash and Pavel. E: shield."],"next":["Павел открыл безопасный путь для Нади.","Pavel opened a safe route for Nadia."],"choices":[["stay","Остаться на посту","Stay on watch","pavel",1],["help","Проводить жителей","Help the residents","nadia",1]]},
- {"id":"path","npc":"nadia","zone":"forest","mode":"route","title":["Тропа Нади","Nadia's trail"],"context":["Надя прислушивается к лесу. Подожди её решения.","Nadia listens to the forest. Wait for her decision."],"rule":["Пройди безопасные проходы по порядку. Красное опасно.","Follow safe passages in order. Red means danger."],"next":["Надя нашла выход. Павел собирает жителей.","Nadia found the exit. Pavel gathers the residents."],"choices":[["mark","Запомнить безопасный путь","Remember the safe trail","pavel",1],["lead","Повести Надю первой","Let Nadia lead","nadia",1]]},
- {"id":"evacuate","npc":"pavel","zone":"town","mode":"evacuation","title":["До закрытия ворот","Before the gate closes"],"context":["Павел зовёт жителей по именам. Помоги собраться.","Pavel calls the residents. Help them gather."],"rule":["E рядом с жителем. Проведи троих к безопасной зоне.","E near a resident. Escort three to the safe area."],"next":["Все вышли. Соня заметила наблюдателя в лесу.","Everyone got out. Sonya saw the Watcher in the forest."],"choices":[["together","Держаться вместе","Stay together","pavel",1],["return","Вернуться за отставшими","Return for stragglers","sonya",1]]},
- {"id":"watcher","npc":"sonya","zone":"forest","mode":"dodge","title":["Не отводи взгляд","Keep watching"],"context":["Соня напугана, но остаётся рядом. Не торопи её.","Sonya is frightened but stays. Give her a moment."],"rule":["Уклоняйся от полос. E рядом с Соней после трёх атак.","Dodge the lanes. E near Sonya after three attacks."],"next":["Наблюдатель отступил. Надя готова восстановить запись.","The Watcher retreated. Nadia can restore the record."],"choices":[["trust","Довериться Соне","Trust Sonya","sonya",2],["safe","Увести Соню в укрытие","Lead Sonya to shelter","nadia",1]]},
- {"id":"restore","npc":"nadia","zone":"library","mode":"repair","title":["После тишины","After Silence"],"context":["Надя раскладывает обрывки. Дождись её кивка.","Nadia lays out the fragments. Wait for her nod."],"rule":["Удерживай E рядом с Надей. Отпускай, когда шкала красная.","Hold E near Nadia. Release when the gauge turns red."],"next":["Город сохранил память о вашей помощи.","The town remembers your help."],"choices":[["public","Открыть запись всем","Share the record","mara",2],["private","Сохранить имена в тайне","Keep the names private","sonya",2]]}
- ]
+  "version": 2,
+  "events": [
+    {
+      "id": "letter",
+      "npc": "lev",
+      "zone": "town",
+      "mode": "escort",
+      "title": [
+        "Письмо Льва",
+        "Lev's letter"
+      ],
+      "context": [
+        "Проведи Льва через меняющиеся улицы.",
+        "Escort Lev through the shifting streets."
+      ],
+      "rule": [
+        "Иди рядом с Львом. Обходи красные вспышки.",
+        "Stay near Lev. Avoid red flashes."
+      ],
+      "next": [
+        "Теперь гость праздника. Открой «Путешествие»: там есть путь.",
+        "Next: Festival guest. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Доставить письмо вместе",
+          "Deliver the letter together",
+          "lev",
+          1
+        ],
+        [
+          "share",
+          "Попросить Надю передать письмо",
+          "Ask Nadia to deliver the letter",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "square",
+      "requires": ""
+    },
+    {
+      "id": "guest",
+      "npc": "mara",
+      "zone": "library",
+      "mode": "stealth",
+      "title": [
+        "Гость праздника",
+        "Festival guest"
+      ],
+      "context": [
+        "Мара заметила гостя. Проследи за ним незаметно.",
+        "Mara spotted a guest. Follow without being seen."
+      ],
+      "rule": [
+        "Держись за спиной. Не входи в красный сектор.",
+        "Stay behind. Avoid the red vision cone."
+      ],
+      "next": [
+        "Теперь комнаты двух времён. Открой «Путешествие»: там есть путь.",
+        "Next: Rooms of two eras. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Дать гостю время объясниться",
+          "Give the guest time to explain",
+          "mara",
+          1
+        ],
+        [
+          "share",
+          "Попросить Надю поговорить с гостем",
+          "Ask Nadia to talk to the guest",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "square",
+      "requires": "letter"
+    },
+    {
+      "id": "epochs",
+      "npc": "sonya",
+      "zone": "town",
+      "mode": "epochs",
+      "title": [
+        "Комнаты двух времён",
+        "Rooms of two eras"
+      ],
+      "context": [
+        "Дом Сони меняется. Помоги найти безопасную эпоху.",
+        "Sonya's house shifts. Find a safe era."
+      ],
+      "rule": [
+        "E меняет эпоху. Пройди подсвеченные комнаты.",
+        "E changes the era. Visit the highlighted rooms."
+      ],
+      "next": [
+        "Теперь сердце мастерской. Открой «Путешествие»: там есть путь.",
+        "Next: Workshop heart. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Сохранить комнату прошлого",
+          "Keep the room of the past",
+          "sonya",
+          1
+        ],
+        [
+          "share",
+          "Оставить место для новой жизни",
+          "Leave room for a new life",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "home_sonya",
+      "requires": "guest"
+    },
+    {
+      "id": "machine",
+      "npc": "lev",
+      "zone": "library",
+      "mode": "repair",
+      "title": [
+        "Сердце мастерской",
+        "Workshop heart"
+      ],
+      "context": [
+        "Лев ждёт в мастерской. Механизм перегревается.",
+        "Lev waits in his workshop. The machine overheats."
+      ],
+      "rule": [
+        "Удерживай E рядом со Львом. Отпускай, когда шкала красная.",
+        "Hold E near Lev. Release when the gauge turns red."
+      ],
+      "next": [
+        "Теперь защитники моста. Открой «Путешествие»: там есть путь.",
+        "Next: Bridge defenders. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Отдать Льву управление",
+          "Let Lev run the machine",
+          "lev",
+          1
+        ],
+        [
+          "share",
+          "Позвать Надю проверить безопасность",
+          "Ask Nadia to check safety",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "workshop",
+      "requires": "epochs"
+    },
+    {
+      "id": "bridge",
+      "npc": "pavel",
+      "zone": "town",
+      "mode": "defense",
+      "title": [
+        "Защитники моста",
+        "Bridge defenders"
+      ],
+      "context": [
+        "Павел открыл проход. Прикрой мост вместе с ним.",
+        "Pavel opened the crossing. Guard the bridge together."
+      ],
+      "rule": [
+        "Встань между вспышкой и Павлом. E — защитить.",
+        "Stand between the flash and Pavel. E: shield."
+      ],
+      "next": [
+        "Теперь ритм доверия. Открой «Путешествие»: там есть путь.",
+        "Next: Rhythm of trust. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Остаться с Павлом на мосту",
+          "Stay with Pavel on the bridge",
+          "pavel",
+          1
+        ],
+        [
+          "share",
+          "Отправить Надю за подмогой",
+          "Send Nadia for help",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "bridge",
+      "requires": "machine"
+    },
+    {
+      "id": "memory",
+      "npc": "child",
+      "zone": "town",
+      "mode": "rhythm",
+      "title": [
+        "Ритм доверия",
+        "Rhythm of trust"
+      ],
+      "context": [
+        "Ребёнок боится говорить. Повтори знакомый ритм.",
+        "The child is afraid to speak. Repeat a familiar rhythm."
+      ],
+      "rule": [
+        "Нажимай E, когда кольцо становится бирюзовым.",
+        "Press E when the ring turns teal."
+      ],
+      "next": [
+        "Теперь сын из будущего. Открой «Путешествие»: там есть путь.",
+        "Next: Son from tomorrow. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Выслушать воспоминание ребёнка",
+          "Listen to the child's memory",
+          "child",
+          1
+        ],
+        [
+          "share",
+          "Позвать Надю и рассказать вместе",
+          "Ask Nadia to share the memory",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "square",
+      "requires": "bridge"
+    },
+    {
+      "id": "garden",
+      "npc": "child",
+      "zone": "town",
+      "mode": "escort",
+      "title": [
+        "Сын из будущего",
+        "Son from tomorrow"
+      ],
+      "context": [
+        "Проведи сына Нади из будущего через сад.",
+        "Lead Nadia's future son through the garden."
+      ],
+      "rule": [
+        "Иди рядом с ребёнком. Обходи красные вспышки.",
+        "Stay near the child. Avoid red flashes."
+      ],
+      "next": [
+        "Теперь не одна против толпы. Открой «Путешествие»: там есть путь.",
+        "Next: Not alone. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Позволить ребёнку выбрать тропу",
+          "Let the child choose the path",
+          "child",
+          1
+        ],
+        [
+          "share",
+          "Позвать Надю встретить сына",
+          "Ask Nadia to meet her son",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "garden",
+      "requires": "memory"
+    },
+    {
+      "id": "crowd",
+      "npc": "nadia",
+      "zone": "town",
+      "mode": "defense",
+      "title": [
+        "Не одна против толпы",
+        "Not alone"
+      ],
+      "context": [
+        "Надю окружили встревоженные соседи. Помоги ей.",
+        "Worried neighbors surround Nadia. Help her."
+      ],
+      "rule": [
+        "Встань между вспышкой и Надей. E — защитить.",
+        "Stand between the flash and Nadia. E: shield."
+      ],
+      "next": [
+        "Теперь поезд без рельсов. Открой «Путешествие»: там есть путь.",
+        "Next: Train without tracks. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Помочь Наде ответить спокойно",
+          "Help Nadia answer calmly",
+          "nadia",
+          1
+        ],
+        [
+          "share",
+          "Попросить Льва развести толпу",
+          "Ask Lev to calm the crowd",
+          "lev",
+          1
+        ]
+      ],
+      "location": "square",
+      "requires": "garden"
+    },
+    {
+      "id": "train",
+      "npc": "pavel",
+      "zone": "town",
+      "mode": "evacuation",
+      "title": [
+        "Поезд без рельсов",
+        "Train without tracks"
+      ],
+      "context": [
+        "Пассажиры ждут у пристани. Помоги им выйти.",
+        "Passengers wait by the pier. Help them leave."
+      ],
+      "rule": [
+        "E рядом с жителем. Проведи троих к безопасной зоне.",
+        "E near a resident. Escort three to the safe area."
+      ],
+      "next": [
+        "Теперь столкновение городов. Открой «Путешествие»: там есть путь.",
+        "Next: Colliding towns. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Вывести пассажиров с Павлом",
+          "Lead passengers out with Pavel",
+          "pavel",
+          1
+        ],
+        [
+          "share",
+          "Позвать Надю к испуганным",
+          "Ask Nadia to comfort passengers",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "station",
+      "requires": "crowd"
+    },
+    {
+      "id": "collision",
+      "npc": "mara",
+      "zone": "forest",
+      "mode": "route",
+      "title": [
+        "Столкновение городов",
+        "Colliding towns"
+      ],
+      "context": [
+        "Мара нашла путь между двумя версиями библиотеки.",
+        "Mara found a route between two versions of the library."
+      ],
+      "rule": [
+        "Пройди безопасные проходы по порядку. Красное опасно.",
+        "Follow safe passages in order. Red means danger."
+      ],
+      "next": [
+        "Теперь рука алины. Открой «Путешествие»: там есть путь.",
+        "Next: Alina's hand. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Сберечь записи обоих городов",
+          "Keep records of both towns",
+          "mara",
+          1
+        ],
+        [
+          "share",
+          "Отдать Наде письма жителей",
+          "Give Nadia the residents' letters",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "library",
+      "requires": "train"
+    },
+    {
+      "id": "alina",
+      "npc": "alina",
+      "zone": "forest",
+      "mode": "dodge",
+      "title": [
+        "Рука Алины",
+        "Alina's hand"
+      ],
+      "context": [
+        "Алина видна в разломе. Не оставляй её одну.",
+        "Alina appears in the rift. Stay with her."
+      ],
+      "rule": [
+        "Уклоняйся от полос. E рядом с Алиной после трёх атак.",
+        "Dodge the lanes. E near Alina after three attacks."
+      ],
+      "next": [
+        "Теперь последний берег. Открой «Путешествие»: там есть путь.",
+        "Next: The final shore. Travel shows the route."
+      ],
+      "choices": [
+        [
+          "care",
+          "Остаться рядом с Алиной",
+          "Stay with Alina",
+          "alina",
+          1
+        ],
+        [
+          "share",
+          "Позвать Надю встретить Алину",
+          "Ask Nadia to welcome Alina",
+          "nadia",
+          1
+        ]
+      ],
+      "location": "rift",
+      "requires": "collision"
+    },
+    {
+      "id": "shore",
+      "npc": "sonya",
+      "zone": "town",
+      "mode": "evacuation",
+      "title": [
+        "Последний берег",
+        "The final shore"
+      ],
+      "context": [
+        "Последние жители ждут у воды. Выведи всех вместе.",
+        "The last residents wait by the water. Lead them out."
+      ],
+      "rule": [
+        "E рядом с жителем. Проведи троих к безопасной зоне.",
+        "E near a resident. Escort three to the safe area."
+      ],
+      "next": [
+        "Берег в безопасности.",
+        "The shore is safe."
+      ],
+      "choices": [
+        [
+          "together",
+          "Сохранить оба времени",
+          "Keep both eras",
+          "alina",
+          2
+        ],
+        [
+          "home",
+          "Вернуть всех домой",
+          "Bring everyone home",
+          "sonya",
+          2
+        ]
+      ],
+      "location": "shore",
+      "requires": "alina"
+    }
+  ]
 }

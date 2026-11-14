@@ -214,6 +214,7 @@ func test_boss_telegraph_jump_and_three_counters():
 		assert_true(battle.counter())
 	assert_false(battle.active)
 	battle.queue_free()
+	await get_tree().process_frame
 
 func test_ending_achievements_match_branch():
 	var achievements=load("res://after_silence/core/achievements.gd")
@@ -236,3 +237,25 @@ func test_quest_steps_follow_chapter_progress():
 	assert_false(quests.steps()[0][0])
 	state.set_flag("mara_met")
 	assert_true(quests.steps()[0][0])
+
+func test_event_checkpoint_rejects_corruption_without_mutation():
+	var activity={"mode":"epochs","elapsed":17.0,"progress":2.0,"hp":5,"step":2,"alert":0.0,"heat":0.0,"npc":[320,310],"epoch":1}
+	state.event_state={"version":2,"index":2,"phase":"suspended","activity":activity}
+	var data=state.to_data()
+	var copy=State.new()
+	assert_true(copy.restore(data))
+	assert_eq(copy.event_state.activity.epoch,1)
+	for value in ["2",3,{},false]:
+		var corrupt=data.duplicate(true)
+		corrupt.event_state.version=value
+		assert_false(copy.restore(corrupt))
+		assert_eq(copy.to_data(),data)
+	for value in [-1,2,"past",[],{}]:
+		var corrupt=data.duplicate(true)
+		corrupt.event_state.activity.epoch=value
+		var before=copy.to_data()
+		assert_false(copy.restore(corrupt))
+		assert_eq(copy.to_data(),before)
+	var old=data.duplicate(true)
+	old.event_state.erase("version");old.event_state.activity.erase("epoch")
+	assert_true(copy.restore(old))

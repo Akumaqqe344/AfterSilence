@@ -9,11 +9,16 @@ func _ready():
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 func unlocked(zone: String) -> bool:
+	if game.state.flag("event_campaign"): return game.journey.zone_allowed(zone)
 	return not game.state.flag("rift_mode") or game.state.flag("rift_finished") or game.state.flag("district_"+zone) or game.state.flag("rift_q03_done" if zone=="orchard" else "rift_q05_done")
 
 func populate():
 	var world=game.world
 	if game.state.flag("event_campaign"):
+		if world.zone=="town":
+			world.spot("visit_orchard",Vector2(1710,500),"none")
+			world.spot("visit_harbor",Vector2(600,1200),"none")
+		elif world.zone in ["orchard","harbor"]: world.spot("district_return",Vector2(600,740),"none")
 		if is_instance_valid(game.living): game.living.populate()
 		return
 	for request in data.requests:
@@ -60,10 +65,12 @@ func count(request: Dictionary) -> int:
 	return value
 
 func handle(id: String) -> bool:
-	if id=="village_hints": game._quest_help();return true
+	if id=="village_hints": game.journey.open() if game.state.flag("event_campaign") else game._quest_help();return true
 	if id.begins_with("hamlet_house_"):
 		var i=int(id.trim_prefix("hamlet_house_"))
 		if i<0 or i>4: return true
+		if game.state.flag("event_campaign") and not game.journey.zone_allowed(game.Homes.IDS[i%4]):
+			game._notify(game.t("Путь пока закрыт. T — причина открытия.","This route is closed. T shows how it opens."));return true
 		game.state.set_flag("hamlet_return_"+str(i))
 		game._travel(game.Homes.IDS[i%4],Vector2(320,395));return true
 	if id=="leave_home":
@@ -82,6 +89,8 @@ func handle(id: String) -> bool:
 	if id.begins_with("district_house_"):
 		var index=int(id.trim_prefix("district_house_"))
 		if index<0 or index>2: return true
+		if game.state.flag("event_campaign") and not game.journey.zone_allowed(game.Homes.IDS[index]):
+			game._notify(game.t("Путь пока закрыт. T — причина открытия.","This route is closed. T shows how it opens."));return true
 		game.state.set_flag("visit_"+game.state.zone+"_"+str(index))
 		game._travel(game.Homes.IDS[index],Vector2(320,395));return true
 	if id=="leave_home":

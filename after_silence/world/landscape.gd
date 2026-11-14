@@ -26,6 +26,11 @@ static func build(world):
 			if not wet and start>=0:
 				world.boundary(Rect2(start,y,x-start,16));start=-1
 	var buildings=[]
+	var stages=[]
+	if world.story_mode:
+		var places=JSON.parse_string(FileAccess.get_file_as_string("res://after_silence/data/locations.json"))
+		for place in places.values():
+			if place.zone==world.zone: stages.append(Vector2(place.point[0],place.point[1]))
 	for prop in world.sorter.get_children():
 		if prop.has_meta("building") or prop.kind in ["shop_front","gazebo"]: buildings.append(Rect2(prop.position-Vector2(104,170),Vector2(208,220)))
 	# Seeded blue-noise-like sampling: no grid rows, rectangular clearing or
@@ -34,6 +39,8 @@ static func build(world):
 		for x in range(45,int(world.dimensions.x)-20,64):
 			var seed_value=posmod(x*73856093 ^ y*19349663,997)
 			var p=Vector2(x+seed_value%41-20,y+(seed_value/41)%37-18)
+			# Rounded clearings leave room for the real event actors and their cues.
+			if stages.any(func(center):return ((p-center)/Vector2(330,260)).length()<1): continue
 			if world.on_path(p,42) or Water.depth(world.zone,p)>-36: continue
 			if buildings.any(func(r):return r.has_point(p)): continue
 			if world.obstacles.any(func(r):return r.grow(20).has_point(p)): continue

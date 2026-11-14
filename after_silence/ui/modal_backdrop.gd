@@ -6,6 +6,7 @@ const TEAL=Color("69c5bf")
 
 var menu_mode=false
 var english=false
+var journey_mode=false
 var age=0.0
 var tick=0
 
@@ -49,4 +50,5 @@ func _draw() -> void:
 	var footer="ПАМЯТЬ / ЭПИЗОД I" if menu_mode else "ПОСЛЕ ТИШИНЫ / АРХИВ"
 	if english:
 		footer="MEMORY / EPISODE I" if menu_mode else "AFTER SILENCE / ARCHIVE"
+	if journey_mode: footer="AFTER SILENCE / THE JOURNEY" if english else "ПОСЛЕ ТИШИНЫ / ПУТЕШЕСТВИЕ"
 	draw_string(get_theme_default_font(),Vector2(25,size.y-17),footer,HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("75928b"))

@@ -41,6 +41,7 @@ func initialize():
 func position_of(r: Dictionary) -> Vector2:
 	return Vector2(r.x,r.y)
 func visible_here(id: String, zone: String) -> bool:
+	if state.flag("event_campaign") and state.flag("event_left_"+id): return false
 	if id=="sonya" and state.flag("rift_finished"): return state.residents[id].zone==zone
 	if id=="sonya" and not state.flag("returned"): return zone=="forest" and state.echo
 	return state.residents[id].zone==zone
@@ -60,6 +61,7 @@ func update(game, dt: float, enabled: bool):
 		return
 	var night=state.clock>=20 or state.clock<7
 	for id in PROFILE:
+		if state.flag("event_campaign") and game.events_controller.owns(id): continue
 		if id=="sonya" and not state.flag("returned") and not state.flag("rift_finished"):
 			if game.actors.has(id): _wander(game,id,Vector2(1100,280),dt)
 			continue

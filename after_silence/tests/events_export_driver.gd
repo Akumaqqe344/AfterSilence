@@ -7,11 +7,11 @@ func check(ok: bool,label: String):
 	if not ok: failures+=1;push_error(label)
 func _ready(): call_deferred("run")
 func run():
-	game.event_saves.path="user://qa_events_export130.json"
+	game.event_saves.path="user://qa_events_export140.json"
 	game._new_event_game();game.set_physics_process(false)
 	var director=game.events_controller
 	director.set_physics_process(false)
-	check(director.events.size()==9,"packed nine NPC events")
+	check(director.events.size()==12,"packed twelve NPC events")
 	for event in director.events:
 		check(event.choices.size()>=2,"packed alternatives "+event.id)
 		check(event.mode in preload("res://after_silence/core/event_progress.gd").MODES,"packed activity "+event.mode)
@@ -28,9 +28,11 @@ func run():
 	director.activity.set_physics_process(false)
 	director.activity.hp=0;director.activity.tick(.01)
 	check(director.phase=="failure","packed defeat")
+	game.body.visible_characters=-1
 	game.buttons.retry.pressed.emit()
 	check(director.activity.hp==5,"packed retry")
 	director.activity.active=false
+	game.event_window.close()
 	game.audio.shutdown();game.queue_free()
 	await get_tree().process_frame;await get_tree().create_timer(.3).timeout
 	print("NPC EVENTS EXPORT QA: %d checks, %d failures"%[checks,failures])

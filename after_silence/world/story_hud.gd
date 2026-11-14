@@ -3,7 +3,7 @@ var game
 var actions: Array[Button]=[]
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
-	for entry in [["J","Журнал","Journal","_journal"],["I","Предметы","Inventory","_inventory"],["Tab","Отголосок","Echo","_shift"],["Esc","Пауза","Pause","_pause"]]:
+	for entry in [["T","Путешествие","Travel","_travel_window"],["J","Журнал","Journal","_journal"],["I","Предметы","Inventory","_inventory"],["Esc","Пауза","Pause","_pause"]]:
 		var button=Button.new()
 		button.position=Vector2(516+actions.size()*29,331)
 		button.size=Vector2(26,20)
@@ -26,7 +26,9 @@ func _process(_dt):
 	visible=not game.modal and not game.in_menu and not game.rift.active
 	for button in actions:
 		var entry=button.get_meta("entry")
-		button.visible=not game.state.flag("rift_mode") or entry[0] in ["J","Esc"]
+		button.visible=(not game.state.flag("rift_mode") or entry[0] in ["J","Esc"]) or (entry[0]=="T" and game.state.flag("event_campaign"))
+		if entry[0]=="T": button.visible=game.state.flag("event_campaign")
+		if game.state.flag("event_campaign") and entry[0]=="I": button.visible=true
 		button.text=entry[0]
 		button.tooltip_text=game.t(entry[1],entry[2])
 		button.disabled=game.transitions.busy or game.cutscenes.running
