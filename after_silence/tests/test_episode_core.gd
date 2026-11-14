@@ -228,3 +228,11 @@ func test_ending_achievements_match_branch():
 	achievements.evaluate(sealed)
 	assert_true("sealed_end" in sealed.achievements)
 	assert_false("public_end" in sealed.achievements)
+func test_quest_steps_follow_chapter_progress():
+	var quests=Quests.new(state)
+	assert_eq(quests.steps().size(),1)
+	state.set_flag("nadia_met")
+	assert_eq(quests.steps().size(),4)
+	assert_false(quests.steps()[0][0])
+	state.set_flag("mara_met")
+	assert_true(quests.steps()[0][0])

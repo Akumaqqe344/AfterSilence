@@ -21,6 +21,15 @@ func target_npc() -> String:
 		if not state.flag("mara_review"): return "mara"
 		if "coverup" in state.links and "witness" in state.links: return "pavel"
 	return ""
+func steps() -> Array:
+	match stage():
+		1: return [[state.flag("nadia_met"),"Узнать у Нади, кто помнит Алину","Ask Nadia who remembers Alina"]]
+		2: return [[state.flag("mara_met"),"Получить доступ к архиву Мары","Gain access to Mara's archive"],["date" in state.links,"Связать афишу и часы","Link the poster and the clock"],[state.flag("catalog"),"Расшифровать порядок в каталоге","Decode the catalogue sequence"],[state.flag("clock_solved"),"Восстановить время отключения сигнала","Restore the time of the signal cut"]]
+		3: return [[state.flag("boss_relay_defeated"),"Пережить атаки сторожа реле и открыть его контур","Survive the relay guardian and open its circuit"],[state.flag("fuse_given"),"Получить предохранитель у Льва","Get a fuse from Lev"],[state.flag("forest_power"),"Включить насос без тревожного звонка","Power the pump without ringing the bell"]]
+		4: return [[state.echo,"Перейти в отголосок леса","Enter the forest echo"],[state.flag("sonya_met"),"Выслушать Соню и решить, защищать ли её имя","Hear Sonya and decide whether to protect her name"]]
+		5: return [[state.flag("returned"),"Вернуться в город, разорвав преследование","Reach town and break the pursuit"]]
+		6: return [[state.flag("nadia_review"),"Сверить рассказ Сони с карточкой Нади","Compare Sonya's story with Nadia's chart"],["survival" in state.links,"Проверить, что Алина пережила отключение","Establish that Alina survived the signal cut"],[state.flag("lev_review") and state.flag("mara_review"),"Записать версии Льва и Мары","Record Lev's and Mara's accounts"],["coverup" in state.links and "witness" in state.links,"Связать список, фотографию и подпись","Connect the register, photo and signature"],[state.flag("boss_watcher_defeated"),"Разорвать сигнал наблюдателя","Break the Watcher's signal"]]
+		_: return [[state.flag("ending"),"История завершена; проверьте достижения","Story complete; review achievements"]]
 func objective() -> Array:
 	if stage()==3 and not state.flag("boss_relay_defeated"): return ["Сторож реле: избегайте подсвеченных атак, подойдите после третьей и нажмите E","Relay guardian: dodge marked attacks; after the third, approach and press E"]
 	if stage()==6:

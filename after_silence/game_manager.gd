@@ -709,7 +709,9 @@ func _light_socket():
 func _journal():
 	var names=PackedStringArray()
 	for id in state.links: names.append(_object_name(id))
-	var text=Story.pair(quests.objective(),state.language)+"\n"+t("Связи: ","Connections: ")+", ".join(names)+"\n"+t("Выберите две разные улики: сначала одну, затем вторую.","Choose one clue, then another.")
+	var text=t("ЦЕЛЬ · ","OBJECTIVE · ")+Story.pair(quests.objective(),state.language)+"\n\n"
+	for step in quests.steps(): text+=("◆  " if step[0] else "◇  ")+t(step[1],step[2])+"\n"
+	text+="\n"+t("Связи: ","Connections: ")+", ".join(names)+"\n"+t("Выберите две разные улики: сначала одну, затем вторую.","Choose one clue, then another.")
 	var actions=[]
 	for id in state.evidence: actions.append(choice(id,_object_name(id),_object_name(id),func():_select_clue(id)))
 	actions.append(choice("history","История разговоров","Dialogue history",_history))
