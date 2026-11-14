@@ -22,6 +22,7 @@ var jump_duration=.44
 var jump_peak=28.0
 var elevation=0.0
 var clips: Dictionary={}
+var npc_speed=30.0
 var npc_anchor=Vector2(32,92)
 var portrait=Rect2(8,0,48,48)
 func _ready():
@@ -65,7 +66,7 @@ func _physics_process(dt):
 			direction=Input.get_vector("as_left","as_right","as_up","as_down")
 			running=Input.is_physical_key_pressed(KEY_SHIFT)
 		elif position.distance_to(target)>3: direction=position.direction_to(target)
-	var speed=SPEED*(1.65 if running else 1.0) if is_player else 26.0
+	var speed=SPEED*(1.65 if running else 1.0) if is_player else npc_speed
 	if not enabled and not scripted: velocity=Vector2.ZERO
 	elif is_player and not scripted:
 		var acceleration=(ACCEL if direction!=Vector2.ZERO else DECEL)*dt

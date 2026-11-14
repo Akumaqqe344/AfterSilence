@@ -1,6 +1,7 @@
 extends Node2D
 const Prop = preload("res://after_silence/world/prop.gd")
 const Ground = preload("res://after_silence/world/ground_detail.gd")
+const Homes = preload("res://after_silence/world/homes.gd")
 var dimensions = Vector2(1280,960)
 var sorter: Node2D
 var terrain: TileMapLayer
@@ -17,7 +18,7 @@ func build(id: String, distorted: bool):
 	for child in get_children(): child.queue_free()
 	obstacles.clear()
 	interactables.clear()
-	dimensions = {"town":Vector2(1280,960),"library":Vector2(960,720),"forest":Vector2(1504,1120)}[id]
+	dimensions = {"town":Vector2(1280,960),"library":Vector2(960,720),"forest":Vector2(1504,1120)}.get(id,Vector2(640,480))
 	paths=[]
 	if id=="town":
 		paths=[[Vector2(600,170),Vector2(600,850),24.0],[Vector2(260,500),Vector2(1050,500),24.0]]
@@ -34,8 +35,8 @@ func build(id: String, distorted: bool):
 	add_child(sorter)
 	for y in range(int(dimensions.y/16)):
 		for x in range(int(dimensions.x/16)):
-			var tile = 2 if id=="library" else 0
-			if id!="library" and on_path(Vector2(x*16+8,y*16+8)): tile=1
+			var tile = 2 if id=="library" or id in Homes.IDS else 0
+			if id in ["town","forest"] and on_path(Vector2(x*16+8,y*16+8)): tile=1
 			terrain.set_cell(Vector2i(x,y),tile,Vector2i(x%20,y%20))
 	var detail=Ground.new()
 	detail.zone=id
@@ -51,7 +52,8 @@ func build(id: String, distorted: bool):
 	boundary(Rect2(dimensions.x-24,0,24,dimensions.y))
 	if id=="town": build_town()
 	elif id=="library": build_library()
-	else: build_forest()
+	elif id=="forest": build_forest()
+	else: Homes.build(self)
 	decorate()
 	add_light(Vector2(480,390) if id=="library" else Vector2(750,560) if id=="forest" else Vector2(600,445))
 	grid = AStarGrid2D.new()
@@ -109,12 +111,13 @@ func prop(kind: String, p: Vector2, variant: int=0):
 		var file="sanctuary" if kind=="well" else "rock" if kind=="stone" else kind
 		node.tex=load("res://after_silence/assets/pechatai/world/"+file+".png")
 		node.size=Vector2(60,40) if kind in ["rock","stone"] else Vector2(100,70) if kind=="well" else Vector2(40,20)
-	elif kind in ["shelf","mirror","lamp","desk","rug","plant","window","clock"]:
+	elif kind in ["shelf","mirror","lamp","desk","rug","plant","window","clock","bed","table","chair","workbench"]:
 		var file="bookshelf" if kind=="shelf" else kind
 		node.tex=load("res://after_silence/assets/pechatai/interior/"+file+".png")
 		node.size=node.tex.get_size()*2
 		if kind=="clock": node.size=Vector2(38,62)
 	sorter.add_child(node)
+	if kind=="rug": node.z_index=-1
 	if kind=="house": boundary(Rect2(p+Vector2(-74,-68),Vector2(148,68)))
 	elif kind=="shelf": boundary(Rect2(p+Vector2(-38,-16),Vector2(76,16)))
 	elif kind=="tree": boundary(Rect2(p+Vector2(-6,-5),Vector2(12,9)))
@@ -140,7 +143,7 @@ func add_light(p: Vector2):
 	light.energy=.7 if echo else .35
 	add_child(light)
 func decorate():
-	if zone=="library": return
+	if zone!="town" and zone!="forest": return
 	for y in range(80,int(dimensions.y)-50,64):
 		for x in range(150,int(dimensions.x)-100,92):
 			var p=Vector2(x+posmod(y,31),y+posmod(x,17))
@@ -157,6 +160,7 @@ func build_town():
 		var p=[Vector2(260,300),Vector2(960,300),Vector2(260,740),Vector2(960,740)][i]
 		if echo: p+=Vector2(40 if i%2 else -40,32)
 		prop("house",p,i)
+		spot(Homes.IDS[i],p+Vector2(0,28),"none")
 	for y in range(90,920,76):
 		for x in [90,1150]: prop("tree",Vector2(x,y))
 	prop("well",Vector2(600,445))
@@ -202,12 +206,13 @@ func walkable(p: Vector2) -> bool:
 	var c=cell(p)
 	return grid.is_in_boundsv(c) and not grid.is_point_solid(c)
 func recover(p: Vector2) -> Vector2:
+	p=p.clamp(Vector2(32,32),dimensions-Vector2(32,32))
 	if walkable(p): return p
 	for ring in range(1,20):
 		for angle in range(16):
 			var q=p+Vector2.from_angle(angle*TAU/16)*ring*16
 			if walkable(q): return q
-	return Vector2(600,500) if zone=="town" else Vector2(480,580) if zone=="library" else Vector2(700,940)
+	return Vector2(320,395) if zone in Homes.IDS else Vector2(600,500) if zone=="town" else Vector2(480,580) if zone=="library" else Vector2(700,940)
 func path_between(a: Vector2,b: Vector2) -> PackedVector2Array:
 	var start=cell(recover(a))
 	var end=cell(recover(b))

@@ -158,3 +158,25 @@ func test_quest_progression():
 	assert_eq(quests.stage(),6)
 	state.set_flag("ending")
 	assert_eq(quests.stage(),7)
+func test_house_and_resident_save_round_trip():
+	state.zone="home_lev"
+	state.position=Vector2(320,350)
+	NPCs.new(state).initialize()
+	state.residents.nadia.zone="home_nadia"
+	var copy=State.new()
+	assert_true(copy.restore(state.to_data()))
+	assert_eq(copy.zone,"home_lev")
+	assert_eq(copy.residents,state.residents)
+func test_invalid_resident_does_not_mutate_state():
+	var before=state.to_data()
+	for resident in [{"zone":"home_nadia"},{"zone":"town","x":[],"y":300},{"zone":"missing","x":200,"y":200}]:
+		var data=state.to_data()
+		data.residents={"nadia":resident}
+		assert_false(state.restore(data))
+		assert_eq(state.to_data(),before)
+func test_old_saves_without_residents_are_accepted():
+	var data=state.to_data()
+	data.erase("residents")
+	assert_true(state.restore(data))
+	NPCs.new(state).initialize()
+	assert_eq(state.residents.size(),5)

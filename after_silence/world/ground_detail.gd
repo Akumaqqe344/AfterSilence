@@ -5,6 +5,12 @@ var dimensions=Vector2.ZERO
 var water=preload("res://after_silence/assets/pechatai/world/water.png")
 var rug=preload("res://after_silence/assets/pechatai/interior/rug.png")
 func _draw():
+	if zone.begins_with("home_"):
+		for rect in [Rect2(0,0,640,64),Rect2(0,64,64,416),Rect2(576,64,64,416),Rect2(64,448,512,32)]: draw_rect(rect,Color("172126"))
+		for rect in [Rect2(64,64,512,16),Rect2(64,80,16,352),Rect2(560,80,16,352),Rect2(80,432,208,16),Rect2(352,432,208,16)]:
+			draw_rect(rect,Color("574b45"))
+			draw_rect(Rect2(rect.position,Vector2(rect.size.x,3)),Color("bb9b79"))
+		return
 	if zone=="library":
 		draw_rect(Rect2(80,75,800,20),Color("574b45"))
 		draw_rect(Rect2(80,95,800,36),Color("a09178"))

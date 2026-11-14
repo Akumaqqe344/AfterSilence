@@ -12,6 +12,7 @@ const World=preload("res://after_silence/world/world_view.gd")
 const Actor=preload("res://after_silence/world/pechatai_actor.gd")
 const Enemy=preload("res://after_silence/world/pursuer.gd")
 const Story=preload("res://after_silence/story.gd")
+const Homes=preload("res://after_silence/world/homes.gd")
 const Review=preload("res://after_silence/story_review.gd")
 const Cutscenes=preload("res://after_silence/core/cutscene_director.gd")
 const Atmosphere=preload("res://after_silence/world/atmosphere.gd")
@@ -126,19 +127,24 @@ func _setup_ui():
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(hud)
 	objective=Label.new()
-	objective.position=Vector2(138,15)
-	objective.size=Vector2(480,37)
-	objective.add_theme_font_size_override("font_size",13)
+	objective.position=Vector2(12,12)
+	objective.size=Vector2(470,30)
+	objective.add_theme_font_size_override("font_size",12)
+	objective.add_theme_color_override("font_outline_color",Color("172126"))
+	objective.add_theme_constant_override("outline_size",4)
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(objective)
 	status=Label.new()
+	status.hide()
 	status.position=Vector2(138,55)
 	status.add_theme_font_size_override("font_size",11)
 	ui.add_child(status)
 	hint=Label.new()
-	hint.position=Vector2(24,294)
+	hint.position=Vector2(24,327)
 	hint.size=Vector2(592,23)
 	hint.add_theme_font_size_override("font_size",12)
+	hint.add_theme_color_override("font_outline_color",Color("172126"))
+	hint.add_theme_constant_override("outline_size",4)
 	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(hint)
@@ -293,6 +299,7 @@ func _travel(id: String,p: Vector2):
 	shade.hide()
 	await transitions.transition(self,veil,func(): _build_world(id,p))
 	_save(false)
+	if id in Homes.IDS: _notify(Story.pair(Homes.NAMES[Homes.IDS.find(id)],state.language))
 func _build_world(id: String,p: Vector2):
 	if is_instance_valid(player):
 		player.get_parent().remove_child(player)
@@ -325,13 +332,7 @@ func _build_world(id: String,p: Vector2):
 	world.add_child(atmosphere)
 	world.modulate=Color("7b93b3") if state.echo else Color("b5c6b6")
 	actors.clear()
-	if id=="town":
-		_npc("nadia",Vector2(650,540),"res://after_silence/assets/pechatai/npc/lora.png")
-		_npc("lev",Vector2(350,500),"res://after_silence/assets/pechatai/npc/inventor.png")
-		_npc("pavel",Vector2(900,370),"res://after_silence/assets/pechatai/npc/orest.png")
-		if state.flag("returned"): _npc("sonya",Vector2(780,650),"res://after_silence/assets/pechatai/npc/ella.png")
-	elif id=="library": _npc("mara",Vector2(270,490),"res://after_silence/assets/pechatai/npc/scientist.png")
-	elif state.echo: _npc("sonya",Vector2(1100,280),"res://after_silence/assets/pechatai/npc/ella.png")
+	npcs.populate(self)
 	enemy=null
 	if id=="forest":
 		enemy=Enemy.new()
@@ -351,7 +352,19 @@ func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	actor.set_meta("home",actor.position)
 	world.sorter.add_child(actor)
 	actors[id]=actor
+	var caption=Label.new()
+	caption.theme=ui.theme
+	caption.position=Vector2(-75,-85)
+	caption.size=Vector2(150,28)
+	caption.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	caption.add_theme_font_size_override("font_size",10)
+	caption.add_theme_color_override("font_outline_color",Color("172126"))
+	caption.add_theme_constant_override("outline_size",4)
+	caption.hide()
+	actor.add_child(caption)
+	actor.set_meta("caption",caption)
 func _physics_process(dt):
+	if is_instance_valid(objective): objective.visible=not modal and not in_menu
 	shift_cooldown=maxf(0,shift_cooldown-dt)
 	if modal and is_instance_valid(body) and body.visible_characters>=0:
 		type_progress+=dt*42
@@ -364,11 +377,7 @@ func _physics_process(dt):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
 		enemy.visible=state.flag("sonya_met") and not state.flag("returned")
 		enemy.pressure=state.pressure
-	for id in actors:
-		var n=actors[id]
-		n.enabled=enabled and n.position.distance_to(player.position)>50
-		var goal=npcs.destination(id,n.get_meta("home"),state.clock)
-		n.target=goal if world.walkable(goal) else n.get_meta("home")
+	npcs.update(self,dt,enabled)
 	if not enabled: return
 	state.clock=fposmod(state.clock+dt/60,24)
 	state.play_seconds+=dt
@@ -377,9 +386,22 @@ func _physics_process(dt):
 		autosave_age=0
 		_save(false)
 	objective.text=Story.pair(quests.objective(),state.language)
+	var target=quests.target_npc()
+	if state.residents.has(target):
+		var zone=state.residents[target].zone
+		if zone in Homes.IDS and zone!=state.zone: objective.text=t("Найдите ","Find ")+named(target)+" · "+Story.pair(Homes.NAMES[Homes.IDS.find(zone)],state.language)
+	var night=state.clock>=20 or state.clock<7
+	var tint=Color("7b93b3") if state.echo else Color("7b889f") if night else Color("b5c6b6")
+	world.modulate=world.modulate.lerp(tint,minf(1,dt*2))
 	status.text=t("Отголоски: ","Echoes: ")+str(state.charges)+"/3 · "+t("Улики: ","Clues: ")+str(state.evidence.size())+"/"+str(State.CLUES.size())+" · "+("%02d:%02d"%[int(state.clock),int(fmod(state.clock,1)*60)])
 	var nearby=_nearest()
-	hint.text=t("E — ","E — ")+_object_name(nearby) if nearby!="" else t("J — журнал · I — предметы · Tab — отголосок","J: journal · I: inventory · Tab: echo")
+	hint.text=t("E — ","E — ")+_object_name(nearby) if nearby!="" else ""
+	hint.size=Vector2(220,35)
+	if nearby!="":
+		var p=actors[nearby].position if actors.has(nearby) else player.position
+		for spot in world.interactables:
+			if spot.id==nearby: p=spot.position
+		hint.position=((world.get_global_transform_with_canvas()*p)+Vector2(-110,18)).clamp(Vector2(8,72),Vector2(410,305))
 	if is_instance_valid(enemy) and enemy.active and enemy.position.distance_to(player.position)<240:
 		status.text+=" · "+t("Кто-то рядом. Ищите каменное укрытие.","Something is close. Find the stone shelter.")
 	hint_age=maxf(0,hint_age-dt)
@@ -400,6 +422,9 @@ func _nearest() -> String:
 		if d<distance: distance=d;result=spot.id
 	return result
 func _object_name(id: String) -> String:
+	if id in Homes.IDS: return t("войти: ","enter: ")+Story.pair(Homes.NAMES[Homes.IDS.find(id)],state.language)
+	if id=="leave_home": return t("выйти на улицу","leave the house")
+	if id=="home_memory": return t("осмотреть записи хозяина","read the resident's notes")
 	if id in Story.NAMES: return named(id)
 	if id=="survival": return t("Жива после рассвета","Alive after dawn")
 	var extras={"fuse":["предохранитель","fuse"],"lens":["линза памяти","memory lens"],"key":["ключ от архива","archive key"],"date":["Момент отключения","The signal cut"],"coverup":["Переписанный список","The rewritten list"],"witness":["Живой свидетель","A living witness"]}
@@ -427,6 +452,15 @@ func _unhandled_key_input(event):
 		KEY_ESCAPE: _pause()
 func interact(id: String):
 	if id=="": return
+	if id in Homes.IDS:
+		_travel(id,Vector2(320,395));return
+	if id=="leave_home":
+		_travel("town",Homes.door(state.zone,state.echo));return
+	if id=="home_memory":
+		var index=Homes.IDS.find(state.zone)
+		var notes=[t("На столе Нади карточки без фамилий. Она оставляет место для того, что ещё нельзя утверждать наверняка.","Nadia keeps unsigned charts, leaving room for what cannot yet be known."),t("Лев аккуратно подписал две цепи: насос и колокол. На полях — время следующего осмотра проводки.","Lev labelled two circuits: pump and bell. A wiring inspection is scheduled in the margin."),t("В доме Павла часы идут вперёд, но лист с датой собрания перевёрнут. Чернила на краях ещё видны.","Pavel's clock keeps moving, but the meeting record lies face down. Ink remains along its edges."),t("Соня оставила чашку и чистый лист. Здесь можно написать свою историю, когда появятся слова.","Sonya left a cup beside a blank page, waiting for words of her own.")]
+		state.set_flag("visited_"+state.zone)
+		_dialog("note_"+state.zone,Story.pair(Homes.NAMES[index],state.language),notes[index],[choice("close","Закрыть","Close",_close)]);return
 	player.inspect_time=.6
 	audio.ping(state.volume)
 	if id in actors: _talk(id);return

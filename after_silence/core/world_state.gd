@@ -1,6 +1,6 @@
 extends RefCounted
 signal changed
-const ZONES = ["town", "library", "forest"]
+const ZONES = ["town", "library", "forest","home_nadia","home_lev","home_pavel","home_sonya"]
 const ITEMS = ["fuse", "lens", "key", "ribbon"]
 const CLUES = ["photo", "poster", "ledger", "clock", "diagram", "testimony", "signature", "medical"]
 var flags: Dictionary = {}
@@ -19,6 +19,7 @@ var clock = 8.0
 var play_seconds = 0.0
 var language = "ru"
 var volume = 0.45
+var residents: Dictionary={}
 func flag(id: String) -> bool:
 	return flags.get(id, false) == true
 func set_flag(id: String, value: bool = true) -> void:
@@ -37,8 +38,21 @@ func give(id: String, count: int = 1) -> bool:
 	changed.emit()
 	return true
 func to_data() -> Dictionary:
-	return {"flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
+	return {"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
 func restore(d: Dictionary) -> bool:
+	var memory=d.get("residents",{})
+	if not memory is Dictionary: return false
+	var restored={}
+	for id in memory:
+		if id not in relations: continue
+		var r=memory[id]
+		if not r is Dictionary or not r.get("zone","") in ZONES: return false
+		if not r.has("x") or not r.has("y"): return false
+		for key in ["x","y","elapsed","wait","visits"]:
+			var value=r.get(key,0)
+			if not (value is int or value is float) or not is_finite(float(value)): return false
+		restored[id]={"zone":r.zone,"x":clampf(float(r.x),24,1500),"y":clampf(float(r.y),24,1100),"elapsed":clampf(float(r.get("elapsed",0)),0,1000),"wait":clampf(float(r.get("wait",3)),0,20),"visits":int(clampf(float(r.get("visits",0)),0,100000))}
+		restored[id].destination=r.get("destination",r.zone) if r.get("destination",r.zone) in ZONES else r.zone
 	if not d.get("zone", "") in ZONES: return false
 	var p = d.get("position", [])
 	if not p is Array or p.size() != 2: return false
@@ -54,6 +68,7 @@ func restore(d: Dictionary) -> bool:
 	for key in ["charges", "pressure", "clock", "play_seconds", "volume"]:
 		var value=d.get(key,0)
 		if not (value is int or value is float) or not is_finite(float(value)): return false
+	residents=restored
 	flags.clear()
 	for key in d.get("flags", {}):
 		if key is String and key.length() < 80 and d.flags[key] is bool: flags[key] = d.flags[key]

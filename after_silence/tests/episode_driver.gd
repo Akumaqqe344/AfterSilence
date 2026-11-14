@@ -70,6 +70,7 @@ func run():
 	check(game.state.zone=="town","new game town")
 	press("close")
 	await shot("town")
+	await verify_homes()
 	var origin=game.player.position
 	Input.action_press("as_right")
 	await create_timer(.4).timeout
@@ -255,3 +256,62 @@ func run():
 	game.queue_free()
 	await process_frame
 	quit(0 if failures.is_empty() else 1)
+func verify_homes():
+	var Homes=load("res://after_silence/world/homes.gd")
+	for id in Homes.IDS:
+		route_to(id)
+		game.player.position=Homes.door(id,game.state.echo)
+		check(game._nearest()==id,"house door can be selected: "+id)
+		game.interact(id)
+		await wait_world()
+		check(game.state.zone==id,"entered "+id)
+		check(game.world.path_between(game.player.position,Vector2(470,260)).size()>0,"room furniture leaves a passage")
+		var before=game.player.position
+		Input.action_press("as_up")
+		await create_timer(.25).timeout
+		Input.action_release("as_up")
+		await create_timer(.15).timeout
+		check(game.player.position.y<before.y-15,"room responds without Esc")
+		game.interact("home_memory")
+		press("close")
+		if id=="home_lev":
+			game._save(false)
+			var saved=game.player.position
+			game.player.position=Vector2(420,380)
+			await game._load_game()
+			check(game.state.zone==id and game.player.position.distance_to(saved)<1,"load restores interior and position")
+			await shot("home_workshop")
+		game.interact("leave_home")
+		await wait_world()
+		check(game.state.zone=="town" and game.player.position.distance_to(Homes.door(id,game.state.echo))<2,"exit returns to matching door")
+	# Active resident walks through its door; same resident is visible indoors.
+	game.state.clock=21
+	game.player.position=Vector2(600,630)
+	game.actors.nadia.position=Homes.door("home_nadia",false)
+	game.npcs.update(game,.02,true)
+	check(game.state.residents.nadia.zone=="home_nadia","NPC enters home at night")
+	game.interact("home_nadia")
+	await wait_world()
+	check(game.actors.has("nadia"),"resident can be found indoors")
+	game.player.position=Vector2(400,380)
+	game.actors.nadia.position=Vector2(410,380)
+	game.npcs.update(game,.02,true)
+	check(not game.actors.nadia.enabled,"NPC stops and faces nearby player")
+	game._save(false)
+	await game._load_game()
+	check(game.state.residents.nadia.zone=="home_nadia","resident home survives save and load")
+	await shot("home_nadia")
+	game.state.clock=8
+	game.actors.nadia.position=Vector2(320,422)
+	game.player.position=Vector2(450,300)
+	game.npcs.update(game,.02,true)
+	check(game.state.residents.nadia.zone=="town","NPC leaves home in morning")
+	game.interact("leave_home")
+	await wait_world()
+	# Re-establish daytime workplaces before exercising the main story.
+	for id in game.npcs.PROFILE:
+		var data=game.npcs.PROFILE[id]
+		var r=game.state.residents[id]
+		r.zone=data[0];r.x=data[1].x;r.y=data[1].y;r.elapsed=0
+	game._build_world("town",Vector2(600,630))
+	await process_frame

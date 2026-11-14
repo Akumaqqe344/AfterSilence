@@ -9,6 +9,18 @@ func stage() -> int:
 	if state.flag("catalog") and state.flag("clock_solved"): return 3
 	if state.flag("nadia_met"): return 2
 	return 1
+func target_npc() -> String:
+	if stage()==1: return "nadia"
+	if stage()==2 and not state.flag("mara_met"): return "mara"
+	if stage()==3 and not state.flag("fuse_given"): return "lev"
+	if stage()==4: return "sonya"
+	if stage()==6:
+		if not state.flag("nadia_review"): return "nadia"
+		if not "survival" in state.links: return ""
+		if not state.flag("lev_review"): return "lev"
+		if not state.flag("mara_review"): return "mara"
+		if "coverup" in state.links and "witness" in state.links: return "pavel"
+	return ""
 func objective() -> Array:
 	if stage()==6:
 		if not state.flag("nadia_review"): return ["Покажите Наде рассказ Сони: проверьте утро после воды","Show Sonya's testimony to Nadia; verify the morning after"]
