@@ -167,6 +167,9 @@ func tick(dt: float):
 
 func _physics_process(dt: float):
 	if not is_instance_valid(game.player): return
+	if game.state.flag("event_campaign"):
+		visible=false
+		return
 	if focus_left>0:
 		focus_left-=dt
 		if focus_left<=0: restore_camera()

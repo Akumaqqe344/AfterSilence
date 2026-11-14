@@ -12,6 +12,7 @@ var obstacles: Array[Rect2] = []
 var interactables: Array = []
 var zone = "town"
 var echo = false
+var story_mode=false
 var paths: Array=[]
 var glow_texture: Texture2D
 func build(id: String, distorted: bool):
@@ -133,6 +134,7 @@ func boundary(r: Rect2):
 	add_child(body)
 	mark_obstacle(r)
 func prop(kind: String, p: Vector2, variant: int=0):
+	if story_mode and kind in ["lamp","street_lamp","trace"]: kind="plant"
 	if kind=="tree" and zone!="orchard": variant=posmod(variant,2)
 	var node=Prop.new()
 	node.texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
@@ -204,6 +206,7 @@ func decorate():
 		prop("library",Vector2(600,145))
 		boundary(Rect2(526,72,148,73))
 func spot(id: String,p: Vector2,kind: String="note"):
+	if story_mode and kind=="trace": kind="none"
 	if kind=="trace" and id!="rift_next" and zone not in Homes.IDS and zone!="library": p+=Vector2(42,0)
 	interactables.append({"id":id,"position":p})
 	if kind=="trace" and (zone=="library" or zone in Homes.IDS): kind="none"

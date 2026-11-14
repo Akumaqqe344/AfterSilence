@@ -21,6 +21,9 @@ func open():
 	actions.append(game.choice("close","До встречи","Goodbye",game._close))
 	game._dialog("",game.t("Лавка у площади","Village shop"),game.t("Жетоны: ","Tokens: ")+str(game.state.tokens)+"\n"+game.t("Помогай жителям — получай жетоны для припасов.","Help residents to earn supply tokens."),actions,false)
 func hint() -> String:
+	if game.state.flag("event_campaign"):
+		var director=game.events_controller
+		return game.t("История завершена.","The story is complete.") if director.index>=director.events.size() else director.pair(director.events[director.index].context)
 	if game.state.flag("rift_mode"):
 		if game.state.flag("rift_finished"): return game.t("Помоги собрать письма на пристани. Загляни в дома друзей.","Collect harbor letters and visit your friends' homes.")
 		var quest=game.Rift.QUESTS[game.rift.index]

@@ -26,6 +26,7 @@ var away_times: Dictionary={}
 var storage: Dictionary={}
 var minigame: Dictionary={}
 var tokens=3
+var event_state: Dictionary={}
 func flag(id: String) -> bool:
 	return flags.get(id, false) == true
 func set_flag(id: String, value: bool = true) -> void:
@@ -44,8 +45,10 @@ func give(id: String, count: int = 1) -> bool:
 	changed.emit()
 	return true
 func to_data() -> Dictionary:
-	return {"tokens":tokens,"schema":3,"storage":storage.duplicate(),"minigame":minigame.duplicate(true),"last_memories":last_memories.duplicate(),"away_times":away_times.duplicate(),"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "achievements":achievements.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
+	return {"event_state":event_state.duplicate(true),"tokens":tokens,"schema":3,"storage":storage.duplicate(),"minigame":minigame.duplicate(true),"last_memories":last_memories.duplicate(),"away_times":away_times.duplicate(),"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "achievements":achievements.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
 func restore(d: Dictionary) -> bool:
+	var saved_event=d.get("event_state",{})
+	if not saved_event is Dictionary or not preload("res://after_silence/core/event_progress.gd").valid(saved_event): return false
 	var saved_tokens=d.get("tokens",3)
 	if not (saved_tokens is int or saved_tokens is float) or not is_finite(float(saved_tokens)) or saved_tokens<0 or saved_tokens>999: return false
 	var schema=d.get("schema",2)
@@ -112,6 +115,7 @@ func restore(d: Dictionary) -> bool:
 	residents=restored
 	storage=saved_storage
 	tokens=int(saved_tokens)
+	event_state=saved_event.duplicate(true)
 	minigame=saved_game
 	last_memories=saved_memories
 	away_times=saved_times

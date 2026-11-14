@@ -25,6 +25,8 @@ var state=State.new()
 var saves=Saves.new()
 var archive_saves: RefCounted
 var rift_saves=Saves.new()
+var event_saves=Saves.new()
+var events_controller
 var evidence
 var inventory
 var quests
@@ -54,6 +56,7 @@ var card_scroll: ScrollContainer
 var column: VBoxContainer
 var modal_backdrop: Control
 var modal_tween: Tween
+var toast_tween: Tween
 
 var body: RichTextLabel
 var objective: Label
@@ -88,6 +91,8 @@ func _ready():
 	RenderingServer.set_default_clear_color(Color("182e32"))
 	archive_saves=saves
 	rift_saves.path="user://rift_slot.json"
+	event_saves.path="user://events_slot.json"
+	if "--qa" in OS.get_cmdline_user_args(): event_saves.path="user://qa_events_slot.json"
 	if "--qa" in OS.get_cmdline_user_args(): saves.path="user://qa_episode.json"
 	if "--qa" in OS.get_cmdline_user_args(): rift_saves.path="user://qa_rift_slot.json"
 	for id in ["as_left","as_right","as_up","as_down"]:
@@ -108,8 +113,15 @@ func _ready():
 	talkkit_pilot=preload("res://after_silence/world/talkkit_pilot.gd").new()
 	talkkit_pilot.game=self
 	add_child(talkkit_pilot)
+	events_controller=preload("res://after_silence/world/npc_event_director.gd").new()
+	events_controller.game=self
+	ui.add_child(events_controller)
 	_build_world("town",Vector2(600,630))
 	_main_menu()
+	if "--qa-events-export" in OS.get_cmdline_user_args():
+		var event_runner=load("res://after_silence/tests/events_export_driver.gd").new()
+		event_runner.game=self
+		get_tree().root.add_child.call_deferred(event_runner)
 	if "--qa-export" in OS.get_cmdline_user_args():
 		var runner=load("res://after_silence/tests/episode_driver.gd").new()
 		runner.game=self
@@ -364,11 +376,22 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("ПОСЛЕ ТИШИНЫ","AFTER SILENCE"),t("РАЗЛОМ ПАМЯТИ  /  12 СОБЫТИЙ","MEMORY RIFT  /  12 EVENTS"),[choice("load","Продолжить","Continue",_continue_rift),choice("rift","Новая история","New story",_new_rift_game),choice("archive","Архив: Имена под водой","Archive: Names Underwater",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выход","Exit",func():get_tree().quit())],false,true)
-	if not rift_saves.exists(): buttons["rift"].grab_focus()
+	_dialog("",t("ПОСЛЕ ТИШИНЫ","AFTER SILENCE"),t("ГОРОД ПОМНИТ / 9 СОБЫТИЙ","THE TOWN REMEMBERS / 9 EVENTS"),[choice("events_load","Продолжить","Continue",func():saves=event_saves;_load_game()),choice("events_new","Новая история","New story",_new_event_game),choice("archive","Архив прежних историй","Previous stories",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выход","Exit",func():get_tree().quit())],false,true)
+	if not event_saves.exists(): buttons["events_new"].grab_focus()
 func _archive_menu():
 	in_menu=true
-	_dialog("",t("АРХИВ","ARCHIVE"),t("ИМЕНА ПОД ВОДОЙ","NAMES UNDERWATER"),[choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_main_menu)],false,true)
+	_dialog("",t("АРХИВ","ARCHIVE"),t("ПРЕЖНИЕ СОХРАНЕНИЯ","PREVIOUS SAVES"),[choice("load","Продолжить разлом","Continue rift",_continue_rift),choice("rift","Начать разлом заново","Restart rift",_new_rift_game),choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_main_menu)],false,true)
+func _new_event_game():
+	var lang=state.language
+	var volume=state.volume
+	state=State.new();state.language=lang;state.volume=volume
+	saves=event_saves
+	_setup_services()
+	state.set_flag("event_campaign");state.set_flag("rift_mode")
+	state.set_flag("nadia_met");state.set_flag("catalog");state.set_flag("clock_solved")
+	in_menu=false;modal=false;shade.hide();adventure.expanded=false
+	events_controller.start()
+	_save(false)
 func _continue_rift():
 	saves=rift_saves
 	_load_game()
@@ -412,18 +435,22 @@ func _load_game():
 		return
 	_setup_services()
 	var checkpoint=state.minigame.duplicate(true)
+	var event_checkpoint=state.event_state.duplicate(true)
 	in_menu=false
 	modal=false
 	shade.hide()
 	await _travel(state.zone,state.position)
 	state.minigame=checkpoint
-	if state.flag("rift_mode") and not state.flag("rift_finished"): rift.start(self)
+	state.event_state=event_checkpoint
+	if state.flag("event_campaign"): events_controller.start(true)
+	elif state.flag("rift_mode") and not state.flag("rift_finished"): rift.start(self)
 	_save(false)
 
 func _save(notify: bool=true):
 	if in_menu or not is_instance_valid(player): return
+	if state.flag("event_campaign") and is_instance_valid(events_controller) and not events_controller.preparing: state.event_state=events_controller.capture()
 	state.minigame=preload("res://after_silence/core/minigame_checkpoint.gd").capture(rift) if rift.active else {}
-	objectives.refresh()
+	if not state.flag("event_campaign"): objectives.refresh()
 	state.position=player.position
 	if saves.save(state):
 		dirty=false
@@ -444,6 +471,7 @@ func _build_world(id: String,p: Vector2):
 	if not is_instance_valid(world):
 		world=World.new()
 		add_child(world)
+	world.story_mode=state.flag("event_campaign")
 	world.build(id,state.echo)
 	state.zone=id
 	state.set_flag("explored_"+id)
@@ -526,7 +554,7 @@ func _physics_process(dt):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
 		enemy.visible=state.flag("sonya_met") and not state.flag("returned")
 		enemy.pressure=state.pressure
-	npcs.update(self,dt,enabled)
+	npcs.update(self,dt,enabled and not state.flag("event_campaign"))
 	if not enabled: return
 	state.clock=fposmod(state.clock+dt/60,24)
 	state.play_seconds+=dt
@@ -535,7 +563,7 @@ func _physics_process(dt):
 		autosave_age=0
 		_save(false)
 	objective.text=Story.pair(quests.objective(),state.language)
-	if rift.phase=="travel" and state.flag("rift_mode") and not state.flag("rift_finished") and rift.index<rift.STOPS.size():
+	if not state.flag("event_campaign") and rift.phase=="travel" and state.flag("rift_mode") and not state.flag("rift_finished") and rift.index<rift.STOPS.size():
 		var delta=rift.STOPS[rift.index]-player.position
 		var direction="→" if delta.x>40 else "←" if delta.x< -40 else "↓" if delta.y>0 else "↑"
 		objective.text=t("К огоньку ","Follow the light ")+direction+"  "+str(int(delta.length()/16))+t(" шагов • E"," steps • E")
@@ -566,6 +594,12 @@ func _physics_process(dt):
 	if hint_age<=0: toast.text=""
 func _notify(text: String):
 	toast.text=text
+	if is_instance_valid(toast_tween): toast_tween.kill()
+	toast.modulate.a=0
+	toast_tween=create_tween()
+	toast_tween.tween_property(toast,"modulate:a",1,.18)
+	toast_tween.tween_interval(2.8)
+	toast_tween.tween_property(toast,"modulate:a",0,.6)
 	hint_age=4
 func _footstep(loud: bool):
 	if is_instance_valid(enemy): enemy.hear(player.position,loud and not state.flag("soft_steps"))
@@ -582,6 +616,8 @@ func _nearest() -> String:
 		if d<distance: distance=d;result=spot.id
 	return result
 func can_interact(id: String) -> bool:
+	if state.flag("event_campaign") and is_instance_valid(events_controller) and events_controller.phase!="finished" and id in Homes.IDS+["to_town","to_library","to_forest","visit_shop","visit_orchard","visit_harbor","district_return"]: return false
+	if state.flag("event_campaign") and (id.begins_with("collect_") or id in ["rift_next","hotspot_lamp"]): return false
 	if id in ["hotspot_window","hotspot_furniture"] and state.flag("examined_"+state.zone+"_"+id): return false
 	if not state.flag("rift_mode"): return true
 	return id not in ["photo","poster","ledger","clock","diagram","testimony","signature","medical","relay","mirror","catalog","library_light","ribbon","trace","shelter","home_memory"]
@@ -638,6 +674,7 @@ func _toggle_zoom():
 	wide_camera=not wide_camera
 	camera.zoom=Vector2.ONE*(0.65 if wide_camera else 1.0)
 func _quest_help():
+	if state.flag("event_campaign"): events_controller.journal();return
 	_dialog("",t("Куда идти?","Where to go?"),shop.hint()+"\n"+t("Золотая отметка на карте — следующее событие. E — действие.","The gold map marker is the next event. E: interact."),[choice("map","Показать карту","Show map",func():_close();adventure.expanded=true),choice("close","Понятно","Got it",_close)],false)
 func interact(id: String):
 	if is_instance_valid(adventure) and adventure.handle(id): return
@@ -710,6 +747,7 @@ func _rift_talk(id: String):
 	var special=state.flag({"nadia":"rift_choice_08_defend","lev":"rift_choice_04_limit","mara":"rift_choice_02_follow","pavel":"rift_choice_05_guard","sonya":"rift_choice_11_trust"}.get(id,""))
 	_dialog("rift_talk_"+id,named(id),lines.get(id,[t("Город снова меняется, но люди помнят друг друга.","Town still changes, but its people remember one another.")])[1 if special else 0],[choice("close","Продолжить","Continue",_close)],false)
 func _talk(id: String):
+	if is_instance_valid(events_controller) and events_controller.talk(id): return
 	if living.talk(id): return
 	if state.flag("rift_mode"): _rift_talk(id);return
 	if state.flag("ending") and id=="nadia":
@@ -857,6 +895,7 @@ func _light_socket():
 		elif not inventory.install_fuse("library_light"): _notify(t("Нужна деталь Льва.","You need Lev's part."))
 		_close()),choice("close","Назад","Back",_close)],false)
 func _journal():
+	if state.flag("event_campaign"): events_controller.journal();return
 	if state.flag("rift_mode"):
 		var completed=0
 		var event_lines=[]

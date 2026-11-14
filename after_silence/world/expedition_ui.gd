@@ -42,7 +42,7 @@ func routines():
 	game._dialog("",game.t("Жители и время","Residents and time"),"\n".join(lines),[game.choice("back","В журнал","Journal",game._journal)],false)
 func slots():
 	var actions=[]
-	var base="qa_slot" if "--qa" in OS.get_cmdline_user_args() else "rift_slot" if game.state.flag("rift_mode") else "episode_slot"
+	var base="qa_slot" if "--qa" in OS.get_cmdline_user_args() else "events_slot" if game.state.flag("event_campaign") else "rift_slot" if game.state.flag("rift_mode") else "episode_slot"
 	for slot in range(1,4):
 		var target="user://"+base+("" if slot==1 else "_"+str(slot))+".json"
 		actions.append(game.choice("save"+str(slot),"Записать в слот "+str(slot),"Save slot "+str(slot),func():game.saves.path=target;game._save();slots()))

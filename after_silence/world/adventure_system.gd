@@ -13,6 +13,9 @@ func unlocked(zone: String) -> bool:
 
 func populate():
 	var world=game.world
+	if game.state.flag("event_campaign"):
+		if is_instance_valid(game.living): game.living.populate()
+		return
 	for request in data.requests:
 		if request.zone!=world.zone: continue
 		for i in range(request.points.size()):
@@ -146,6 +149,7 @@ func _process(_dt):
 	queue_redraw()
 
 func _unhandled_input(event):
+	if game.state.flag("event_campaign"): return
 	if not visible: return
 	if event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE) and not expanded:
 		game.camera.position-=event.relative/game.camera.zoom
@@ -167,6 +171,7 @@ func _unhandled_input(event):
 		game.player.set_meta("click_route",game.world.path_between(game.player.position,world_point))
 
 func _draw():
+	if game.state.flag("event_campaign"): return
 	if not visible: return
 	var rect=Rect2(60,55,520,245) if expanded else Rect2(500,72,130,94)
 	draw_rect(rect,Color("102a2cf2"))

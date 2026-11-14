@@ -11,6 +11,7 @@ function Invoke-CheckedGodot([string]$Log,[string[]]$EngineArgs) {
 }
 Invoke-CheckedGodot 'work/import-release.log' @('--headless','--editor','--path','.','--import')
 if (-not $SkipTests) {
+    Invoke-CheckedGodot 'work/events130-test.log' @('--headless','--path','.','--script','after_silence/tests/run_events130.gd','--','--qa')
     Invoke-CheckedGodot 'work/landscape120-test.log' @('--headless','--path','.','--script','after_silence/tests/run_landscape120.gd','--','--qa')
     Invoke-CheckedGodot 'work/merge110-test.log' @('--headless','--path','.','--script','after_silence/tests/run_merge110.gd','--','--qa')
     Invoke-CheckedGodot 'work/gut-all.log' @('--headless','--path','.','-s','addons/gut/gut_cmdln.gd','-gdir=res://test/unit/,res://after_silence/tests/','-gexit')
