@@ -29,3 +29,8 @@ export/linux/bundle/littleAdventure.pck
 export/linux/bundle/littleAdventure.x86_64
 export/linux/snap/LittleAdventure.pck
 export/linux/snap/LittleAdventure.x86_64
+
+work/
+baseline-*.log
+after_silence/build/
+
