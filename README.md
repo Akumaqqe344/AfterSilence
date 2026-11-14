@@ -1,123 +1,28 @@
-<div align="center">
+# ПОСЛЕ ТИШИНЫ · AFTER SILENCE
 
-<img src="icon.png" alt="Little Adventure" width="128" />
+Новая сюжетная RPG на Godot 4.7.2, основанная на Little Adventure. Вера расследует исчезновение сестры в городе, который стирает воспоминания. Механик печати нет.
 
-# 🗡️ Little Adventure
+Проект: `C:\Games\AfterSilence`. Ветка: `after-silence-rework`.
 
-**A little pixel art RPG where Gordon sets out to repair his village's well.**
+## Запуск
 
-Free · Linux, Android, Windows & Web · Made with Godot 4
+Windows x86_64: `after_silence/build/AfterSilence.exe`. Установка Godot для игры не нужна. Для разработки импортируйте `project.godot` в Godot 4.7.2.
 
-[![Flathub](https://img.shields.io/flathub/v/org.dupot.littleadventure?logo=flathub&logoColor=white&label=Flathub&color=4a90d9)](https://flathub.org/apps/org.dupot.littleadventure)
-[![Godot 4](https://img.shields.io/badge/Godot-4.7-478CBF?logo=godotengine&logoColor=white)](https://godotengine.org)
-[![License: LGPL-2.1](https://img.shields.io/badge/License-LGPL--2.1-blue.svg)](LICENSE)
+WASD/стрелки — движение; Shift — бег; E — взаимодействие/показать текст; 1–9 — ответы; Tab — отголосок; J — журнал; I — предметы; Esc — пауза. В длинных диалогах есть прокрутка и клавиатурный фокус.
 
-<a href="https://flathub.org/apps/org.dupot.littleadventure"><img width="200" alt="Get it on Flathub" src="https://flathub.org/api/badge?locale=en"/></a>
+Город, библиотека и лес имеют две версии реальности. Реализованы новая героиня, пять NPC, три головоломки, восемь улик, четыре вывода, преследователь, сверка свидетельств и два финала. Отголосок меняет геометрию, персонажей, звук и свет; переход расходует силы. Предохранитель и лента имеют альтернативные применения.
 
-</div>
+Автосохранение работает при переходах и закрытии диалогов, ручное — через паузу. Данные: `%APPDATA%/AfterSilence`. Формат 2, SHA-256, временный файл и резервная копия. QA использует отдельные слоты.
 
----
+## Проверка
 
-## 📖 About
+`./after_silence/build_windows.ps1` выполняет импорт, GUT, сквозной прогон и Windows-экспорт. Движок и шаблоны по умолчанию находятся в `C:/Games/Tools/Godot`; параметр `-Godot` меняет путь к движку. Скрипт проверяет журнал, поскольку Godot может возвращать 0 при ошибках GDScript.
 
-The village well is broken, and **Gordon** is the one who has to fix it. To find the missing pieces, he'll have to leave home and explore the world.
+Для оконного сквозного прогона запустите Godot с аргументами `--path . --script after_silence/tests/run_episode.gd -- --qa`. Подробные результаты: [DEVELOPMENT_STATE.md](DEVELOPMENT_STATE.md). Маршрут со спойлерами: [WALKTHROUGH_RU.md](after_silence/WALKTHROUGH_RU.md).
 
-- 🏡 **Explore**: walk around the village, talk to its inhabitants and find your way with the map
-- 🛒 **Shop**: buy a sword, potions and tools from the merchant
-- 🕷️ **Fight**: face spiders, crabs and other monsters roaming outside the village
-- 🗺️ **Travel**: visit the tree village, the bear village and the crab village to gather every piece of the well
-- 🌍 **Languages**: play in English or French, chosen on the title screen or in the in-game settings (your system language by default)
+Цель 20–30 минут требует независимого плейтеста; автоматический прогон не измеряет прохождение человеком. Особняк и подземелья относятся к следующему этапу.
 
-## 📸 Screenshots
+## Лицензии
 
-<div align="center">
+Основа: [Little Adventure](https://github.com/imikado/dupotLittleAdventure), Michael Bertocchi / dupot.org, коммит `37209a3b6a676f7383ca33886e3e8398ba915585`. Сохранены [LGPL-2.1](LICENSE), исходники и [оригинальная документация](UPSTREAM_README.md). Новая графика создана для проекта встроенным imagegen; диалоги не используют внешние API. Происхождение и промпты: [ASSET_PROVENANCE.md](after_silence/ASSET_PROVENANCE.md). Godot — MIT; уведомления: `after_silence/third_party/`.
 
-| At home | The merchant | The broken well |
-|:---:|:---:|:---:|
-| ![At home](export/linux/screenshots/Screenshot_01.png) | ![The merchant](export/linux/screenshots/Screenshot_02.png) | ![The broken well](export/linux/screenshots/Screenshot_04.png) |
-| **Into the forest** | **Fighting a spider** | **The crab village** |
-| ![Into the forest](export/linux/screenshots/Screenshot_05.png) | ![Fighting a spider](export/linux/screenshots/Screenshot_06.png) | ![The crab village](export/linux/screenshots/Screenshot_08.png) |
-
-</div>
-
-## 🎮 Controls
-
-| Action | Keyboard |
-|---|---|
-| Move | Arrow keys |
-| Talk / Attack / Confirm | `Enter` or `Space` |
-| Menu | `Escape` or `Backspace` |
-
-🎮 Gamepads are supported too, and Android gets on-screen touch controls (virtual joystick and action button).
-
-## 📦 Install
-
-### Flathub (Linux, recommended)
-
-```bash
-flatpak install flathub org.dupot.littleadventure
-flatpak run org.dupot.littleadventure
-```
-
-You can also install it from GNOME Software, KDE Discover or any app store that uses Flathub. The Flatpak metadata lives in [export/linux/flatpak](export/linux/flatpak).
-
-## 🛠️ Build from source
-
-1. Install [Godot 4.7](https://godotengine.org/download/) or later.
-2. Clone the repository:
-   ```bash
-   git clone https://github.com/imikado/dupotLittleAdventure.git
-   ```
-3. Open `project.godot` in Godot and press **F5** to play.
-
-Export presets for **Linux**, **Windows**, **Android**, **Android Fire TV** and **HTML5** are included in `export_presets.cfg`. For Android TV specific changes, see [help/androidTv.txt](help/androidTv.txt).
-
-### Tests
-
-Unit tests use [GUT](https://github.com/bitwes/Gut) and live in [test/](test/). Run them with:
-
-```bash
-./unitTest.sh
-```
-
-(`unitTest.sh` expects a `godot` 4 binary in your `PATH`; tests are configured in `.gutconfig.json`.)
-
-### Release scripts
-
-| Script | What it does |
-|---|---|
-| `./maj_version.sh` | copies the version of the latest `<release>` in the [appdata](export/linux/flatpak/org.dupot.littleadventure.appdata.xml) to `project.godot`, `globalVersion.gd` and `snapcraft.yaml` (run by the build scripts) |
-| `./build_snap.sh` | exports the Linux build and packs the snap in [export/linux/snap](export/linux/snap) (`--install` to install it locally) |
-| `./build_flathub.sh` | exports the Linux build into `export/linux/bundle.tar.gz`, the archive used by the Flathub manifest, and prints its SHA256 |
-| `./export_html5.sh` | exports the HTML5 build and zips it in `export/html` |
-| `./generate_screenshots.sh [FR\|EN]` | regenerates the 1920x1080 screenshots in [export/linux/screenshots](export/linux/screenshots) (English by default, `FR` for French) |
-
-These scripts use the `godot` binary from your `PATH`, or the one set in the `GODOT` variable. To publish a new version, add a `<release version="X.Y.Z">` at the top of `<releases>` in the appdata, then run the build scripts.
-
-## 🕹️ More from dupot.org
-
-Also on Flathub from the same developer:
-
-- **[Save the Sheep](https://github.com/imikado/dupotSaveTheSheep)**
-- **Beat And Match To Pass**
-- **Easyflatpak**
-
-See them all on [dupot.org](https://www.dupot.org/games.html).
-
-## 🐛 Feedback
-
-Found a bug or have an idea? [Open an issue](https://github.com/imikado/dupotLittleAdventure/issues).
-
-## 📜 License
-
-This game is released under the [GNU LGPL v2.1](LICENSE).
-
-Font: [Pixel Operator](https://github.com/bauripalash/ttf-pixeloperator-fork) by Jayvee Enaguas, released into the public domain ([CC0 1.0](common/themes/fonts/LICENSE-PixelOperator-CC0.txt)).
-
----
-
-<div align="center">
-
-Made with ❤️ and [Godot Engine](https://godotengine.org) by [Michael Bertocchi](https://www.dupot.org/games.html) · [dupot.org](https://www.dupot.org)
-
-</div>
