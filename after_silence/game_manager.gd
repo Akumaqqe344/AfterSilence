@@ -16,6 +16,9 @@ const Homes=preload("res://after_silence/world/homes.gd")
 const Review=preload("res://after_silence/story_review.gd")
 const Cutscenes=preload("res://after_silence/core/cutscene_director.gd")
 const Atmosphere=preload("res://after_silence/world/atmosphere.gd")
+const Achievements=preload("res://after_silence/core/achievements.gd")
+const BossBattle=preload("res://after_silence/world/boss_battle.gd")
+
 var state=State.new()
 var saves=Saves.new()
 var evidence
@@ -29,6 +32,8 @@ var world
 var player
 var camera: Camera2D
 var enemy
+var battle: Control
+
 var actors: Dictionary={}
 var ui: Control
 var shade: ColorRect
@@ -94,6 +99,8 @@ func _setup_services():
 		add_child(audio)
 func _mark_dirty():
 	dirty=true
+	for id in Achievements.evaluate(state):
+		if is_instance_valid(toast): _notify(t("Достижение: ","Achievement: ")+Story.pair(Achievements.ENTRIES[id],state.language))
 func style(bg: Color, accent: bool=false) -> StyleBoxFlat:
 	var s=StyleBoxFlat.new()
 	s.bg_color=bg
@@ -120,11 +127,10 @@ func _setup_ui():
 	ui.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	layer.add_child(ui)
 	var theme=Theme.new()
-	var font=SystemFont.new()
-	font.font_names=PackedStringArray(["Segoe UI","DejaVu Sans"])
-	font.antialiasing=TextServer.FONT_ANTIALIASING_GRAY
+	var font=load("res://after_silence/assets/fonts/PressStart2P-Regular.ttf")
+	font.antialiasing=TextServer.FONT_ANTIALIASING_NONE
 	theme.default_font=font
-	theme.default_font_size=15
+	theme.default_font_size=10
 	theme.set_color("font_color","Label",Color("dce9e3"))
 	theme.set_stylebox("normal","Button",choice_style(false))
 	theme.set_stylebox("hover","Button",choice_style(true))
@@ -140,8 +146,8 @@ func _setup_ui():
 	ui.add_child(hud)
 	objective=Label.new()
 	objective.position=Vector2(12,12)
-	objective.size=Vector2(470,30)
-	objective.add_theme_font_size_override("font_size",12)
+	objective.size=Vector2(480,44)
+	objective.add_theme_font_size_override("font_size",8)
 	objective.add_theme_color_override("font_outline_color",Color("172126"))
 	objective.add_theme_constant_override("outline_size",4)
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
@@ -154,7 +160,7 @@ func _setup_ui():
 	hint=Label.new()
 	hint.position=Vector2(24,327)
 	hint.size=Vector2(592,23)
-	hint.add_theme_font_size_override("font_size",12)
+	hint.add_theme_font_size_override("font_size",8)
 	hint.add_theme_color_override("font_outline_color",Color("172126"))
 	hint.add_theme_constant_override("outline_size",4)
 	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
@@ -192,6 +198,15 @@ func _setup_ui():
 	veil.modulate.a=0
 	veil.hide()
 	ui.add_child(veil)
+	battle=BossBattle.new()
+	battle.visible=false
+	battle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	battle.won.connect(_boss_won)
+	battle.struck.connect(func(): audio.ping(state.volume))
+	battle.hurt.connect(func(): audio.ping(state.volume))
+
+	ui.add_child(battle)
+
 	var loading=Label.new()
 	loading.text=t("Город вспоминает…","The town remembers…")
 	loading.position=Vector2(200,170)
@@ -225,7 +240,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	var header=Label.new()
 	header.text=title
 	header.add_theme_color_override("font_color",Color("c7ebe5"))
-	header.add_theme_font_size_override("font_size",27 if main_layout else 22)
+	header.add_theme_font_size_override("font_size",18 if main_layout else 15)
 	header.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var portrait_id=id.split("_")[0]
 	if id=="intro": portrait_id="vera"
@@ -252,7 +267,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	body.custom_minimum_size=Vector2(0,20 if main_layout else 24)
 	body.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	body.add_theme_color_override("default_color",Color("a9c6bd"))
-	body.add_theme_font_size_override("normal_font_size",13 if main_layout else 14)
+	body.add_theme_font_size_override("normal_font_size",9)
 	column.add_child(body)
 	var seen=dialogues.was_seen(id)
 	if id!="": dialogues.record(id,title,text)
@@ -265,7 +280,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		button.text=("%02d   "%(i+1) if not main_layout else "")+item.label
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
 		button.custom_minimum_size=Vector2(0,31 if main_layout else 32)
-		button.add_theme_font_size_override("font_size",16 if main_layout else 14)
+		button.add_theme_font_size_override("font_size",10)
 		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		button.pressed.connect(func():
 			if body.visible_characters>=0 and body.visible_characters<body.get_total_character_count():
@@ -410,7 +425,7 @@ func _physics_process(dt):
 		body.visible_characters=int(type_progress)
 		if body.visible_characters>=body.get_total_character_count(): body.visible_characters=-1
 	if not is_instance_valid(player): return
-	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running
+	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active
 	player.enabled=enabled
 	if is_instance_valid(enemy):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
@@ -474,6 +489,11 @@ func _object_name(id: String) -> String:
 func _unhandled_key_input(event):
 	if not event.is_pressed() or event.is_echo(): return
 	if transitions.busy: return
+	if battle.active:
+		if event.physical_keycode==KEY_SPACE: battle.jump()
+		elif event.physical_keycode==KEY_E: battle.counter()
+		return
+
 	if cutscenes.running: return
 	if modal:
 		if event.physical_keycode==KEY_E and is_instance_valid(body): body.visible_characters=-1
@@ -574,7 +594,19 @@ func _talk(id: String):
 		if state.flag("ending"): _story("public" if state.flag("ending_public") else "sealed");return
 		if not state.flag("returned") or not "witness" in state.links or not "coverup" in state.links or not "survival" in state.links or not state.flag("lev_review") or not state.flag("mara_review"):
 			_story("pavel_before");return
+		if not state.flag("boss_watcher_defeated"): _begin_boss("watcher");return
+
 		_story("pavel_truth",[choice("public","Оставить оба списка на площади","Publish both versions of the list",func():_ending(true)),choice("seal","Запереть список. Сохранить сегодняшний покой","Seal the list. Preserve today's peace",func():_ending(false))])
+func _begin_boss(id: String):
+	modal=false
+	shade.hide()
+	battle.start(id,state.language=="en")
+func _boss_won(id: String,flawless: bool):
+	state.set_flag("boss_"+id+"_defeated")
+	if id=="relay" and flawless: state.set_flag("boss_relay_flawless")
+	if id=="relay": _relay()
+	else: _talk("pavel")
+
 func _start_chase():
 	if state.item("ribbon")>0 and state.flag("ribbon_kept"):
 		state.give("ribbon",-1)
@@ -597,8 +629,8 @@ func _caught():
 	enemy.position=world.recover(Vector2(1040,280))
 	_story("caught")
 func _ending(public: bool):
-	state.set_flag("ending")
 	state.set_flag("ending_public",public)
+	state.set_flag("ending")
 	state.echo=not public
 	npcs.change_relation("pavel",-2 if public else 1)
 	npcs.change_relation("nadia",2 if public else -1)
@@ -652,6 +684,8 @@ func _set_clock():
 		_clock()
 func _relay():
 	if state.flag("forest_power"): _notify(t("Насос работает тихо.","The pump runs quietly."));return
+	if not state.flag("boss_relay_defeated"): _begin_boss("relay");return
+
 	var options=[]
 	for i in range(3): options.append(choice("lever_"+str(i),t("Рычаг ","Lever ")+str(i+1)+(" ●" if relay_mask&(1<<i) else " ○"),"Lever "+str(i+1)+(" ON" if relay_mask&(1<<i) else " OFF"),func():relay_mask=relay_mask^(1<<i);_relay()))
 	options.append(choice("power","Вставить предохранитель и подать питание","Insert fuse and power on",_power_relay))
@@ -679,8 +713,18 @@ func _journal():
 	var actions=[]
 	for id in state.evidence: actions.append(choice(id,_object_name(id),_object_name(id),func():_select_clue(id)))
 	actions.append(choice("history","История разговоров","Dialogue history",_history))
+	actions.append(choice("achievements","Достижения","Achievements",_achievements))
+
 	actions.append(choice("close","На карту","Return",_close))
 	_dialog("",t("Журнал расследования","Investigation journal"),text,actions,false)
+func _achievements():
+	var lines=[]
+	for id in Achievements.ENTRIES:
+		var label=Story.pair(Achievements.ENTRIES[id],state.language)
+		lines.append(("◆  " if id in state.achievements else "◇  ")+label)
+	var count=state.achievements.size()
+	_dialog("",t("Достижения","Achievements"),t("Открыто: ","Unlocked: ")+str(count)+"/"+str(Achievements.ENTRIES.size())+"\n\n"+"\n".join(lines),[choice("back","В журнал","Journal",_journal)],false)
+
 func _select_clue(id: String):
 	if selected_evidence=="": selected_evidence=id;_clue_with_links(id);return
 	var first=selected_evidence

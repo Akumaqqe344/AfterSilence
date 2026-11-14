@@ -31,6 +31,16 @@ func press(id: String):
 	if game.buttons.has(id):
 		game.body.visible_characters=-1
 		game.buttons[id].pressed.emit()
+
+func win_battle(id: String):
+	check(game.battle.active and game.battle.boss_id==id,"boss started: "+id)
+	check(not game.battle.counter(),"counter requires opening: "+id)
+	for i in range(3):
+		game.battle.phase="exposed"
+		game.battle.player_pos=Vector2(320,185)
+		check(game.battle.counter(),"boss counter "+str(i+1)+": "+id)
+	check(game.state.flag("boss_"+id+"_defeated"),"boss defeated: "+id)
+
 func wait_world():
 	await create_timer(0.7).timeout
 func profile(label: String):
@@ -132,6 +142,11 @@ func run():
 	check(game.buttons.has("hour"),"clock exposes puzzle rather than only clue")
 	press("close")
 	game._journal()
+	press("achievements")
+	check(game.body.text.contains("Открыто") and game.state.achievements.size()>0,"achievement screen and progress")
+	await shot("achievements")
+	press("back")
+
 	press("poster")
 	press("choose")
 	press("clock")
@@ -177,6 +192,8 @@ func run():
 	check(game.state.zone=="forest","forest travel")
 	for id in ["relay","mirror","shelter","to_town"]: route_to(id)
 	game.interact("relay")
+	win_battle("relay")
+
 	press("lever_0")
 	press("lever_2")
 	press("power")
@@ -229,6 +246,8 @@ func run():
 		press("close")
 	check(game.state.links.size()==4,"four evidence inferences")
 	game._talk("pavel")
+	win_battle("watcher")
+
 	press("public")
 	await wait_world()
 	check(game.state.flag("ending_public") and game.quests.stage()==7,"public ending")

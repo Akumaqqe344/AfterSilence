@@ -10,6 +10,7 @@ var links: Array = []
 var relations: Dictionary = {"nadia": 0, "lev": 0, "mara": 0, "pavel": 0, "sonya": 0}
 var history: Array = []
 var seen: Array = []
+var achievements: Array = []
 var zone = "town"
 var position = Vector2(600, 630)
 var echo = false
@@ -38,7 +39,7 @@ func give(id: String, count: int = 1) -> bool:
 	changed.emit()
 	return true
 func to_data() -> Dictionary:
-	return {"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
+	return {"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "achievements":achievements.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
 func restore(d: Dictionary) -> bool:
 	var memory=d.get("residents",{})
 	if not memory is Dictionary: return false
@@ -60,7 +61,7 @@ func restore(d: Dictionary) -> bool:
 	if not is_finite(float(p[0])) or not is_finite(float(p[1])): return false
 	for key in ["flags", "inventory", "relations"]:
 		if not d.get(key, {}) is Dictionary: return false
-	for key in ["evidence", "links", "history", "seen"]:
+	for key in ["evidence", "links", "history", "seen", "achievements"]:
 		if not d.get(key, []) is Array: return false
 	for group in ["inventory", "relations"]:
 		for value in d.get(group, {}).values():
@@ -80,6 +81,7 @@ func restore(d: Dictionary) -> bool:
 	for id in relations: relations[id] = int(clampf(float(d.get("relations", {}).get(id, 0)), -5, 5))
 	history = d.get("history", []).slice(-100)
 	seen = d.get("seen", []).filter(func(v): return v is String and v.length() < 80).slice(-100)
+	achievements = d.get("achievements", []).filter(func(v): return v is String and v in preload("res://after_silence/core/achievements.gd").ENTRIES)
 	zone = d.zone
 	position = Vector2(clampf(float(p[0]), 32, 1500), clampf(float(p[1]), 32, 1100))
 	echo = d.get("echo", false) == true

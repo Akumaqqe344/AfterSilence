@@ -180,3 +180,51 @@ func test_old_saves_without_residents_are_accepted():
 	assert_true(state.restore(data))
 	NPCs.new(state).initialize()
 	assert_eq(state.residents.size(),5)
+func test_achievements_survive_save_and_reject_unknown_ids():
+	var achievements=load("res://after_silence/core/achievements.gd")
+	state.add_clue("photo")
+	assert_eq(achievements.evaluate(state),["first_clue"])
+	assert_eq(achievements.evaluate(state).size(),0)
+	var copy=State.new()
+	assert_true(copy.restore(state.to_data()))
+	assert_true("first_clue" in copy.achievements)
+	var data=state.to_data()
+	data.achievements.append("fake")
+	assert_true(copy.restore(data))
+	assert_false("fake" in copy.achievements)
+func test_boss_telegraph_jump_and_three_counters():
+	for action in ["as_left","as_right","as_up","as_down"]:
+		if not InputMap.has_action(action): InputMap.add_action(action)
+
+	var battle=load("res://after_silence/world/boss_battle.gd").new()
+	add_child(battle)
+	battle.start("relay",false)
+	assert_false(battle.counter())
+	battle.phase="attack"
+	battle.target=battle.player_pos
+	battle._physics_process(.016)
+	assert_eq(battle.player_hp,2)
+	battle.invulnerable=0
+	battle.jump_age=0
+	battle._hit()
+	assert_eq(battle.player_hp,2)
+	for i in range(3):
+		battle.phase="exposed"
+		battle.player_pos=Vector2(320,185)
+		assert_true(battle.counter())
+	assert_false(battle.active)
+	battle.queue_free()
+
+func test_ending_achievements_match_branch():
+	var achievements=load("res://after_silence/core/achievements.gd")
+	state.set_flag("ending_public",true)
+	state.set_flag("ending")
+	achievements.evaluate(state)
+	assert_true("public_end" in state.achievements)
+	assert_false("sealed_end" in state.achievements)
+	var sealed=State.new()
+	sealed.set_flag("ending_public",false)
+	sealed.set_flag("ending")
+	achievements.evaluate(sealed)
+	assert_true("sealed_end" in sealed.achievements)
+	assert_false("public_end" in sealed.achievements)
