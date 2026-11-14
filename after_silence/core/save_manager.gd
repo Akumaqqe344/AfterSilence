@@ -30,7 +30,10 @@ func load_state(state) -> bool:
 	for candidate in [path, path + ".bak"]:
 		if not FileAccess.file_exists(candidate): continue
 		var file = FileAccess.open(candidate, FileAccess.READ)
-		if file == null or file.get_length() > 1048576: continue
+		if file == null: continue
+		if file.get_length() > 1048576:
+			file.close()
+			continue
 		var parser=JSON.new()
 		var parse_error=parser.parse(file.get_as_text())
 		file.close()

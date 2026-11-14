@@ -83,10 +83,12 @@ func _setup_services():
 	quests=Quests.new(state)
 	dialogues=Dialogues.new(state)
 	npcs=NPCs.new(state)
-	state.changed.connect(func(): dirty=true)
+	if not state.changed.is_connected(_mark_dirty): state.changed.connect(_mark_dirty)
 	if not is_instance_valid(audio):
 		audio=Audio.new()
 		add_child(audio)
+func _mark_dirty():
+	dirty=true
 func style(bg: Color) -> StyleBoxFlat:
 	var s=StyleBoxFlat.new()
 	s.bg_color=bg

@@ -59,17 +59,17 @@ func restore(d: Dictionary) -> bool:
 		if key is String and key.length() < 80 and d.flags[key] is bool: flags[key] = d.flags[key]
 	inventory.clear()
 	for id in ITEMS:
-		if d.get("inventory",{}).has(id): inventory[id] = clampi(int(d.inventory[id]), 0, 9)
+		if d.get("inventory",{}).has(id): inventory[id] = int(clampf(float(d.inventory[id]), 0, 9))
 	evidence = d.get("evidence", []).filter(func(v): return v in CLUES)
 	links = d.get("links", []).filter(func(v): return v in ["date", "coverup", "witness", "survival"])
-	for id in relations: relations[id] = clampi(int(d.get("relations", {}).get(id, 0)), -5, 5)
+	for id in relations: relations[id] = int(clampf(float(d.get("relations", {}).get(id, 0)), -5, 5))
 	history = d.get("history", []).slice(-100)
 	seen = d.get("seen", []).filter(func(v): return v is String and v.length() < 80).slice(-100)
 	zone = d.zone
 	position = Vector2(clampf(float(p[0]), 32, 1500), clampf(float(p[1]), 32, 1100))
 	echo = d.get("echo", false) == true
-	charges = clampi(int(d.get("charges", 3)), 0, 3)
-	pressure = clampi(int(d.get("pressure", 0)), 0, 5)
+	charges = int(clampf(float(d.get("charges", 3)), 0, 3))
+	pressure = int(clampf(float(d.get("pressure", 0)), 0, 5))
 	clock = fposmod(float(d.get("clock", 8)), 24.0)
 	play_seconds = maxf(0, float(d.get("play_seconds", 0)))
 	language = "en" if d.get("language") == "en" else "ru"
