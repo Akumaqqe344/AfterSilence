@@ -23,6 +23,8 @@ var jump_peak=28.0
 var elevation=0.0
 var clips: Dictionary={}
 var npc_speed=30.0
+var managed_motion=false
+var managed_velocity=Vector2.ZERO
 var npc_anchor=Vector2(32,92)
 var portrait=Rect2(8,0,48,48)
 func _ready():
@@ -78,9 +80,9 @@ func _physics_process(dt):
 		var acceleration=(ACCEL if direction!=Vector2.ZERO else DECEL)*dt
 		velocity.x=move_toward(velocity.x,direction.x*speed,acceleration)
 		velocity.y=move_toward(velocity.y,direction.y*speed,acceleration)
-	else: velocity=direction*(92.0 if scripted else speed)
-	move_and_slide()
-	var motion=get_real_velocity()
+	else: velocity=direction*(92.0 if scripted and is_player else speed)
+	if not managed_motion: move_and_slide()
+	var motion=managed_velocity if managed_motion else get_real_velocity()
 	var moving=motion.length()>4
 	if moving:
 		facing=(3 if motion.x>0 else 2) if absf(motion.x)>absf(motion.y) else (0 if motion.y>0 else 1)

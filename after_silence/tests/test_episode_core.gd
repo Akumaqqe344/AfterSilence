@@ -163,6 +163,8 @@ func test_house_and_resident_save_round_trip():
 	state.position=Vector2(320,350)
 	NPCs.new(state).initialize()
 	state.residents.nadia.zone="home_nadia"
+	state.residents.nadia.x=320.0;state.residents.nadia.y=300.0
+
 	var copy=State.new()
 	assert_true(copy.restore(state.to_data()))
 	assert_eq(copy.zone,"home_lev")
@@ -179,7 +181,28 @@ func test_old_saves_without_residents_are_accepted():
 	data.erase("residents")
 	assert_true(state.restore(data))
 	NPCs.new(state).initialize()
-	assert_eq(state.residents.size(),5)
+	assert_eq(state.residents.size(),8)
+
+func test_large_world_positions_and_route_assignment_survive_load():
+	state.zone="town";state.position=Vector2(1710,1200)
+	NPCs.new(state).initialize()
+	state.residents.lev.x=1710.0;state.residents.lev.y=1200.0
+	state.residents.lev.assignment={"zone":"forest","point":[1100.0,1280.0]}
+	var copy=State.new()
+	assert_true(copy.restore(state.to_data()))
+	assert_eq(copy.position,state.position)
+	assert_eq(copy.residents.lev.x,1710.0)
+	assert_eq(copy.residents.lev.y,1200.0)
+	assert_eq(copy.residents.lev.assignment,state.residents.lev.assignment)
+func test_invalid_route_assignment_is_atomic():
+	NPCs.new(state).initialize()
+	var before=state.to_data()
+	for invalid in [null,[],{"zone":"missing","point":[100,100]},{"zone":"town","point":[100]},{"zone":"town","point":["x",100]},{"zone":"town","point":[INF,100]},{"zone":"home_lev","point":[1000,100]}]:
+		var data=before.duplicate(true)
+		data.residents.lev.assignment=invalid
+		assert_false(state.restore(data))
+		assert_eq(state.to_data(),before)
+
 func test_achievements_survive_save_and_reject_unknown_ids():
 	var achievements=load("res://after_silence/core/achievements.gd")
 	state.add_clue("photo")

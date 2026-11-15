@@ -154,6 +154,9 @@ func run() -> void:
 	await get_tree().process_frame
 	check(game.state.flag("rift_finished"),"story finished")
 	check(game.state.flag("rift_final_child"),"earned child ending")
+	var completed=game.state.flags.duplicate()
+	game.rift.choose(Rift.QUESTS[11].choices[0])
+	check(game.state.flags==completed,"completed finale rejects repeated choice")
 	check(game.state.echo,"child ending changes world")
 	check(game.state.achievements.has("rift_all"),"completion achievement")
 	check(game.actors.has("sonya"),"Sonya is in the final town")

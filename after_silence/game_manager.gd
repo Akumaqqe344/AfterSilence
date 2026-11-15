@@ -129,6 +129,10 @@ func _ready():
 		var event_runner=load("res://after_silence/tests/events_export_driver.gd").new()
 		event_runner.game=self
 		get_tree().root.add_child.call_deferred(event_runner)
+	if "--qa-input-export" in OS.get_cmdline_user_args():
+		var input_runner=load("res://after_silence/tests/input_playthrough_driver.gd").new()
+		input_runner.game=self
+		get_tree().root.add_child.call_deferred(input_runner)
 	if "--qa-export" in OS.get_cmdline_user_args():
 		var runner=load("res://after_silence/tests/episode_driver.gd").new()
 		runner.game=self
@@ -142,6 +146,10 @@ func _ready():
 		living_runner.game=self
 		get_tree().root.add_child.call_deferred(living_runner)
 func _setup_services():
+	if is_instance_valid(event_window): event_window.close()
+	if is_instance_valid(events_controller):
+		events_controller.dispose_activity()
+		events_controller.npc=null
 	objectives=preload("res://after_silence/core/objective_tracker.gd").new(state)
 	objectives.quest_completed.connect(func(id):
 		for quest in objectives.data.quests:
@@ -150,6 +158,7 @@ func _setup_services():
 	inventory=Inventory.new(state)
 	quests=Quests.new(state)
 	dialogues=Dialogues.new(state)
+	if npcs!=null: npcs.dispose(self)
 	npcs=NPCs.new(state)
 	if not state.changed.is_connected(_mark_dirty): state.changed.connect(_mark_dirty)
 	if not is_instance_valid(audio):
@@ -346,7 +355,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	for i in range(actions.size()):
 		var item=actions[i]
 		var button=Button.new()
-		button.text=("%02d   "%(i+1) if not main_layout else "")+item.label
+		button.text=item.label
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
 		button.custom_minimum_size=Vector2(0,31 if main_layout else 32)
 		button.add_theme_font_size_override("font_size",10)
@@ -380,6 +389,8 @@ func _close():
 	if in_menu: return
 	modal=false
 	shade.hide()
+	var focus=get_viewport().gui_get_focus_owner()
+	if is_instance_valid(focus): focus.release_focus()
 	if is_instance_valid(player): player.enabled=true
 	_save(false)
 func _main_menu():
@@ -458,6 +469,7 @@ func _load_game():
 
 func _save(notify: bool=true):
 	if in_menu or not is_instance_valid(player): return
+	npcs.capture(self)
 	if state.flag("event_campaign") and is_instance_valid(events_controller) and not events_controller.preparing: state.event_state=events_controller.capture()
 	state.minigame=preload("res://after_silence/core/minigame_checkpoint.gd").capture(rift) if rift.active else {}
 	if not state.flag("event_campaign"): objectives.refresh()
@@ -474,6 +486,8 @@ func _travel(id: String,p: Vector2):
 	_save(false)
 	if id in Homes.IDS: _notify(Story.pair(Homes.NAMES[Homes.IDS.find(id)],state.language))
 func _build_world(id: String,p: Vector2):
+	if is_instance_valid(events_controller): events_controller.detach_activity()
+	npcs.detach(self)
 	if is_instance_valid(living): living.restore_camera()
 	if is_instance_valid(player) and player.has_meta("click_route"): player.remove_meta("click_route")
 	if is_instance_valid(player):
@@ -513,7 +527,6 @@ func _build_world(id: String,p: Vector2):
 	atmosphere.anchor=player
 	world.add_child(atmosphere)
 	world.modulate=Color("7b93b3") if state.echo else Color("b5c6b6")
-	actors.clear()
 	npcs.populate(self)
 	enemy=null
 	if id=="forest":
@@ -528,11 +541,12 @@ func _build_world(id: String,p: Vector2):
 	if is_instance_valid(adventure): adventure.populate()
 	if id=="town" and rift.phase=="travel" and state.flag("rift_mode") and not state.flag("rift_finished") and rift.index<rift.STOPS.size():
 		world.spot("rift_next",rift.STOPS[rift.index],"trace")
+	if is_instance_valid(events_controller): events_controller.attach_activity(id)
 func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	var actor=Actor.new()
 	actor.sheet=load(path)
 	actor.npc_color=color
-	actor.position=world.recover(p)
+	actor.position=p
 	actor.target=actor.position
 	actor.set_meta("home",actor.position)
 	world.sorter.add_child(actor)
@@ -615,9 +629,17 @@ func _footstep(loud: bool):
 	if is_instance_valid(enemy): enemy.hear(player.position,loud and not state.flag("soft_steps"))
 func _nearest() -> String:
 	if rift.phase=="travel" and not state.flag("rift_finished") and rift.index<rift.STOPS.size() and state.zone=="town" and player.position.distance_to(rift.STOPS[rift.index])<52: return "rift_next"
+	for spot in world.interactables:
+		if spot.position.distance_to(player.position)<28 and (spot.id in Homes.IDS or spot.id in ["to_library","to_forest","to_town","leave_home","leave_shop","visit_shop","visit_orchard","visit_harbor","district_return"]):
+			return spot.id
+	if state.flag("event_campaign") and is_instance_valid(events_controller) and events_controller.phase in ["observe","ready","suspended","decision","failure"]:
+		var actor=events_controller.npc
+		if is_instance_valid(actor) and actor.is_visible_in_tree() and actor.position.distance_to(player.position)<55:
+			return events_controller.events[events_controller.index].npc
 	var result=""
 	var distance=55.0
 	for id in actors:
+		if not npcs.visible_here(id,state.zone): continue
 		var d=actors[id].position.distance_to(player.position)
 		if d<distance: distance=d;result=id
 	for spot in world.interactables:
@@ -671,7 +693,11 @@ func _unhandled_key_input(event):
 		elif event.physical_keycode>=KEY_1 and event.physical_keycode<=KEY_9:
 			var index=int(event.physical_keycode-KEY_1)
 			if index<buttons.size(): buttons.values()[index].pressed.emit()
-		elif event.physical_keycode==KEY_ESCAPE and not in_menu: _close()
+		elif event.physical_keycode==KEY_ESCAPE and not in_menu:
+			_close()
+			if state.flag("event_campaign") and events_controller.phase=="failure":
+				events_controller.phase="ready"
+				if is_instance_valid(events_controller.npc): events_controller.npc.managed_motion=true
 		return
 	match event.physical_keycode:
 		KEY_T: if state.flag("event_campaign"): journey.open()

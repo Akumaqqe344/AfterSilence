@@ -1,7 +1,11 @@
 extends RefCounted
 const Homes=preload("res://after_silence/world/homes.gd")
-const PROFILE={"nadia":["town",Vector2(650,540),"home_nadia","lora"],"lev":["town",Vector2(350,500),"home_lev","inventor"],"mara":["library",Vector2(270,490),"home_nadia","scientist"],"pavel":["town",Vector2(900,370),"home_pavel","orest"],"sonya":["town",Vector2(780,650),"home_sonya","ella"]}
+const PROFILE={"nadia":["town",Vector2(650,540),"home_nadia","lora"],"lev":["town",Vector2(350,500),"home_lev","inventor"],"mara":["library",Vector2(270,490),"home_nadia","scientist"],"pavel":["town",Vector2(900,370),"home_pavel","orest"],"sonya":["town",Vector2(780,650),"home_sonya","ella"],"child":["home_nadia",Vector2(360,330),"home_nadia","ella"],"alina":["forest",Vector2(700,520),"home_sonya","lora"],"guest":["town",Vector2(950,500),"home_pavel","scientist"]}
 var state
+var pool: Node2D
+var bound_game
+var requests: Dictionary={}
+var navigation=preload("res://after_silence/core/resident_navigation.gd").new()
 var routine=preload("res://after_silence/core/routine_schedule.gd").new()
 func task(id: String) -> Array:
 	if state.flag("weather_rain") and state.clock>=7 and state.clock<20:
@@ -37,144 +41,208 @@ func initialize():
 		var zone=data[0]
 		var p=data[1]
 		if state.clock>=20 or state.clock<7: zone=data[2];p=Vector2(280+PROFILE.keys().find(id)*22,320)
+		if id=="sonya" and not state.flag("returned") and not state.flag("rift_finished") and not state.flag("event_campaign"):
+			zone="forest";p=Vector2(1100,280)
 		state.residents[id]={"zone":zone,"destination":zone,"x":p.x,"y":p.y,"elapsed":0.0,"wait":3.0,"visits":0}
 func position_of(r: Dictionary) -> Vector2:
 	return Vector2(r.x,r.y)
 func visible_here(id: String, zone: String) -> bool:
-	if state.flag("event_campaign") and state.flag("event_left_"+id): return false
-	if id=="sonya" and state.flag("rift_finished"): return state.residents[id].zone==zone
-	if id=="sonya" and not state.flag("returned"): return zone=="forest" and state.echo
+	if not state.residents.has(id): return false
+	if id in ["child","alina","guest"] and not state.flag("event_campaign"): return false
+	if id=="sonya" and not state.flag("returned") and not state.flag("rift_finished") and not state.flag("event_campaign"):
+		return zone=="forest" and state.echo
 	return state.residents[id].zone==zone
+func dispose(game):
+	for actor in game.actors.values():
+		if is_instance_valid(actor):
+			actor.get_parent().remove_child(actor);actor.queue_free()
+	game.actors.clear()
+	if is_instance_valid(pool): pool.queue_free()
+func capture(game):
+	for id in game.actors:
+		if not is_instance_valid(game.actors[id]) or not state.residents.has(id): continue
+		var p=game.actors[id].position
+		state.residents[id].x=p.x;state.residents[id].y=p.y
+func detach(game):
+	capture(game)
+	for actor in game.actors.values():
+		if is_instance_valid(actor) and actor.get_parent()!=pool: actor.reparent(pool,false)
+func nav(zone: String) -> Dictionary:
+	if is_instance_valid(bound_game) and is_instance_valid(bound_game.world):
+		var world=bound_game.world
+		if world.zone==zone and world.echo==state.echo and world.story_mode==state.flag("event_campaign") and world.grid!=null:
+			return {"grid":world.grid,"size":world.dimensions,"obstacles":world.obstacles}
+	return navigation.geometry(zone,state.echo,state.flag("event_campaign"))
+func safe_point(zone: String, p: Vector2) -> Vector2:
+	var geometry=nav(zone)
+	if navigation.clear_segment(geometry,p,p): return p
+	for ring in range(1,20):
+		for angle in range(16):
+			var q=p+Vector2.from_angle(angle*TAU/16)*ring*16
+			if navigation.clear_segment(geometry,q,q): return q
+	return p
 func populate(game):
+	bound_game=game
 	initialize()
+	if not is_instance_valid(pool):
+		pool=Node2D.new();pool.name="PersistentResidents";pool.hide();game.add_child(pool)
 	for id in PROFILE:
-		if not visible_here(id,game.state.zone) or game.actors.has(id): continue
-		var p=position_of(state.residents[id])
-		if id=="sonya" and not state.flag("returned") and not state.flag("rift_finished"): p=Vector2(1100,280)
-		game._npc(id,p,"res://after_silence/assets/pechatai/npc/"+PROFILE[id][3]+".png")
-func update(game, dt: float, enabled: bool):
-	initialize()
-	if not enabled:
-		for actor in game.actors.values():
-			actor.enabled=false
-			actor.get_meta("caption").hide()
-		return
-	var night=state.clock>=20 or state.clock<7
-	for id in PROFILE:
-		if state.flag("event_campaign") and game.events_controller.owns(id): continue
-		if id=="sonya" and not state.flag("returned") and not state.flag("rift_finished"):
-			if game.actors.has(id): _wander(game,id,Vector2(1100,280),dt)
-			continue
+		if game.actors.has(id) and is_instance_valid(game.actors[id]): continue
 		var r=state.residents[id]
+		var saved=position_of(r)
+		var p=safe_point(r.zone,saved)
+		if p.distance_to(saved)>1:
+			r.recovery="obstructed legacy position";r.x=p.x;r.y=p.y
+			game._notify(game.t("Житель вернулся на ближайшую безопасную точку.","A resident returned to the nearest safe point."))
+		game._npc(id,p,"res://after_silence/assets/pechatai/npc/"+PROFILE[id][3]+".png")
+		var actor=game.actors[id]
+		actor.set_meta("resident_id",id);actor.managed_motion=true
+		if id=="child": actor.scale=Vector2.ONE*.8
+		attach(game,id)
+	for id in game.actors: attach(game,id)
+func attach(game,id: String):
+	var actor=game.actors[id]
+	var present=visible_here(id,state.zone)
+	var parent=game.world.sorter if present else pool
+	if actor.get_parent()!=parent: actor.reparent(parent,false)
+	actor.visible=present;actor.collision_layer=4 if present else 0
+	actor.collision_mask=0 if actor.managed_motion else 1
+func request(id: String, zone: String, point: Vector2):
+	requests[id]={"zone":zone,"point":[point.x,point.y]}
+	state.residents[id].assignment=requests[id].duplicate(true)
+	state.residents[id].destination=zone;state.residents[id].target=[point.x,point.y]
+func release(id: String):
+	requests.erase(id)
+	state.residents[id].erase("assignment")
+func available(game,zone: String) -> bool:
+	if state.flag("event_campaign"): return game.journey.zone_allowed(zone)
+	return zone not in ["orchard","harbor"] or game.adventure.unlocked(zone)
+func seat(game,id: String,zone: String,target: Vector2) -> Vector2:
+	var r=state.residents[id]
+	var key="%s:%s"%[zone,target]
+	var old=r.get("seat",[])
+	var candidates=[target]
+	if r.get("seat_key","")==key and old.size()==2: candidates.push_front(Vector2(old[0],old[1]))
+	for ring in [20,36,48]:
+		for i in range(8): candidates.append(target+Vector2.from_angle((i+PROFILE.keys().find(id))*TAU/8)*ring)
+	for p in candidates:
+		if not navigation.clear_segment(nav(zone),p,p): continue
+		var occupied=false
+		for other_id in game.actors:
+			if other_id==id or state.residents[other_id].zone!=zone: continue
+			if game.actors[other_id].position.distance_to(p)<16: occupied=true;break
+		if not occupied:
+			r.seat_key=key;r.seat=[p.x,p.y]
+			return p
+	return target
+func update(game, dt: float, enabled: bool):
+	populate(game)
+	dt=clampf(dt,0,.05)
+	for id in PROFILE:
+		var actor=game.actors[id]
+		var r=state.residents[id]
+		if r.has("assignment") and not requests.has(id): requests[id]=r.assignment.duplicate(true)
+		if not actor.managed_motion:
+			r.x=actor.position.x;r.y=actor.position.y
+			continue
+		actor.managed_velocity=Vector2.ZERO;actor.enabled=enabled;actor.scripted=false
+		actor.get_meta("caption").hide()
+		if not enabled: continue
 		var activity=task(id)
 		var desired=activity[2]
-		# A schedule never sends residents through a district gate that is closed.
-		if desired in ["orchard","harbor"] and not game.adventure.unlocked(desired): desired="town"
+		var goal=Vector2(activity[3],activity[4])
 		var mode=behavior(id)
-		if r.get("mode","")!=mode:
-			r.previous_mode=r.get("mode","routine")
-			r.mode=mode
-			r.mode_since=state.play_seconds
-		if mode in ["alarm","search"]:
-			r.last_seen=[game.player.position.x,game.player.position.y]
-		if mode=="fear":
-			desired=PROFILE[id][2]
-			activity=[20,7,desired,320,300,"sleep"]
-		if r.get("destination",r.zone)!=desired:
-			r.elapsed=0.0
-			r.destination=desired
-		r.elapsed+=dt
-		if r.zone!=game.state.zone:
-			if r.zone!=desired and r.elapsed>25:
-				r.zone=desired
-				var p=Vector2(activity[3],activity[4])
-				r.x=p.x;r.y=p.y;r.elapsed=0.0
+		r.mode=mode
+		if not requests.has(id) and r.zone==state.zone and actor.position.distance_to(game.player.position)<76 and mode not in ["fear","help"]:
+			actor.enabled=false
+			var delta=game.player.position-actor.position
+			actor.facing=(3 if delta.x>0 else 2) if absf(delta.x)>absf(delta.y) else (0 if delta.y>0 else 1)
 			continue
-		if not game.actors.has(id): continue
-		var actor=game.actors[id]
+		if mode=="fear": desired=PROFILE[id][2];goal=Vector2(320,300)
+		if requests.has(id):
+			desired=requests[id].zone;goal=Vector2(requests[id].point[0],requests[id].point[1])
+		elif id=="sonya" and not state.flag("returned") and not state.flag("rift_finished") and not state.flag("event_campaign"):
+			desired="forest";goal=Vector2(1100,280)
+		elif mode=="help" and r.zone==state.zone and actor.position.distance_to(game.player.position)<200:
+			goal=game.player.position+Vector2(0,40);desired=r.zone
+			if actor.position.distance_to(game.player.position)<85:
+				state.charges=3;game.living.remember(id,"help")
+				game._notify(game.t("Надя помогла восстановить силы.","Nadia restored your energy."))
+		r.destination=desired;r.target=[goal.x,goal.y]
+		if not available(game,desired): r.route_status="waiting_closed_zone";continue
+		var edge=[]
+		if r.zone!=desired:
+			edge=navigation.next_portal(r.zone,desired,state.echo)
+			if edge.is_empty(): r.route_status="waiting_no_connection";continue
+			if not available(game,edge[2]): r.route_status="waiting_closed_zone";continue
+			goal=edge[1]
+		else: goal=seat(game,id,desired,goal)
+		_walk(game,actor,goal,dt,108 if not edge.is_empty() else 60)
 		r.x=actor.position.x;r.y=actor.position.y
-		if r.zone==desired:
-			if mode=="help" and actor.position.distance_to(game.player.position)<200:
-				_walk(game,actor,game.player.position,dt,55)
-				if actor.position.distance_to(game.player.position)<85:
-					state.charges=3
-					game.living.remember(id,"help")
-					game._notify(game.t("Надя помогла восстановить силы.","Nadia restored your energy."))
-			elif mode in ["search","alarm"]:
-				var search_point=Vector2(600,500)+Vector2(sin(state.play_seconds*.04)*180,cos(state.play_seconds*.04)*100)
-				if mode=="alarm" and r.has("last_seen"): search_point=Vector2(r.last_seen[0],r.last_seen[1])
-				_walk(game,actor,search_point,dt,60)
-			else: _wander(game,id,Vector2(activity[3],activity[4]),dt)
-			continue
-		var goal=Vector2(320,422) if r.zone in Homes.IDS else Vector2(480,590) if r.zone=="library" else Vector2(600,180) if desired=="library" else Homes.door(PROFILE[id][2],state.echo)
-		if r.zone in ["orchard","harbor"]: goal=Vector2(600,740)
-		elif r.zone=="town" and desired in ["orchard","harbor"]: goal=Vector2(1710,500) if desired=="orchard" else Vector2(600,1200)
-		if actor.position.distance_to(goal)<22:
-			var next_zone="town" if r.zone!="town" else desired
-			var p=Homes.door(r.zone,state.echo) if r.zone in Homes.IDS else Vector2(600,210) if r.zone=="library" else Vector2(320,395) if desired in Homes.IDS else Vector2(480,575)
-			if desired in ["orchard","harbor"] and r.zone=="town": p=Vector2(600,700)
-			elif r.zone in ["orchard","harbor"]: p=Vector2(1670,500) if r.zone=="orchard" else Vector2(600,1150)
-			r.zone=next_zone;r.x=p.x;r.y=p.y;r.elapsed=0
-			game.actors.erase(id)
-			actor.queue_free()
-		else: _walk(game,actor,goal,dt,108)
-	populate(game)
-func _wander(game,id: String, center: Vector2, dt: float):
-	var actor=game.actors[id]
-	var r=state.residents[id]
-	r.wait-=dt
-	if r.wait<=0:
-		r.visits+=1
-		r.wait=3.0+PROFILE.keys().find(id)*.7
-		var goal=center+[Vector2.ZERO,Vector2(32,0),Vector2(0,28),Vector2(-24,8)][int(r.visits)%4]
-		actor.set_meta("wander_goal",game.world.recover(goal))
-	_walk(game,actor,actor.get_meta("wander_goal",game.world.recover(center)),dt,30)
+		if not edge.is_empty() and actor.position.distance_to(goal)<3:
+			var landing: Vector2=edge[3]
+			if not navigation.clear_segment(nav(edge[2]),landing,landing):
+				r.route_status="waiting_blocked_portal";continue
+			# Local coordinates change only at a named, reached scene portal.
+			r.zone=edge[2];actor.position=landing;actor.target=landing
+			r.x=landing.x;r.y=landing.y;r.visits=int(r.get("visits",0))+1
+			r.portal=[edge[0],edge[2]];r.route_status="portal"
+			clear_route(actor);attach(game,id)
+		elif edge.is_empty() and actor.position.distance_to(goal)<3: r.route_status="arrived"
+		if visible_here(id,state.zone) and actor.position.distance_to(game.player.position)<100 and not requests.has(id):
+			var caption=actor.get_meta("caption")
+			caption.text=game.t("Я рядом.","I'm here.");caption.show()
+	capture(game)
+func clear_route(actor):
+	for key in ["route","route_goal","route_retry","blocked_for"]:
+		if actor.has_meta(key): actor.remove_meta(key)
 func _walk(game,actor,goal: Vector2,dt: float,speed: float):
-	var caption=actor.get_meta("caption")
-	caption.visible=actor.position.distance_to(game.player.position)<115 and fmod(state.play_seconds,15)<3
-	if caption.visible:
-		var id=game.actors.find_key(actor)
-		var lines={"nadia":["Не потеряйте записи.","Keep your notes safe."],"lev":["Сначала отключим ток.","Power off first."],"mara":["Проверим второй экземпляр.","Check the second copy."],"pavel":["Я выслушаю свидетелей.","I will hear the witnesses."],"sonya":["Не называйте меня вслух.","Please keep my name quiet."]}
-		caption.text=lines[id][1] if state.language=="en" else lines[id][0]
-		var mode=behavior(id)
-		if mode=="fear": caption.text=game.t("Пойду домой…","Going home…")
-		elif mode=="alarm": caption.text=game.t("Проверю площадь!","Checking the square!")
-		elif mode=="search": caption.text=game.t("Дорога под охраной.","The road is safe.")
-		elif state.last_memories.get(id,"")!="": caption.text=game.t("Я помню нашу встречу.","I remember our meeting.")
-	actor.npc_speed=speed
-	var actor_id=game.actors.find_key(actor)
-	actor.enabled=actor.position.distance_to(game.player.position)>76 or behavior(actor_id)=="fear"
-	if not actor.enabled:
-		var d=game.player.position-actor.position
-		actor.facing=(3 if d.x>0 else 2) if absf(d.x)>absf(d.y) else (0 if d.y>0 else 1)
-		return
-	var age=float(actor.get_meta("route_age",0))-dt
+	var id: String=actor.get_meta("resident_id")
+	var r=state.residents[id]
+	var geometry=nav(r.zone)
 	var route: PackedVector2Array=actor.get_meta("route",PackedVector2Array())
-	var previous_goal: Vector2=actor.get_meta("route_goal",goal)
-	if previous_goal.distance_to(goal)>16:
-		age=0
-		actor.set_meta("stuck_time",0.0)
-	var last_position: Vector2=actor.get_meta("route_last_position",actor.position)
-	var stuck=float(actor.get_meta("stuck_time",0.0))
-	if actor.position.distance_to(goal)>18:
-		stuck+=dt
-	else:
-		stuck=0.0
-		last_position=actor.position
-	if stuck>=2.0:
-		# Replan from the actual position; do not move the resident through walls.
-		if actor.position.distance_to(last_position)<4:
-			age=0
-			route=PackedVector2Array()
-		stuck=0.0
-		last_position=actor.position
-	if age<=0:
-		route=game.world.path_between(actor.position,goal)
-		age=1.0
-	while route.size()>0 and actor.position.distance_to(route[0])<6: route.remove_at(0)
-	actor.target=route[0] if route.size()>0 else actor.position
+	var previous: Vector2=actor.get_meta("route_goal",Vector2.INF)
+	var retry=float(actor.get_meta("route_retry",0))-dt
+	if previous.distance_to(goal)>.5 or (route.is_empty() and retry<=0):
+		route=navigation.path(geometry,actor.position,goal)
+		actor.set_meta("route_goal",goal);retry=1
+	actor.set_meta("route_retry",retry)
+	while not route.is_empty() and actor.position.distance_to(route[0])<.1: route.remove_at(0)
+	if route.is_empty():
+		r.route_status="arrived" if actor.position.distance_to(goal)<3 else "waiting_no_path"
+		actor.set_meta("route",route);return
+	var budget=speed*dt
+	var origin=actor.position
+	while budget>.001 and not route.is_empty():
+		var next: Vector2=actor.position.move_toward(route[0],budget)
+		if not navigation.clear_segment(geometry,actor.position,next):
+			route.clear();r.route_status="waiting_obstacle";break
+		var blocked=false
+		for other_id in game.actors:
+			if other_id==id or state.residents[other_id].zone!=r.zone: continue
+			var other=game.actors[other_id]
+			if next.distance_to(other.position)<12 and next.distance_to(other.position)<actor.position.distance_to(other.position)-.01: blocked=true;break
+		if blocked:
+			var age=float(actor.get_meta("blocked_for",0))+dt
+			actor.set_meta("blocked_for",age);r.route_status="waiting_resident"
+			if age>1:
+				var reserved=[]
+				for other_id in game.actors:
+					if other_id==id or state.residents[other_id].zone!=r.zone: continue
+					var center=Vector2i(game.actors[other_id].position/16)
+					for y in range(-1,2):
+						for x in range(-1,2):
+							var cell=center+Vector2i(x,y)
+							if geometry.grid.is_in_boundsv(cell) and not geometry.grid.is_point_solid(cell) and Vector2i(actor.position/16)!=cell:
+								reserved.append(cell);geometry.grid.set_point_solid(cell,true)
+				route=navigation.path(geometry,actor.position,goal)
+				for cell in reserved: geometry.grid.set_point_solid(cell,false)
+				actor.set_meta("blocked_for",0.0)
+			break
+		actor.set_meta("blocked_for",0.0)
+		budget-=actor.position.distance_to(next);actor.position=next
+		r.safe=[next.x,next.y];r.route_status="walking"
+		if actor.position.distance_to(route[0])<.1: route.remove_at(0)
+	actor.target=route[0] if not route.is_empty() else actor.position
+	actor.managed_velocity=(actor.position-origin)/maxf(dt,.00001)
 	actor.set_meta("route",route)
-	actor.set_meta("route_age",age)
-	actor.set_meta("route_goal",goal)
-	actor.set_meta("route_last_position",last_position)
-	actor.set_meta("stuck_time",stuck)

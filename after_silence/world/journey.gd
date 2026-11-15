@@ -48,7 +48,7 @@ func details(id: String):
 	var names=[]
 	for npc_id in game.state.residents:
 		var resident=game.state.residents[npc_id]
-		if resident.zone==place.zone and not game.state.flag("event_left_"+npc_id) and Vector2(resident.x,resident.y).distance_to(Vector2(place.point[0],place.point[1]))<220: names.append(game.named(npc_id))
+		if resident.zone==place.zone and Vector2(resident.x,resident.y).distance_to(Vector2(place.point[0],place.point[1]))<220: names.append(game.named(npc_id))
 	var director=game.events_controller
 	if director.index<director.events.size() and director.events[director.index].location==id and director.phase!="travel":
 		var active_name=game.named(director.events[director.index].npc)

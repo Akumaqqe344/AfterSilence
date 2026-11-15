@@ -11,6 +11,12 @@ func run():
 	game._new_event_game();game.set_physics_process(false)
 	var director=game.events_controller
 	director.set_physics_process(false)
+	game._close()
+	for frame in range(1200):
+		game.npcs.update(game,.05,true)
+		director._physics_process(0)
+		if director.phase!="travel": break
+	game._close()
 	check(director.events.size()==12,"packed twelve NPC events")
 	for event in director.events:
 		check(event.choices.size()>=2,"packed alternatives "+event.id)

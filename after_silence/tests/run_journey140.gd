@@ -21,6 +21,12 @@ func fixture_at(index: int):
 	var place=game.journey.places[director.events[index].location]
 	game._build_world(place.zone,Vector2(place.point[0],place.point[1])+Vector2(0,65))
 	director.prepare(false)
+	game._close()
+	for frame in range(3000):
+		if director.phase!="travel": break
+		game.npcs.update(game,.05,true)
+		director._physics_process(0)
+	game._close()
 func run():
 	create_timer(150).timeout.connect(func():push_error("Journey QA watchdog");quit(2))
 	game=load("res://after_silence/scenes/main.tscn").instantiate();root.add_child(game)
@@ -28,6 +34,7 @@ func run():
 	await shot("menu")
 	game.event_saves.path="user://qa_journey140.json"
 	game._new_event_game();game.set_physics_process(false);game.living.set_physics_process(false);game.events_controller.set_physics_process(false)
+	fixture_at(0)
 	check(game.journey.unlocked("square") and not game.journey.unlocked("rift"),"location gates")
 	game.interact("home_lev");check(game.state.zone=="town" and not game.transitions.busy,"main workshop gate")
 	game.interact("hamlet_house_1");check(game.state.zone=="town" and not game.transitions.busy,"village workshop gate")
@@ -119,6 +126,7 @@ func run():
 		if ending==0: await shot("final")
 		game._close()
 	game._new_event_game();game.set_physics_process(false);game.events_controller.set_physics_process(false)
+	fixture_at(0)
 	var director=game.events_controller
 	director.start_activity();director.activity.set_physics_process(false);director.activity.elapsed=17;director.activity.progress=2
 	game.event_window.leave()
@@ -126,6 +134,19 @@ func run():
 	await game._load_game()
 	check(director.phase=="suspended" and director.activity.elapsed==17,"suspended save resume")
 	director.resume_activity();check(game.event_window.active,"reopen preserved activity")
+	game.event_window.leave()
+	var retained=director.activity
+	var resident=director.npc
+	await game._travel("home_nadia",Vector2(320,395))
+	check(is_instance_valid(retained) and director.activity==retained and director.npc==resident,"suspended activity survives leaving zone")
+	await game._load_game()
+	check(director.phase=="travel" and not director.pending.is_empty(),"checkpoint retained when loading outside event zone")
+	await game._travel("town",Vector2(600,645))
+	director._physics_process(0)
+	retained=director.activity
+	check(is_instance_valid(retained) and retained.get_parent()==game.world,"suspended activity reattaches to event world")
+	director.resume_activity()
+	check(game.event_window.active and retained.elapsed==17,"suspended activity resumes after house visit")
 	game.event_window.close();director.activity.active=false
 	var old=game.state.to_data();old.event_state={"index":2,"phase":"observe","activity":{}}
 	old.flags["event_done_letter"]=true;old.flags["event_done_song"]=true

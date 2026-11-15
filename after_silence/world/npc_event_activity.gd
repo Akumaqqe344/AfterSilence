@@ -23,11 +23,15 @@ var look_dir=Vector2.RIGHT
 var moving_world=false
 var epoch=0
 var gates: Array=[]
+var gate_base: Dictionary={}
+var gate_grid: AStarGrid2D
+var zone=""
 var original_tint=Color.WHITE
 var extra_actor
 var initiator
 func start(owner,kind: String,actor,origin: Vector2):
 	game=owner;mode=kind;npc=actor;center=origin
+	zone=game.state.zone
 	initiator=actor
 	if mode=="stealth":
 		extra_actor=game.Actor.new();extra_actor.sheet=load("res://after_silence/assets/pechatai/npc/inventor.png")
@@ -35,10 +39,17 @@ func start(owner,kind: String,actor,origin: Vector2):
 		game.world.sorter.add_child(extra_actor);npc=extra_actor
 	original_tint=game.world.modulate
 	if mode=="epochs":
+		gate_grid=game.world.grid
 		for i in range(2):
 			var body=StaticBody2D.new();body.position=center+Vector2(-65 if i==0 else 65,-75)
 			var shape=CollisionShape2D.new();var rect=RectangleShape2D.new();rect.size=Vector2(12,80);shape.shape=rect
 			body.add_child(shape);add_child(body);gates.append(shape)
+			var rect_bounds=Rect2(body.position-Vector2(6,40),Vector2(12,80)).grow(5)
+			for y in range(floori(rect_bounds.position.y/16),ceili(rect_bounds.end.y/16)+1):
+				for x in range(floori(rect_bounds.position.x/16),ceili(rect_bounds.end.x/16)+1):
+					var cell=Vector2i(x,y)
+					if game.world.grid.is_in_boundsv(cell) and rect_bounds.has_point(Vector2(cell)*16+Vector2(8,8)):
+						gate_base[cell]=game.world.grid.is_point_solid(cell)
 		set_epoch(0)
 	npc.scripted=true
 	if mode=="evacuation":
@@ -67,8 +78,17 @@ func restore(data: Dictionary):
 	if mode=="epochs": set_epoch(int(data.get("epoch",0)))
 func set_epoch(value: int):
 	epoch=value%2
+	clear_gate_navigation()
 	for i in range(gates.size()): gates[i].set_deferred("disabled",i==epoch)
+	for i in range(gates.size()):
+		if i==epoch: continue
+		var bounds=Rect2(gates[i].get_parent().position-Vector2(6,40),Vector2(12,80)).grow(5)
+		for cell in gate_base:
+			if bounds.has_point(Vector2(cell)*16+Vector2(8,8)): game.world.grid.set_point_solid(cell,true)
 	game.world.modulate=Color("99b7af") if epoch else Color("d1c7a2")
+func clear_gate_navigation():
+	if gate_grid==null: return
+	for cell in gate_base: gate_grid.set_point_solid(cell,gate_base[cell])
 func route_point(i: int) -> Vector2:
 	var points=[Vector2(0,-100),Vector2(155,-100),Vector2(0,140),Vector2(0,0)]
 	if game.state.zone=="forest": points=[Vector2(0,0),Vector2(160,0),Vector2(0,160),Vector2(0,280)]
@@ -77,8 +97,17 @@ func route_point(i: int) -> Vector2:
 	return game.world.recover(center+points[posmod(i,4)])
 func move_actor(actor,goal: Vector2,dt: float,speed: float=72):
 	actor.scripted=true;actor.npc_speed=speed
-	var path=game.world.path_between(actor.position,goal)
-	actor.target=path[1] if path.size()>1 else goal
+	var path: PackedVector2Array=actor.get_meta("activity_route",PackedVector2Array())
+	var old: Vector2=actor.get_meta("activity_goal",Vector2.INF)
+	var age=float(actor.get_meta("activity_route_age",0))-dt
+	if old.distance_to(goal)>20 or age<=0:
+		path=game.world.path_between(actor.position,goal)
+		if path.size()>1 and game.world.sees(actor.position,path[1]): path.remove_at(0)
+		if not path.is_empty(): path.append(goal)
+		actor.set_meta("activity_goal",goal);age=.75
+	while not path.is_empty() and actor.position.distance_to(path[0])<6: path.remove_at(0)
+	actor.target=path[0] if not path.is_empty() else actor.position
+	actor.set_meta("activity_route",path);actor.set_meta("activity_route_age",age)
 	if actor==npc and actor.target.distance_to(actor.position)>2: look_dir=(actor.target-actor.position).normalized()
 func _physics_process(dt):
 	if game.modal and is_instance_valid(extra_actor): extra_actor.scripted=false
@@ -181,9 +210,10 @@ func win():
 	active=false;completed.emit()
 func _exit_tree():
 	if moving_world: return
+	clear_gate_navigation()
 	if is_instance_valid(initiator): initiator.scripted=false
 	if is_instance_valid(extra_actor): extra_actor.queue_free()
-	if is_instance_valid(game) and is_instance_valid(game.world): game.world.modulate=original_tint
+	if is_instance_valid(game) and is_instance_valid(game.world) and game.world.zone==zone: game.world.modulate=original_tint
 	if is_instance_valid(npc): npc.scripted=false;npc.modulate=Color.WHITE
 	for actor in followers:
 		if is_instance_valid(actor): actor.queue_free()

@@ -1,6 +1,7 @@
 extends RefCounted
 signal changed
 const ZONES = ["town", "library", "forest","home_nadia","home_lev","home_pavel","home_sonya","orchard","harbor","shop"]
+const SIZES={"town":Vector2(1792,1280),"forest":Vector2(1792,1344),"library":Vector2(960,720),"orchard":Vector2(1200,900),"harbor":Vector2(1200,900)}
 const ITEMS = ["fuse", "lens", "key", "ribbon", "bandage", "keepsake"]
 const CLUES = ["photo", "poster", "ledger", "clock", "diagram", "testimony", "signature", "medical"]
 var flags: Dictionary = {}
@@ -85,7 +86,18 @@ func restore(d: Dictionary) -> bool:
 		for key in ["x","y","elapsed","wait","visits"]:
 			var value=r.get(key,0)
 			if not (value is int or value is float) or not is_finite(float(value)): return false
-		restored[id]={"zone":r.zone,"x":clampf(float(r.x),24,1500),"y":clampf(float(r.y),24,1100),"elapsed":clampf(float(r.get("elapsed",0)),0,1000),"wait":clampf(float(r.get("wait",3)),0,20),"visits":int(clampf(float(r.get("visits",0)),0,100000))}
+		var size=SIZES.get(r.zone,Vector2(640,480))
+		restored[id]={"zone":r.zone,"x":clampf(float(r.x),24,size.x-24),"y":clampf(float(r.y),24,size.y-24),"elapsed":clampf(float(r.get("elapsed",0)),0,1000),"wait":clampf(float(r.get("wait",3)),0,20),"visits":int(clampf(float(r.get("visits",0)),0,100000))}
+		if r.has("assignment"):
+			var a=r.assignment
+			if not a is Dictionary or not a.get("zone","") in ZONES: return false
+			var point=a.get("point")
+			if not point is Array or point.size()!=2: return false
+			for n in point:
+				if not (n is float or n is int) or not is_finite(float(n)): return false
+			var bounds=SIZES.get(a.zone,Vector2(640,480))
+			if point[0]<24 or point[0]>bounds.x-24 or point[1]<24 or point[1]>bounds.y-24: return false
+			restored[id].assignment=a.duplicate(true)
 		restored[id].destination=r.get("destination",r.zone) if r.get("destination",r.zone) in ZONES else r.zone
 		for key in ["mode","previous_mode"]:
 			if r.has(key): restored[id][key]=r[key] if r[key] in ["routine","fear","alarm","help","search","home"] else "routine"
@@ -132,7 +144,8 @@ func restore(d: Dictionary) -> bool:
 	seen = d.get("seen", []).filter(func(v): return v is String and v.length() < 80).slice(-100)
 	achievements = d.get("achievements", []).filter(func(v): return v is String and v in preload("res://after_silence/core/achievements.gd").ENTRIES)
 	zone = d.zone
-	position = Vector2(clampf(float(p[0]), 32, 1500), clampf(float(p[1]), 32, 1100))
+	var size=SIZES.get(zone,Vector2(640,480))
+	position = Vector2(clampf(float(p[0]), 32, size.x-32), clampf(float(p[1]), 32, size.y-32))
 	echo = d.get("echo", false) == true
 	charges = int(clampf(float(d.get("charges", 3)), 0, 3))
 	pressure = int(clampf(float(d.get("pressure", 0)), 0, 5))

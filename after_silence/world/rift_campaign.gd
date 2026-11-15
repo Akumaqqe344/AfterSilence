@@ -436,6 +436,8 @@ func show_decision() -> void:
 	queue_redraw()
 
 func choose(option: Array) -> void:
+	if phase!="decision" or index>=QUESTS.size(): return
+	if option not in QUESTS[index].choices or game.state.flag("rift_q%02d_done"%(index+1)): return
 	game.living.restore_camera()
 	if not available(option[0]): return
 	game.state.set_flag("rift_choice_%02d_%s"%[index+1,option[0]])

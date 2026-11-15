@@ -57,6 +57,7 @@ func close():
 	var activity=game.events_controller.activity
 	if is_instance_valid(activity) and activity.mode=="epochs":
 		game.world.modulate=activity.original_tint
+		activity.clear_gate_navigation()
 		for gate in activity.gates: gate.set_deferred("disabled",true)
 	game.camera.zoom=previous_zoom;game.camera.offset=previous_offset;game.camera.reset_smoothing()
 	pause_panel.hide();hide()

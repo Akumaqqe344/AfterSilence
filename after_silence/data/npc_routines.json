@@ -5,6 +5,9 @@
   "lev":[[7,12,"town",350,500,"work"],[12,14,"town",600,600,"meeting"],[14,20,"town",350,500,"work"],[20,7,"home_lev",320,300,"sleep"]],
   "mara":[[7,12,"library",270,490,"research"],[12,14,"town",600,600,"meeting"],[14,20,"library",270,490,"research"],[20,7,"home_nadia",360,300,"sleep"]],
   "pavel":[[7,12,"town",900,370,"guard"],[12,14,"town",600,600,"meeting"],[14,20,"town",900,370,"guard"],[20,7,"home_pavel",320,300,"sleep"]],
-  "sonya":[[7,12,"town",780,650,"writing"],[12,14,"library",650,490,"research"],[14,20,"town",780,650,"writing"],[20,7,"home_sonya",320,300,"sleep"]]
+  "sonya":[[7,12,"town",780,650,"writing"],[12,14,"library",650,490,"research"],[14,20,"town",780,650,"writing"],[20,7,"home_sonya",320,300,"sleep"]],
+  "child":[[7,20,"home_nadia",360,330,"waiting"],[20,7,"home_nadia",360,300,"sleep"]],
+  "alina":[[7,20,"forest",700,520,"waiting"],[20,7,"home_sonya",360,330,"sleep"]],
+  "guest":[[7,20,"town",950,500,"meeting"],[20,7,"home_pavel",360,330,"sleep"]]
  }
 }

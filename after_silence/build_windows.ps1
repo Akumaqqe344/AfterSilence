@@ -7,10 +7,11 @@ New-Item -ItemType Directory -Force -Path work,after_silence/build | Out-Null
 function Invoke-CheckedGodot([string]$Log,[string[]]$EngineArgs) {
     & $Godot @EngineArgs *> $Log
     if ($LASTEXITCODE -ne 0) { throw "Godot exit $LASTEXITCODE; see $Log" }
-    if (Select-String -LiteralPath $Log -Pattern 'SCRIPT ERROR:|ERROR:|failing tests|WARNING:.*leaked' -Quiet) { throw "Godot reported errors; see $Log" }
+    if (Select-String -LiteralPath $Log -Pattern 'SCRIPT ERROR:|Parser Error|ERROR:|Invalid call|Cannot convert|is_inside_tree|failing tests|ObjectDB.*leaked|orphan nodes' -Quiet) { throw "Godot reported errors; see $Log" }
 }
 Invoke-CheckedGodot 'work/import-release.log' @('--headless','--editor','--path','.','--import')
 if (-not $SkipTests) {
+    Invoke-CheckedGodot 'work/npc-routes-test.log' @('--headless','--path','.','--script','after_silence/tests/run_npc_routes.gd','--','--qa')
     Invoke-CheckedGodot 'work/journey140-test.log' @('--headless','--path','.','--script','after_silence/tests/run_journey140.gd','--','--qa')
     Invoke-CheckedGodot 'work/landscape120-test.log' @('--headless','--path','.','--script','after_silence/tests/run_landscape120.gd','--','--qa')
     Invoke-CheckedGodot 'work/merge110-test.log' @('--headless','--path','.','--script','after_silence/tests/run_merge110.gd','--','--qa')
