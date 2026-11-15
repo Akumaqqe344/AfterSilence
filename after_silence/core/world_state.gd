@@ -98,9 +98,30 @@ func restore(d: Dictionary) -> bool:
 			var bounds=SIZES.get(a.zone,Vector2(640,480))
 			if point[0]<24 or point[0]>bounds.x-24 or point[1]<24 or point[1]>bounds.y-24: return false
 			restored[id].assignment=a.duplicate(true)
+		if r.get("control","routine") not in ["routine","combat","returning","yielding"]: return false
+		if r.has("control"): restored[id].control=r.control
+		for context in ["combat_origin","return_to","yield_origin"]:
+			if not r.has(context): continue
+			var spot=r[context]
+			if not spot is Dictionary or not spot.get("zone","") in ZONES: return false
+			var q=spot.get("point")
+			if not q is Array or q.size()!=2: return false
+			var limit=SIZES.get(spot.zone,Vector2(640,480))
+			for n in q:
+				if not (n is int or n is float) or not is_finite(float(n)): return false
+			if q[0]<24 or q[1]<24 or q[0]>limit.x-24 or q[1]>limit.y-24: return false
+			restored[id][context]=spot.duplicate(true)
+		if r.get("control","")=="combat" and not r.has("combat_origin"): return false
+		if r.get("control","")=="combat":
+			if r.get("combat_phase","") not in ["approach","active"]: return false
+			restored[id].combat_phase=r.combat_phase
+		if r.get("control","")=="returning" and not r.has("return_to"): return false
+		if r.get("control","")=="yielding" and not r.has("yield_origin"): return false
+		if not r.get("combat_paused",false) is bool: return false
+		if r.has("combat_paused"): restored[id].combat_paused=r.combat_paused
 		restored[id].destination=r.get("destination",r.zone) if r.get("destination",r.zone) in ZONES else r.zone
 		for key in ["mode","previous_mode"]:
-			if r.has(key): restored[id][key]=r[key] if r[key] in ["routine","fear","alarm","help","search","home"] else "routine"
+			if r.has(key): restored[id][key]=r[key] if r[key] in ["routine","fear","alarm","help","search","home","escort","combat","returning","waiting"] else "routine"
 		if r.has("mode_since"):
 			if not (r.mode_since is int or r.mode_since is float) or not is_finite(float(r.mode_since)): return false
 			restored[id].mode_since=maxf(0,float(r.mode_since))

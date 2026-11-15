@@ -21,7 +21,7 @@ func owns(id: String) -> bool:
 func capture() -> Dictionary:
 	if not enabled(): return game.state.event_state
 	if not pending.is_empty(): return pending.duplicate(true)
-	var data={"version":2,"index":index,"phase":phase,"activity":{}}
+	var data={"version":3,"index":index,"phase":phase,"activity":{}}
 	if phase in ["running","suspended"] and is_instance_valid(activity) and is_instance_valid(activity.npc): data.activity=activity.checkpoint()
 	return data
 func migrate(saved: Dictionary):
@@ -44,7 +44,11 @@ func start(resume=false):
 	if index>=events.size(): finish();return
 	var matching=int(saved.get("index",index))==index
 	var saved_phase=saved.get("phase","travel") if matching else "travel"
+	if saved_phase in ["running","suspended","decision","failure"] and matching: game.state.set_flag("event_action_"+events[index].id)
 	prepare(false)
+	if saved_phase=="action" and matching:
+		if game.state.zone==game.journey.places[events[index].location].zone: phase="action";populate_preparation()
+		else: pending=saved.duplicate(true)
 	if saved_phase in ["running","suspended","decision","failure"] and matching:
 		var place=game.journey.places[events[index].location]
 		if game.state.zone==place.zone and game.state.residents[events[index].npc].zone==place.zone:
@@ -58,7 +62,9 @@ func start(resume=false):
 	if phase=="travel": return
 	if saved_phase in ["running","suspended"] and not saved.get("activity",{}).is_empty():
 		start_activity(saved.activity)
-		if saved_phase=="suspended": game.event_window.close();activity.active=false;phase="suspended"
+		if saved_phase=="suspended":
+			game.event_window.close();activity.active=false;phase="suspended"
+			if activity.mode=="tactics": activity.tactics.set_paused(true)
 	elif saved_phase=="decision": phase="decision";show_decision()
 	elif saved_phase=="failure": failure()
 func prepare(context=true):
@@ -76,6 +82,7 @@ func prepare(context=true):
 	npc.managed_motion=true
 	phase="travel";observed=0
 	preparing=false
+	populate_preparation()
 	if not game.journey.here(event.location): return
 	arrive(context)
 func arrive(context=true):
@@ -90,7 +97,9 @@ func arrive(context=true):
 		elif saved.phase=="failure": failure()
 		elif not saved.get("activity",{}).is_empty():
 			make_activity(saved.activity);activity.active=false;phase="suspended"
+			if activity.mode=="tactics": activity.tactics.set_paused(true)
 			game._notify(game.t("Событие восстановлено. E — продолжить.","The event is restored. E: continue."))
+		elif saved.phase=="action": phase="action";populate_preparation()
 		game._save(false)
 		return
 	if game.state.residents[event.npc].zone!=game.state.zone or npc.position.distance_to(center+Vector2(0,-20))>25:
@@ -118,29 +127,60 @@ func talk(id: String) -> bool:
 		return true
 	if phase=="observe": game._notify(game.named(id)+game.t(" пока занят. Понаблюдай рядом."," is busy. Observe nearby."));return true
 	if phase=="ready":
-		game._dialog(id+"_event",game.named(id),pair(events[index].rule),[game.choice("help","Помочь","Help",start_activity),game.choice("wait","Подожду немного","I will wait",game._close)],true)
+		game._dialog(id+"_event",game.named(id),pair(events[index].rule),[game.choice("help","Помочь","Help",begin_preparation),game.choice("wait","Подожду немного","I will wait",game._close)],true)
+	elif phase=="action": game._notify(pair(events[index].world_action))
 	elif phase=="suspended":
 		game._dialog(id+"_resume",game.named(id),game.t("Продолжим с того места, где остановились?","Shall we continue where we stopped?"),[game.choice("resume","Продолжить","Continue",resume_activity),game.choice("later","Позже","Later",game._close)],true)
 	elif phase=="decision": show_decision()
 	elif phase=="failure": failure()
 	return true
 func start_activity(checkpoint: Dictionary={}):
-	if not is_instance_valid(npc) or phase not in ["ready","observe","failure","running","suspended"]: return
+	if not is_instance_valid(npc) or phase not in ["ready","observe","action","failure","running","suspended"]: return
+	if not game.state.flag("event_action_"+events[index].id):
+		begin_preparation();return
 	game._close();game.toast.text=""
 	if game.event_window.active: game.event_window.close()
 	dispose_activity()
 	make_activity(checkpoint)
 	phase="running";game.event_window.open();game._save(false)
+func preparation_point() -> Vector2:
+	return game.npcs.safe_point(game.journey.places[events[index].location].zone,center+Vector2(90,45))
+func clear_preparation():
+	if not is_instance_valid(game.world): return
+	game.world.interactables=game.world.interactables.filter(func(spot):return spot.id!="event_preparation")
+	for prop in game.world.sorter.get_children():
+		if prop.get_meta("hotspot_id","")=="event_preparation": prop.hide();prop.queue_free()
+func populate_preparation():
+	clear_preparation()
+	if not enabled() or index>=events.size(): return
+	var event=events[index]
+	if game.state.zone!=game.journey.places[event.location].zone or game.state.flag("event_action_"+event.id): return
+	game.world.spot("event_preparation",preparation_point(),"note")
+func begin_preparation():
+	if index>=events.size() or game.state.flag("event_done_"+events[index].id): return
+	if game.state.flag("event_action_"+events[index].id): start_activity();return
+	phase="action";game._close();populate_preparation()
+	game._notify(pair(events[index].world_action));game._save(false)
+func complete_preparation() -> bool:
+	if phase!="action" or index>=events.size() or game.state.zone!=game.journey.places[events[index].location].zone: return false
+	if game.player.position.distance_to(preparation_point())>60: return false
+	game.state.set_flag("event_action_"+events[index].id)
+	clear_preparation();start_activity();return true
 func make_activity(checkpoint: Dictionary={}):
 	activity=Activity.new();game.world.add_child(activity)
 	npc.managed_motion=false;npc.collision_mask=1
-	activity.start(game,events[index].mode,npc,center)
+	var kind=events[index].mode
+	# Preserve an already active 0.15 defense scene; new attempts use tactics.
+	if kind=="tactics" and checkpoint.get("mode","")=="defense": kind="defense"
+	activity.start(game,kind,npc,center)
+	if kind=="defense" and events[index].mode=="tactics": activity.rule=game.t("E — прикрыть опасную полосу рядом с другом.","E: guard the threatened lane beside your friend.")
 	if not checkpoint.is_empty(): activity.restore(checkpoint)
 	activity.completed.connect(success);activity.defeated.connect(failure)
 	npc.get_meta("caption").hide()
-func dispose_activity():
+func dispose_activity(preserve_residents=false):
 	if not is_instance_valid(activity): activity=null;return
 	var previous=activity
+	if preserve_residents and previous.mode=="tactics" and is_instance_valid(previous.tactics): previous.tactics.released=true
 	activity=null;previous.active=false
 	if previous.is_inside_tree(): previous.get_parent().remove_child(previous)
 	previous.queue_free()
@@ -149,8 +189,10 @@ func detach_activity():
 	if game.event_window.active: game.event_window.close()
 	activity.active=false
 	if phase not in ["decision","failure"]: phase="suspended"
-	npc.managed_motion=true;npc.scripted=false
-	game.npcs.request(events[index].npc,game.state.zone,npc.position)
+	if activity.mode=="tactics": activity.tactics.set_paused(true)
+	else:
+		npc.managed_motion=true;npc.scripted=false
+		game.npcs.request(events[index].npc,game.state.zone,npc.position)
 	activity.moving_world=true
 	activity.reparent(game.npcs.pool,false);activity.hide()
 	for actor in activity.followers+[activity.extra_actor]:
@@ -171,20 +213,22 @@ func attach_activity(zone: String):
 		for gate in activity.gates: gate.set_deferred("disabled",true)
 func resume_activity():
 	game._close();phase="running";activity.active=true
-	npc.managed_motion=false;npc.collision_mask=1
+	if activity.mode=="tactics": activity.tactics.set_paused(false)
+	else: npc.managed_motion=false;npc.collision_mask=1
 	for actor in activity.followers+[activity.extra_actor]:
 		if is_instance_valid(actor): actor.set_physics_process(true)
 	game.event_window.open()
 func suspend():
 	if is_instance_valid(activity): activity.active=false
-	if is_instance_valid(npc):
+	if is_instance_valid(activity) and activity.mode=="tactics": activity.tactics.set_paused(true)
+	elif is_instance_valid(npc):
 		npc.scripted=false;npc.managed_motion=true
 		game.npcs.request(events[index].npc,game.state.zone,npc.position)
 	if is_instance_valid(activity):
 		for person in activity.followers:
 			if is_instance_valid(person): person.scripted=false
 	phase="suspended"
-	game.player.position=game.world.recover(npc.position+Vector2(0,65))
+	if not is_instance_valid(activity) or activity.mode!="tactics": game.player.position=game.world.recover(npc.position+Vector2(0,65))
 	game._save(false)
 func success():
 	game.event_window.close();phase="decision"
@@ -250,6 +294,9 @@ func _physics_process(dt):
 	if phase=="travel":
 		game.objective.text=pair(game.journey.places[event.location].name)+" · "+pair(game.journey.places[event.location].route)
 		if not game.modal and game.journey.here(event.location): arrive()
+		return
+	if phase=="action":
+		game.objective.text=pair(event.world_action)+game.t(" · E у отмеченного предмета."," · E at the marked object.")
 		return
 	if not is_instance_valid(npc):
 		prepare(false);game._notify(game.t("Встреча восстановлена. Загляни в «Путешествие».","The meeting was restored. Check Travel."));return

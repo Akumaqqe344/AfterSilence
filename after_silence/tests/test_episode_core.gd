@@ -194,6 +194,31 @@ func test_large_world_positions_and_route_assignment_survive_load():
 	assert_eq(copy.residents.lev.x,1710.0)
 	assert_eq(copy.residents.lev.y,1200.0)
 	assert_eq(copy.residents.lev.assignment,state.residents.lev.assignment)
+func test_combat_mode_and_origin_survive_save():
+	NPCs.new(state).initialize()
+	var r=state.residents.pavel
+	r.control="combat";r.combat_phase="active";r.combat_paused=true;r.mode="waiting";r.previous_mode="routine"
+	r.combat_origin={"zone":"town","point":[900,370]}
+	var copy=State.new()
+	assert_true(copy.restore(state.to_data()))
+	assert_eq(copy.residents.pavel,r)
+func test_invalid_combat_context_is_atomic():
+	NPCs.new(state).initialize()
+	var before=state.to_data()
+	for fields in [{"control":"combat"},{"control":"returning"},{"control":"yielding"},{"control":"combat","combat_phase":"invalid","combat_origin":{"zone":"town","point":[300,300]}},{"control":"routine","combat_paused":"yes"},{"control":"routine","return_to":{"zone":"missing","point":[300,300]}}]:
+		var data=before.duplicate(true)
+		data.residents.pavel.merge(fields,true)
+		assert_false(state.restore(data))
+		assert_eq(state.to_data(),before)
+func test_yielding_resident_keeps_original_room_and_goal():
+	NPCs.new(state).initialize()
+	var r=state.residents.mara
+	r.control="yielding";r.mode="escort";r.combat_paused=false
+	r.yield_origin={"zone":"library","point":[270,490]}
+	r.assignment={"zone":"town","point":[648,584]}
+	var copy=State.new()
+	assert_true(copy.restore(state.to_data()))
+	assert_eq(copy.residents.mara,r)
 func test_invalid_route_assignment_is_atomic():
 	NPCs.new(state).initialize()
 	var before=state.to_data()
@@ -268,7 +293,7 @@ func test_event_checkpoint_rejects_corruption_without_mutation():
 	var copy=State.new()
 	assert_true(copy.restore(data))
 	assert_eq(copy.event_state.activity.epoch,1)
-	for value in ["2",3,{},false]:
+	for value in ["2",99,{},false]:
 		var corrupt=data.duplicate(true)
 		corrupt.event_state.version=value
 		assert_false(copy.restore(corrupt))

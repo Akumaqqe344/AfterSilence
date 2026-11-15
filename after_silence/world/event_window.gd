@@ -6,10 +6,13 @@ var title: Label
 var goal: Label
 var progress: ProgressBar
 var health: Label
+var controls_hint: Label
 var pause_panel: Panel
 var active=false
 var previous_zoom=Vector2.ONE
 var previous_offset=Vector2.ZERO
+var previous_position=Vector2.ZERO
+var container: SubViewportContainer
 const NAMES={"escort":["Сопровождение","Escort"],"rhythm":["Ритм воспоминаний","Memory rhythm"],"stealth":["Наблюдение","Observation"],"switches":["Механизм","Mechanism"],"epochs":["Две эпохи","Two eras"],"defense":["Защита","Defense"],"route":["Безопасный путь","Safe route"],"evacuation":["Эвакуация","Evacuation"],"dodge":["Наблюдатель","The Watcher"],"repair":["Восстановление","Restoration"]}
 func _ready():
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -19,7 +22,7 @@ func _ready():
 	frame.add_theme_stylebox_override("panel",game.style(Color("1b3830"),true));add_child(frame)
 	title=Label.new();title.position=Vector2(16,10);title.add_theme_font_size_override("font_size",11);title.modulate=Color("f2e2bd");frame.add_child(title)
 	goal=Label.new();goal.position=Vector2(16,32);goal.size=Vector2(560,34);goal.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;goal.add_theme_font_size_override("font_size",8);frame.add_child(goal)
-	var container=SubViewportContainer.new();container.position=Vector2(16,76);container.size=Vector2(576,216);frame.add_child(container)
+	container=SubViewportContainer.new();container.position=Vector2(16,76);container.size=Vector2(576,216);frame.add_child(container)
 	viewport=SubViewport.new();viewport.size=Vector2i(576,216);viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS;viewport.world_2d=game.get_world_2d();container.add_child(viewport)
 	progress=ProgressBar.new();progress.position=Vector2(16,300);progress.size=Vector2(300,12);progress.show_percentage=false;frame.add_child(progress)
 	progress.add_theme_font_size_override("font_size",1)
@@ -28,8 +31,8 @@ func _ready():
 	progress.set_deferred("size",Vector2(300,10))
 	health=Label.new();health.position=Vector2(330,298);health.add_theme_font_size_override("font_size",8);frame.add_child(health)
 	var pause=Button.new();pause.text="Esc · II";pause.position=Vector2(515,298);pause.add_theme_font_size_override("font_size",8);pause.pressed.connect(toggle_pause);frame.add_child(pause)
-	var controls=Label.new();controls.position=Vector2(16,320);controls.add_theme_font_size_override("font_size",7)
-	controls.text=game.t("WASD / стрелки — идти · E — действие · Пробел — прыжок","WASD / arrows: move · E: action · Space: jump");frame.add_child(controls)
+	controls_hint=Label.new();controls_hint.position=Vector2(16,320);controls_hint.add_theme_font_size_override("font_size",7)
+	controls_hint.text=game.t("WASD / стрелки — идти · E — действие · Пробел — прыжок","WASD / arrows: move · E: action · Space: jump");frame.add_child(controls_hint)
 	pause_panel=Panel.new();pause_panel.position=Vector2(150,105);pause_panel.size=Vector2(340,150);pause_panel.add_theme_stylebox_override("panel",game.style(Color("203e32"),true));add_child(pause_panel)
 	for entry in [["Продолжить","Resume",resume],["Повторить","Retry",retry],["Сохранить и выйти","Save and leave",leave]]:
 		var button=Button.new();button.text=game.t(entry[0],entry[1]);button.position=Vector2(12,12+pause_panel.get_child_count()*42);button.size=Vector2(316,34);button.pressed.connect(entry[2]);pause_panel.add_child(button)
@@ -43,11 +46,19 @@ func move_world(parent: Node):
 func open():
 	if active: return
 	active=true;pause_panel.hide();show()
-	previous_zoom=game.camera.zoom;previous_offset=game.camera.offset
+	previous_zoom=game.camera.zoom;previous_offset=game.camera.offset;previous_position=game.camera.position
 	if is_instance_valid(game.living.camera_tween): game.living.camera_tween.kill()
 	game.camera.zoom=Vector2.ONE*.75;game.camera.offset=Vector2(0,-80)
 	move_world(viewport)
 	var activity=game.events_controller.activity
+	if is_instance_valid(activity) and activity.mode=="tactics":
+		viewport.size=Vector2i(576,176);container.size=Vector2(576,176)
+		game.camera.zoom=Vector2.ONE*.7;game.camera.offset=Vector2.ZERO;game.camera.position=activity.center-game.player.position
+		activity.tactics.set_paused(false)
+		controls_hint.text=game.t("Стрелки: цель · E: подтвердить · Tab / Enter: действия · Esc: пауза","Arrows: target · E: confirm · Tab / Enter: actions · Esc: pause")
+	else:
+		viewport.size=Vector2i(576,216);container.size=Vector2(576,216)
+		controls_hint.text=game.t("WASD / стрелки — идти · E — действие · Пробел — прыжок","WASD / arrows: move · E: action · Space: jump")
 	if is_instance_valid(activity) and activity.mode=="epochs": activity.set_epoch(activity.epoch)
 	modulate.a=0;create_tween().tween_property(self,"modulate:a",1,.2)
 func close():
@@ -59,20 +70,32 @@ func close():
 		game.world.modulate=activity.original_tint
 		activity.clear_gate_navigation()
 		for gate in activity.gates: gate.set_deferred("disabled",true)
-	game.camera.zoom=previous_zoom;game.camera.offset=previous_offset;game.camera.reset_smoothing()
+	game.camera.zoom=previous_zoom;game.camera.offset=previous_offset;game.camera.position=previous_position;game.camera.reset_smoothing()
 	pause_panel.hide();hide()
 	game.objective.show();game.hint.show();game.toast.show()
 func toggle_pause():
 	if not active: return
+	var activity=game.events_controller.activity
+	if is_instance_valid(activity) and activity.mode=="tactics": activity.tactics.set_paused(true)
 	game.modal=true;pause_panel.show();pause_panel.get_child(0).grab_focus()
 func resume():
 	game._close();pause_panel.hide()
+	var activity=game.events_controller.activity
+	if is_instance_valid(activity) and activity.mode=="tactics": activity.tactics.set_paused(false)
 func retry():
 	resume();close();game.events_controller.start_activity()
 func leave():
 	resume();close()
 	game.events_controller.suspend()
 func _input(event):
+	var current=game.events_controller.activity
+	if active and not game.modal and is_instance_valid(current) and current.mode=="tactics":
+		if event is InputEventKey and current.tactics.key_input(event):
+			get_viewport().set_input_as_handled();return
+		if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
+			var local_position=container.get_global_transform_with_canvas().affine_inverse()*event.position
+			if Rect2(Vector2.ZERO,Vector2(viewport.size)).has_point(local_position):
+				current.tactics.mouse_input(local_position);get_viewport().set_input_as_handled();return
 	if active and event is InputEventKey and event.physical_keycode==KEY_E:
 		var activity=game.events_controller.activity
 		if is_instance_valid(activity):
@@ -89,8 +112,8 @@ func _process(_dt):
 	if not is_instance_valid(director.activity): close();return
 	var activity=director.activity
 	var event=director.events[director.index]
-	title.text=director.pair(NAMES[activity.mode])+" · "+director.pair(event.title)
-	goal.text=director.pair(event.rule)
+	title.text=(game.t("Тактика","Tactics") if activity.mode=="tactics" else director.pair(NAMES[activity.mode]))+" · "+director.pair(event.title)
+	if activity.mode!="tactics": goal.text=activity.rule if activity.rule!="" else director.pair(event.rule)
 	progress.max_value=activity.goal();progress.value=activity.progress
 	health.text="%d / 5"%activity.hp
 	if activity.mode in ["escort","defense","evacuation","dodge"]: health.text+=" · %02d:%02d"%[int(maxf(0,110-activity.elapsed))/60,int(maxf(0,110-activity.elapsed))%60]

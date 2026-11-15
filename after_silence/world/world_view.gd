@@ -101,7 +101,10 @@ func mark_obstacle(r: Rect2):
 	var b=Vector2i(r.end/16)
 	for y in range(maxi(0,a.y-1),mini(int(dimensions.y/16),b.y+2)):
 		for x in range(maxi(0,a.x-1),mini(int(dimensions.x/16),b.x+2)):
-			if r.grow(5).has_point(Vector2(x*16+8,y*16+8)): grid.set_point_solid(Vector2i(x,y))
+			if foot_bounds(r).has_point(Vector2(x*16+8,y*16+8)): grid.set_point_solid(Vector2i(x,y))
+static func foot_bounds(rect: Rect2) -> Rect2:
+	# Actor capsule: radius 5, height 12, center three pixels above the feet.
+	return rect.grow_individual(5,3,5,9)
 func make_tiles() -> TileSet:
 	var tiles=TileSet.new()
 	tiles.tile_size=Vector2i(16,16)

@@ -46,10 +46,11 @@ func button(control: Button):
 	if not is_instance_valid(control) or not control.is_visible_in_tree() or control.disabled:
 		check(false,"button unavailable");return
 	motion(Vector2.ZERO)
+	var typing=game.modal and control in game.buttons.values() and game.body.visible_characters>=0 and game.body.visible_characters<game.body.get_total_character_count()
 	control.grab_focus()
 	await tap(KEY_ENTER)
 	# First activation completes a typewritten line, if one was still revealing.
-	if is_instance_valid(control) and control.is_visible_in_tree() and control.has_focus(): await tap(KEY_ENTER)
+	if typing and is_instance_valid(control) and control.is_visible_in_tree() and control.has_focus(): await tap(KEY_ENTER)
 func choose(id: String):
 	check(game.buttons.has(id),"button "+id)
 	if game.buttons.has(id): await button(game.buttons[id])
@@ -126,6 +127,43 @@ func exercise_recovery() -> bool:
 	await choose("retry")
 	check(game.event_window.active and director.activity.hp==5,"retry through UI")
 	return game.event_window.active
+func tactical_input(tactics,command: Dictionary):
+	if command.is_empty(): return
+	await button(tactics.controls[command.kind])
+	if command.kind not in ["move","attack","help"]: return
+	var target: Vector2i=command.target if command.kind=="move" else tactics.board.location(command.target)
+	for i in range(20):
+		if not is_instance_valid(tactics) or tactics.cursor==target: break
+		var delta=target-tactics.cursor
+		await tap(KEY_RIGHT if delta.x>0 else KEY_LEFT if delta.x<0 else KEY_DOWN if delta.y>0 else KEY_UP)
+	await tap(KEY_E)
+func mouse_click(control: Button):
+	await get_tree().process_frame;await get_tree().process_frame
+	var position=control.get_global_transform_with_canvas()*(control.size*.5)
+	await mouse_at(position)
+func mouse_at(position: Vector2):
+	var motion_event=InputEventMouseMotion.new();motion_event.position=position;motion_event.global_position=position
+	game.get_viewport().push_input(motion_event,true)
+	for pressed in [true,false]:
+		var event=InputEventMouseButton.new();event.button_index=MOUSE_BUTTON_LEFT;event.position=position;event.global_position=position;event.pressed=pressed
+		game.get_viewport().push_input(event,true)
+		await get_tree().process_frame
+func tactical_load():
+	var director=game.events_controller
+	var before=director.activity.tactics.board.capture()
+	await tap(KEY_ESCAPE)
+	check(game.modal and game.event_window.pause_panel.visible,"tactical pause")
+	await button(game.event_window.pause_panel.get_child(2))
+	check(director.phase=="suspended","tactical save and return")
+	await tap(KEY_ESCAPE);await choose("load")
+	while game.transitions.busy: await get_tree().physics_frame
+	await get_tree().process_frame
+	check(director.phase=="suspended" and director.activity.mode=="tactics","tactical load suspended")
+	check(director.activity.tactics.board.capture()==before,"tactical AP and pending movement restored")
+	if not await walk(director.npc.position+Vector2(0,30),12): return false
+	await tap(KEY_E);await choose("resume")
+	check(game.event_window.active,"tactical resume through dialogue")
+	return game.event_window.active
 func play_event(index: int) -> bool:
 	var director=game.events_controller
 	var event=director.events[index]
@@ -142,6 +180,11 @@ func play_event(index: int) -> bool:
 	if not await walk(director.npc.position+Vector2(0,30),15): return false
 	await tap(KEY_E)
 	await choose("help")
+	check(director.phase=="action" or game.state.flag("event_action_"+event.id),"dialogue precedes world action "+event.id)
+	if director.phase=="action":
+		if not await walk(director.preparation_point(),12): check(false,"reachable world action "+event.id);return false
+		await tap(KEY_E)
+	check(game.state.flag("event_action_"+event.id),"world action persisted "+event.id)
 	check(game.event_window.active,"viewport "+event.id)
 	if not game.event_window.active: return false
 	if tag=="together" and index==0:
@@ -150,14 +193,42 @@ func play_event(index: int) -> bool:
 	var age_play=0.0
 	var last_press=-1
 	var sampled=false
+	var tactical_saved=false
+	var tactical_mouse=false
 	while director.phase=="running" and age_play<112:
 		activity=director.activity
-		var t=activity.elapsed
+		var t=activity.tactics.age if activity.mode=="tactics" else activity.elapsed
 		if t>8 and not sampled:
 			sampled=true
 			await shot("playing-"+event.id)
 		var aim=game.player.position
 		var interact=false
+		if activity.mode=="tactics":
+			var tactics=activity.tactics
+			if tag=="together" and index==4 and not tactical_saved and tactics.stage=="battle" and tactics.board.phase=="moving":
+				tactical_saved=true
+				if not await tactical_load(): return false
+				continue
+			if tactics.stage=="battle" and tactics.resume_goal==Vector2.INF and tactics.board.phase=="active" and tactics.board.active_id()=="vera":
+				if not tactical_mouse:
+					tactical_mouse=true
+					var ap=tactics.board.units.vera.ap
+					await mouse_click(tactics.controls.attack)
+					if tactics.action!="attack" or tactics.board.units.vera.ap!=ap:
+						print("TACTICAL MOUSE DETAIL: action=",tactics.action," ap=",tactics.board.units.vera.ap," expected=",ap," button=",tactics.controls.attack.get_global_rect()," canvas=",tactics.controls.attack.get_global_transform_with_canvas()," mouse=",game.event_window.get_global_mouse_position())
+					check(tactics.action=="attack" and tactics.board.units.vera.ap==ap,"mouse selects tactical action without spending AP")
+					var target=tactics.board.location(tactics.definition.enemies[0][0])
+					var viewport_point=game.event_window.viewport.get_canvas_transform()*tactics.world_point(target)
+					var root_point=game.event_window.container.get_global_transform_with_canvas()*viewport_point
+					await mouse_at(root_point)
+					check(tactics.cursor==target and tactics.board.units.vera.ap==ap,"mouse targets unit in viewport without an illegal attack")
+				var command={}
+				for kind in ["help","attack","move","defend","end"]:
+					command=tactics.board.plan("vera",kind)
+					if not command.is_empty(): break
+				await tactical_input(tactics,command)
+			await get_tree().physics_frame;age_play+=dt()
+			continue
 		match activity.mode:
 			"escort","route","switches","epochs":
 				aim=activity.route_point(activity.step)
@@ -191,6 +262,10 @@ func play_event(index: int) -> bool:
 		await get_tree().physics_frame;age_play+=dt()
 	motion(Vector2.ZERO);key(KEY_E,false)
 	check(director.phase=="decision","victory "+event.id+" hp="+str(activity.hp)+" progress="+str(activity.progress)+" elapsed="+str(activity.elapsed)+" player="+str(game.player.position)+" npc="+str(activity.npc.position)+" target="+str(activity.npc.target))
+	if director.phase!="decision" and activity.mode=="tactics":
+		var controller=activity.tactics
+		print("TACTICAL CASE: stage=",controller.stage," phase=",controller.board.phase," round=",controller.board.round_number," note=",controller.note," pending=",controller.board.pending," return=",controller.resume_goal)
+		for id in game.actors: print("TACTICAL RESIDENT: ",id," at=",game.actors[id].position," control=",game.state.residents[id].get("control","routine")," route=",game.state.residents[id].get("route_status",""))
 	if director.phase!="decision": return false
 	await shot(event.id)
 	for control in game.buttons.values():
@@ -304,5 +379,5 @@ func finish():
 	print("INPUT PLAYTHROUGH: ",checks," checks, ",errors.size()," failures; endings=",results.size())
 	game.audio.shutdown();game.queue_free()
 	await get_tree().process_frame;await get_tree().process_frame
-	await get_tree().create_timer(.5).timeout
+	await get_tree().create_timer(.25,true,false,true).timeout
 	get_tree().quit(0 if errors.is_empty() else 1)

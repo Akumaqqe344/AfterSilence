@@ -52,6 +52,13 @@ func run():
 		var place=game.journey.places[event.location]
 		var target=Vector2(place.point[0],place.point[1])+Vector2(0,-20)
 		check(game.npcs.navigation.clear_segment(game.npcs.nav(place.zone),target,target),event.npc,place.zone,target,"blocked meeting")
+		var action=game.npcs.safe_point(place.zone,Vector2(place.point[0],place.point[1])+Vector2(90,45))
+		var route=game.npcs.navigation.path(game.npcs.nav(place.zone),target,action)
+		check(not route.is_empty(),event.npc,place.zone,action,"unreachable mandatory world action")
+		var safe=true
+		for i in range(1,route.size()):
+			if not game.npcs.navigation.clear_segment(game.npcs.nav(place.zone),route[i-1],route[i]): safe=false
+		check(safe,event.npc,place.zone,action,"world action path lacks capsule clearance")
 	# Zone rebuilds retain exact Actor identities and offscreen residents keep walking.
 	game.npcs.requests.clear()
 	for r in game.state.residents.values(): r.erase("assignment")

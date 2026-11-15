@@ -27,8 +27,28 @@ func fixture_at(index: int):
 		game.npcs.update(game,.05,true)
 		director._physics_process(0)
 	game._close()
+func fulfill_action():
+	var director=game.events_controller
+	director.begin_preparation()
+	game.player.position=director.preparation_point()
+	director.complete_preparation()
+func play_tactics(activity):
+	game.player.set_physics_process(true)
+	activity.npc.set_physics_process(true)
+	var controller=activity.tactics
+	for frame in range(10000):
+		if not activity.active: break
+		if controller.stage=="battle" and controller.board.phase=="active" and controller.board.active_id()=="vera":
+			for kind in ["help","attack","move","defend","end"]:
+				var command=controller.board.plan("vera",kind)
+				if not command.is_empty():
+					controller.perform(command.kind,command.get("target"));break
+		game.npcs.update(game,1.0/60,true)
+		activity.tick(1.0/60)
+		await physics_frame
 func run():
-	create_timer(150).timeout.connect(func():push_error("Journey QA watchdog");quit(2))
+	Engine.time_scale=8;Engine.physics_ticks_per_second=480;Engine.max_physics_steps_per_frame=64;Engine.max_fps=240
+	create_timer(1200).timeout.connect(func():push_error("Journey QA watchdog");quit(2))
 	game=load("res://after_silence/scenes/main.tscn").instantiate();root.add_child(game)
 	await process_frame
 	await shot("menu")
@@ -75,12 +95,13 @@ func run():
 			director.talk(event.npc);check(game.buttons.has("help"),"NPC conversation "+event.id)
 			if ending==0 and index==0: await shot("conversation")
 			var base_tint=game.world.modulate
-			director.start_activity();var activity=director.activity
+			fulfill_action();var activity=director.activity
 			activity.set_physics_process(false);activity.npc.set_physics_process(false);game.player.set_physics_process(false)
 			check(game.event_window.active and game.world.get_parent()==game.event_window.viewport,"custom viewport "+event.id)
 			game.event_window.toggle_pause();check(game.modal,"window pause")
 			game.event_window.resume();check(not game.modal,"window resume")
 			for hit in range(5): activity.invulnerable=0;activity.hit()
+			if activity.mode=="tactics": activity.tactics.board.units.vera.hp=0;activity.tactics.board.outcome()
 			activity.tick(.01)
 			check(director.phase=="failure" and not game.event_window.active,"defeat exits viewport "+event.id)
 			if activity.mode=="epochs": check(game.world.modulate==base_tint,"era tint restored after failure")
@@ -90,7 +111,8 @@ func run():
 			if activity.mode=="epochs":
 				await process_frame
 				check(activity.original_tint==base_tint and game.world.modulate==Color("d1c7a2"),"retry preserves base tint and reapplies era")
-			activity.invulnerable=10000
+			if activity.mode=="tactics": await play_tactics(activity)
+			else: activity.invulnerable=10000
 			for frame in range(2200):
 				if not activity.active: break
 				if ending==0 and frame==200: await shot(event.id)
@@ -112,7 +134,7 @@ func run():
 					"repair": game.player.position=activity.npc.position+Vector2(0,35);activity.repair_hold=activity.heat<1.0
 				activity.tick(.05)
 			check(director.phase=="decision","victory "+event.id)
-			check(activity.elapsed>=30 and activity.elapsed<=110,"duration "+event.id)
+			check(activity.tactics.board.phase=="victory" if activity.mode=="tactics" else activity.elapsed>=30 and activity.elapsed<=110,"completed mechanics "+event.id)
 			if ending==0 and index==11: await shot("final-choice")
 			var option=event.choices[ending if index==11 else 0]
 			var relation=game.state.relations[option[3]]
@@ -128,7 +150,7 @@ func run():
 	game._new_event_game();game.set_physics_process(false);game.events_controller.set_physics_process(false)
 	fixture_at(0)
 	var director=game.events_controller
-	director.start_activity();director.activity.set_physics_process(false);director.activity.elapsed=17;director.activity.progress=2
+	fulfill_action();director.activity.set_physics_process(false);director.activity.elapsed=17;director.activity.progress=2
 	game.event_window.leave()
 	check(director.phase=="suspended" and game.world.get_parent()==game,"safe window exit")
 	await game._load_game()

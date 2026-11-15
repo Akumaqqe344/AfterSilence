@@ -148,7 +148,7 @@ func _ready():
 func _setup_services():
 	if is_instance_valid(event_window): event_window.close()
 	if is_instance_valid(events_controller):
-		events_controller.dispose_activity()
+		events_controller.dispose_activity(true)
 		events_controller.npc=null
 	objectives=preload("res://after_silence/core/objective_tracker.gd").new(state)
 	objectives.quest_completed.connect(func(id):
@@ -542,6 +542,7 @@ func _build_world(id: String,p: Vector2):
 	if id=="town" and rift.phase=="travel" and state.flag("rift_mode") and not state.flag("rift_finished") and rift.index<rift.STOPS.size():
 		world.spot("rift_next",rift.STOPS[rift.index],"trace")
 	if is_instance_valid(events_controller): events_controller.attach_activity(id)
+	if is_instance_valid(events_controller): events_controller.populate_preparation()
 func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	var actor=Actor.new()
 	actor.sheet=load(path)
@@ -573,15 +574,21 @@ func _physics_process(dt):
 		if body.visible_characters>=body.get_total_character_count(): body.visible_characters=-1
 	if not is_instance_valid(player): return
 	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active and not rift.active and not adventure.expanded
+	var npc_enabled=enabled
+	if state.flag("event_campaign") and event_window.active and is_instance_valid(events_controller.activity) and events_controller.activity.mode=="tactics": enabled=false
 	player.enabled=enabled
 	if is_instance_valid(enemy):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
 		enemy.visible=state.flag("sonya_met") and not state.flag("returned")
 		enemy.pressure=state.pressure
-	npcs.update(self,dt,enabled)
+	npcs.update(self,dt,npc_enabled)
 	if not enabled: return
-	state.clock=fposmod(state.clock+dt/60,24)
-	state.play_seconds+=dt
+	var combat_pending=false
+	for resident in state.residents.values():
+		if resident.get("control","")=="combat": combat_pending=true;break
+	if not combat_pending:
+		state.clock=fposmod(state.clock+dt/60,24)
+		state.play_seconds+=dt
 	autosave_age+=dt
 	if autosave_age>20:
 		autosave_age=0
@@ -648,12 +655,14 @@ func _nearest() -> String:
 		if d<distance: distance=d;result=spot.id
 	return result
 func can_interact(id: String) -> bool:
+	if id=="event_preparation": return state.flag("event_campaign") and events_controller.phase=="action"
 	if state.flag("event_campaign") and is_instance_valid(event_window) and event_window.active: return false
 	if state.flag("event_campaign") and (id.begins_with("collect_") or id in ["rift_next","hotspot_lamp"]): return false
 	if id in ["hotspot_window","hotspot_furniture"] and state.flag("examined_"+state.zone+"_"+id): return false
 	if not state.flag("rift_mode"): return true
 	return id not in ["photo","poster","ledger","clock","diagram","testimony","signature","medical","relay","mirror","catalog","library_light","ribbon","trace","shelter","home_memory"]
 func _object_name(id: String) -> String:
+	if id=="event_preparation": return events_controller.pair(events_controller.events[events_controller.index].world_action)
 	if id=="village_hints": return adventure.label(id)
 	if id.begins_with("hamlet_house_"): return adventure.label(id)
 	if id in ["visit_shop","leave_shop","shop_counter","riverside_rest"]: return adventure.label(id)
@@ -720,6 +729,7 @@ func _quest_help():
 	if state.flag("event_campaign"): journey.open();return
 	_dialog("",t("Куда идти?","Where to go?"),shop.hint()+"\n"+t("Золотая отметка на карте — следующее событие. E — действие.","The gold map marker is the next event. E: interact."),[choice("map","Показать карту","Show map",func():_close();adventure.expanded=true),choice("close","Понятно","Got it",_close)],false)
 func interact(id: String):
+	if id=="event_preparation": events_controller.complete_preparation();return
 	if state.flag("event_campaign"):
 		var destinations={"to_library":"library","to_forest":"forest","home_lev":"home_lev","home_sonya":"home_sonya"}
 		if destinations.has(id) and not journey.zone_allowed(destinations[id]):

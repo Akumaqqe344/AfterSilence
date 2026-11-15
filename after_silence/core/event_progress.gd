@@ -1,16 +1,19 @@
 extends RefCounted
-const MODES=["escort","rhythm","stealth","switches","epochs","route","defense","evacuation","dodge","repair"]
+const MODES=["escort","rhythm","stealth","switches","epochs","route","defense","evacuation","dodge","repair","tactics"]
 static func valid(data: Dictionary) -> bool:
 	if data.is_empty(): return true
 	var version=data.get("version",1)
-	if not (version is int or version is float) or version not in [1,2,1.0,2.0]: return false
-	if data.get("phase","") not in ["travel","observe","ready","running","suspended","decision","failure","finished"]: return false
+	if not (version is int or version is float) or version not in [1,2,3,1.0,2.0,3.0]: return false
+	if data.get("phase","") not in ["travel","observe","ready","action","running","suspended","decision","failure","finished"]: return false
 	var index=data.get("index",-1)
-	if not (index is int or index is float) or not is_finite(float(index)) or index!=int(index) or index<0 or index>(12 if data.get("version",1)==2 else 9): return false
+	if not (index is int or index is float) or not is_finite(float(index)) or index!=int(index) or index<0 or index>(12 if data.get("version",1)>=2 else 9): return false
 	var activity=data.get("activity",{})
 	if not activity is Dictionary: return false
 	if not activity.is_empty():
 		if activity.get("mode","") not in MODES: return false
+		if activity.mode=="tactics":
+			if not activity.get("tactics") is Dictionary or not preload("res://after_silence/world/tactical_encounter.gd").valid(activity.tactics): return false
+			if int(index) not in [4,7] or activity.tactics.encounter!=("bridge" if int(index)==4 else "crowd"): return false
 		for key in ["elapsed","progress","hp","step","alert","heat"]:
 			var n=activity.get(key)
 			if not (n is int or n is float) or not is_finite(float(n)) or n<0 or n>10000: return false

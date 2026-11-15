@@ -25,7 +25,7 @@ func clear_segment(nav: Dictionary, a: Vector2, b: Vector2) -> bool:
 		var p = a.lerp(b, float(i) / count)
 		if not walkable(nav, p): return false
 		for obstacle in nav.obstacles:
-			if obstacle.grow(5).has_point(p): return false
+			if World.foot_bounds(obstacle).has_point(p): return false
 	return true
 
 func path(nav: Dictionary, a: Vector2, b: Vector2) -> PackedVector2Array:

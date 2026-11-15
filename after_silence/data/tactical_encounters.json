@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "classes": {
+    "wanderer": {
+      "hp": 5,
+      "ap": 3,
+      "initiative": 12,
+      "damage": 2,
+      "range": 1,
+      "heal": 2
+    },
+    "warden": {
+      "hp": 5,
+      "ap": 3,
+      "initiative": 9,
+      "damage": 2,
+      "range": 1,
+      "heal": 1
+    },
+    "healer": {
+      "hp": 5,
+      "ap": 3,
+      "initiative": 10,
+      "damage": 1,
+      "range": 2,
+      "heal": 2
+    },
+    "ranger": {
+      "hp": 3,
+      "ap": 2,
+      "initiative": 7,
+      "damage": 1,
+      "range": 3,
+      "heal": 0
+    },
+    "mediator": {
+      "hp": 4,
+      "ap": 2,
+      "initiative": 6,
+      "damage": 1,
+      "range": 1,
+      "heal": 1
+    }
+  },
+  "encounters": {
+    "bridge": {
+      "ally": "pavel",
+      "ally_class": "warden",
+      "enemies": [
+        [
+          "guest",
+          "ranger"
+        ],
+        [
+          "mara",
+          "mediator"
+        ]
+      ],
+      "title": [
+        "Держать проход",
+        "Hold the passage"
+      ],
+      "brief": [
+        "Павел, Мара и гость репетируют эвакуацию. Сдержи условных противников и помоги союзнику. Никто не погибнет.",
+        "Pavel, Mara and the guest rehearse an evacuation. Stop the practice opponents and help your ally. Nobody dies."
+      ],
+      "reward": "safe_patrol"
+    },
+    "crowd": {
+      "ally": "nadia",
+      "ally_class": "healer",
+      "enemies": [
+        [
+          "guest",
+          "ranger"
+        ],
+        [
+          "lev",
+          "mediator"
+        ]
+      ],
+      "title": [
+        "Сначала защитить",
+        "Protect first"
+      ],
+      "brief": [
+        "Надя просит отработать защиту толпы с Львом и гостем. Трать силы обдуманно: можно защищаться, помогать и отходить.",
+        "Nadia asks Lev and the guest to rehearse crowd protection. Spend your energy carefully: defend, help and retreat."
+      ],
+      "reward": "calm_nadia"
+    }
+  }
+}

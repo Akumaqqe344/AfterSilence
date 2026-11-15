@@ -29,10 +29,16 @@ var zone=""
 var original_tint=Color.WHITE
 var extra_actor
 var initiator
+var tactics
 func start(owner,kind: String,actor,origin: Vector2):
 	game=owner;mode=kind;npc=actor;center=origin
 	zone=game.state.zone
 	initiator=actor
+	if mode=="tactics":
+		original_tint=game.world.modulate
+		tactics=preload("res://after_silence/world/tactical_encounter.gd").new()
+		add_child(tactics);tactics.start(game,self,game.events_controller.events[game.events_controller.index].id)
+		return
 	if mode=="stealth":
 		extra_actor=game.Actor.new();extra_actor.sheet=load("res://after_silence/assets/pechatai/npc/inventor.png")
 		extra_actor.npc_color=Color("c9c7dd");extra_actor.position=game.world.recover(center+Vector2(0,-30));extra_actor.enabled=false;extra_actor.scripted=true
@@ -44,7 +50,7 @@ func start(owner,kind: String,actor,origin: Vector2):
 			var body=StaticBody2D.new();body.position=center+Vector2(-65 if i==0 else 65,-75)
 			var shape=CollisionShape2D.new();var rect=RectangleShape2D.new();rect.size=Vector2(12,80);shape.shape=rect
 			body.add_child(shape);add_child(body);gates.append(shape)
-			var rect_bounds=Rect2(body.position-Vector2(6,40),Vector2(12,80)).grow(5)
+			var rect_bounds=game.World.foot_bounds(Rect2(body.position-Vector2(6,40),Vector2(12,80)))
 			for y in range(floori(rect_bounds.position.y/16),ceili(rect_bounds.end.y/16)+1):
 				for x in range(floori(rect_bounds.position.x/16),ceili(rect_bounds.end.x/16)+1):
 					var cell=Vector2i(x,y)
@@ -62,8 +68,13 @@ func start(owner,kind: String,actor,origin: Vector2):
 func checkpoint() -> Dictionary:
 	var people=[]
 	for person in followers: people.append({"position":[person.position.x,person.position.y],"rescued":person.get_meta("rescued",false)})
-	return {"epoch":epoch,"mode":mode,"elapsed":elapsed,"progress":progress,"hp":hp,"step":step,"alert":alert,"heat":heat,"recruited":recruited.duplicate(),"followers":people,"npc":[npc.position.x,npc.position.y]}
+	var data={"epoch":epoch,"mode":mode,"elapsed":elapsed,"progress":progress,"hp":hp,"step":step,"alert":alert,"heat":heat,"recruited":recruited.duplicate(),"followers":people,"npc":[npc.position.x,npc.position.y]}
+	if mode=="tactics": data.tactics=tactics.checkpoint()
+	return data
 func restore(data: Dictionary):
+	if mode=="tactics":
+		if not tactics.restore(data.get("tactics",{})): tactics.stage="invalid"
+		return
 	for key in ["elapsed","progress","alert","heat"]: set(key,float(data.get(key,0)))
 	hp=int(data.get("hp",5));step=int(data.get("step",0))
 	recruited=data.get("recruited",[]).map(func(n):return int(n))
@@ -82,7 +93,7 @@ func set_epoch(value: int):
 	for i in range(gates.size()): gates[i].set_deferred("disabled",i==epoch)
 	for i in range(gates.size()):
 		if i==epoch: continue
-		var bounds=Rect2(gates[i].get_parent().position-Vector2(6,40),Vector2(12,80)).grow(5)
+		var bounds=game.World.foot_bounds(Rect2(gates[i].get_parent().position-Vector2(6,40),Vector2(12,80)))
 		for cell in gate_base:
 			if bounds.has_point(Vector2(cell)*16+Vector2(8,8)): game.world.grid.set_point_solid(cell,true)
 	game.world.modulate=Color("99b7af") if epoch else Color("d1c7a2")
@@ -118,6 +129,8 @@ func _physics_process(dt):
 	tick(minf(dt,.05))
 func tick(dt: float):
 	if not active: return
+	if mode=="tactics":
+		tactics.tick(dt);return
 	elapsed+=dt;guard=maxf(0,guard-dt);invulnerable=maxf(0,invulnerable-dt)
 	var player=game.player
 	var limits=Rect2(center-Vector2(235,145),Vector2(470,330))
@@ -171,9 +184,11 @@ func tick(dt: float):
 	if elapsed>=110: lose()
 	queue_redraw()
 func goal() -> float:
+	if mode=="tactics": return 2
 	return {"escort":4,"rhythm":30,"stealth":30,"switches":8,"epochs":8,"route":8,"defense":14,"evacuation":3,"dodge":5,"repair":24}.get(mode,1)
 func interact():
 	if not active or game.modal: return
+	if mode=="tactics": tactics.confirm();return
 	var p=game.player.position
 	match mode:
 		"rhythm":
@@ -219,6 +234,7 @@ func _exit_tree():
 		if is_instance_valid(actor): actor.queue_free()
 func _draw():
 	if not active: return
+	if mode=="tactics": return
 	var font=game.ui.theme.default_font
 	var tint=Color("89d8ca")
 	if mode in ["escort","route","switches","epochs"]:

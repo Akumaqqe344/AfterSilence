@@ -107,13 +107,58 @@ func attach(game,id: String):
 	if actor.get_parent()!=parent: actor.reparent(parent,false)
 	actor.visible=present;actor.collision_layer=4 if present else 0
 	actor.collision_mask=0 if actor.managed_motion else 1
-func request(id: String, zone: String, point: Vector2):
+func request(id: String, zone: String, point: Vector2,role: String="story"):
+	if role!="combat" and state.residents[id].get("control","")=="returning":
+		state.residents[id].control="routine";state.residents[id].erase("return_to")
 	requests[id]={"zone":zone,"point":[point.x,point.y]}
 	state.residents[id].assignment=requests[id].duplicate(true)
 	state.residents[id].destination=zone;state.residents[id].target=[point.x,point.y]
 func release(id: String):
 	requests.erase(id)
 	state.residents[id].erase("assignment")
+func begin_combat(game,id: String,zone: String,target: Vector2):
+	var r=state.residents[id]
+	if r.get("control","")!="combat":
+		r.combat_origin=r.get("return_to",{"zone":r.zone,"point":[game.actors[id].position.x,game.actors[id].position.y]}).duplicate(true)
+		r.previous_mode=r.get("mode","routine");r.mode="alarm";r.mode_since=state.play_seconds
+	r.control="combat";r.combat_phase="approach";r.combat_paused=false;r.erase("return_to")
+	game.actors[id].managed_motion=true;game.actors[id].scripted=false
+	request(id,zone,target,"combat")
+func pause_combat(ids: Array,value: bool):
+	for id in ids:
+		if state.residents.has(id) and state.residents[id].get("control","")=="combat":
+			state.residents[id].combat_paused=value
+			state.residents[id].mode="waiting" if value else "combat" if state.residents[id].get("combat_phase","")=="active" else "escort"
+func end_combat(game,ids: Array):
+	for id in ids:
+		if not state.residents.has(id): continue
+		var r=state.residents[id]
+		if r.get("control","")!="combat": continue
+		var origin=r.get("combat_origin",{"zone":r.zone,"point":[r.x,r.y]}).duplicate(true)
+		r.control="returning";r.mode="returning";r.return_to=origin;r.combat_paused=false;r.erase("combat_origin");r.erase("combat_phase")
+		requests[id]=origin.duplicate(true);r.assignment=origin.duplicate(true)
+		if is_instance_valid(game.actors.get(id)):
+			game.actors[id].managed_motion=true;game.actors[id].scripted=false;game.actors[id].modulate=Color.WHITE
+func yield_to_combat(game,moving_id: String,blocker_position: Vector2):
+	if moving_id!="vera" and not game.actors.has(moving_id): return
+	var mover=game.player if moving_id=="vera" else game.actors[moving_id]
+	var moving_zone=state.zone if moving_id=="vera" else state.residents[moving_id].zone
+	for id in game.actors:
+		var r=state.residents[id]
+		var person=game.actors[id]
+		if id==moving_id or r.zone!=moving_zone or r.get("control","routine")=="combat" or person.position.distance_to(blocker_position)>.1: continue
+		var sideways=person.position.direction_to(mover.position).orthogonal()
+		for direction in [sideways,-sideways,person.position.direction_to(mover.position)*-1]:
+			var goal=person.position+direction*48
+			if not navigation.clear_segment(nav(r.zone),goal,goal) or navigation.path(nav(r.zone),person.position,goal).is_empty(): continue
+			var free=true
+			for other in game.actors:
+				if other!=id and state.residents[other].zone==r.zone and game.actors[other].position.distance_to(goal)<20: free=false
+			if not free: continue
+			if r.get("control","")!="yielding": r.yield_origin=r.get("return_to",{"zone":r.zone,"point":[person.position.x,person.position.y]}).duplicate(true)
+			r.control="yielding";r.mode="escort";r.combat_paused=false;r.erase("return_to")
+			request(id,r.zone,goal,"yield")
+			return
 func available(game,zone: String) -> bool:
 	if state.flag("event_campaign"): return game.journey.zone_allowed(zone)
 	return zone not in ["orchard","harbor"] or game.adventure.unlocked(zone)
@@ -138,9 +183,15 @@ func seat(game,id: String,zone: String,target: Vector2) -> Vector2:
 func update(game, dt: float, enabled: bool):
 	populate(game)
 	dt=clampf(dt,0,.05)
+	var combat_running=false
+	for resident in state.residents.values():
+		if resident.get("control","")=="combat": combat_running=true;break
 	for id in PROFILE:
 		var actor=game.actors[id]
 		var r=state.residents[id]
+		if r.get("control","")=="yielding" and not combat_running:
+			r.control="returning";r.return_to=r.yield_origin.duplicate(true);r.erase("yield_origin")
+			requests[id]=r.return_to.duplicate(true);r.assignment=r.return_to.duplicate(true)
 		if r.has("assignment") and not requests.has(id): requests[id]=r.assignment.duplicate(true)
 		if not actor.managed_motion:
 			r.x=actor.position.x;r.y=actor.position.y
@@ -148,12 +199,17 @@ func update(game, dt: float, enabled: bool):
 		actor.managed_velocity=Vector2.ZERO;actor.enabled=enabled;actor.scripted=false
 		actor.get_meta("caption").hide()
 		if not enabled: continue
+		if (combat_running and r.get("control","") not in ["combat","yielding"]) or r.get("combat_paused",false):
+			actor.enabled=false;r.mode="waiting";r.route_status="waiting_combat";continue
 		var activity=task(id)
 		var desired=activity[2]
 		var goal=Vector2(activity[3],activity[4])
 		var mode=behavior(id)
+		if r.get("control","")=="combat": mode="combat" if r.get("combat_phase","")=="active" else "escort"
+		elif r.get("control","")=="yielding": mode="escort"
+		elif r.get("control","")=="returning": mode="returning"
 		r.mode=mode
-		if not requests.has(id) and r.zone==state.zone and actor.position.distance_to(game.player.position)<76 and mode not in ["fear","help"]:
+		if r.get("control","routine")=="routine" and not requests.has(id) and r.zone==state.zone and actor.position.distance_to(game.player.position)<76 and mode not in ["fear","help"]:
 			actor.enabled=false
 			var delta=game.player.position-actor.position
 			actor.facing=(3 if delta.x>0 else 2) if absf(delta.x)>absf(delta.y) else (0 if delta.y>0 else 1)
@@ -161,6 +217,8 @@ func update(game, dt: float, enabled: bool):
 		if mode=="fear": desired=PROFILE[id][2];goal=Vector2(320,300)
 		if requests.has(id):
 			desired=requests[id].zone;goal=Vector2(requests[id].point[0],requests[id].point[1])
+		elif r.get("control","")=="returning":
+			desired=r.return_to.zone;goal=Vector2(r.return_to.point[0],r.return_to.point[1])
 		elif id=="sonya" and not state.flag("returned") and not state.flag("rift_finished") and not state.flag("event_campaign"):
 			desired="forest";goal=Vector2(1100,280)
 		elif mode=="help" and r.zone==state.zone and actor.position.distance_to(game.player.position)<200:
@@ -176,7 +234,7 @@ func update(game, dt: float, enabled: bool):
 			if edge.is_empty(): r.route_status="waiting_no_connection";continue
 			if not available(game,edge[2]): r.route_status="waiting_closed_zone";continue
 			goal=edge[1]
-		else: goal=seat(game,id,desired,goal)
+		elif r.get("control","")!="combat": goal=seat(game,id,desired,goal)
 		_walk(game,actor,goal,dt,108 if not edge.is_empty() else 60)
 		r.x=actor.position.x;r.y=actor.position.y
 		if not edge.is_empty() and actor.position.distance_to(goal)<3:
@@ -188,7 +246,10 @@ func update(game, dt: float, enabled: bool):
 			r.x=landing.x;r.y=landing.y;r.visits=int(r.get("visits",0))+1
 			r.portal=[edge[0],edge[2]];r.route_status="portal"
 			clear_route(actor);attach(game,id)
-		elif edge.is_empty() and actor.position.distance_to(goal)<3: r.route_status="arrived"
+		elif edge.is_empty() and actor.position.distance_to(goal)<3:
+			r.route_status="arrived"
+			if r.get("control","")=="returning":
+				r.control="routine";r.erase("return_to");release(id)
 		if visible_here(id,state.zone) and actor.position.distance_to(game.player.position)<100 and not requests.has(id):
 			var caption=actor.get_meta("caption")
 			caption.text=game.t("Я рядом.","I'm here.");caption.show()
@@ -213,23 +274,27 @@ func _walk(game,actor,goal: Vector2,dt: float,speed: float):
 		actor.set_meta("route",route);return
 	var budget=speed*dt
 	var origin=actor.position
+	var blockers=[]
+	for other_id in game.actors:
+		if other_id!=id and state.residents[other_id].zone==r.zone: blockers.append(game.actors[other_id].position)
+	if r.get("control","")=="combat" and r.zone==state.zone: blockers.append(game.player.position)
 	while budget>.001 and not route.is_empty():
 		var next: Vector2=actor.position.move_toward(route[0],budget)
 		if not navigation.clear_segment(geometry,actor.position,next):
 			route.clear();r.route_status="waiting_obstacle";break
 		var blocked=false
-		for other_id in game.actors:
-			if other_id==id or state.residents[other_id].zone!=r.zone: continue
-			var other=game.actors[other_id]
-			if next.distance_to(other.position)<12 and next.distance_to(other.position)<actor.position.distance_to(other.position)-.01: blocked=true;break
+		for other in blockers:
+			if next.distance_to(other)<12 and next.distance_to(other)<actor.position.distance_to(other)-.01: blocked=true;break
 		if blocked:
 			var age=float(actor.get_meta("blocked_for",0))+dt
 			actor.set_meta("blocked_for",age);r.route_status="waiting_resident"
 			if age>1:
+				if r.get("control","")=="combat":
+					for other in blockers:
+						if next.distance_to(other)<12: yield_to_combat(game,id,other)
 				var reserved=[]
-				for other_id in game.actors:
-					if other_id==id or state.residents[other_id].zone!=r.zone: continue
-					var center=Vector2i(game.actors[other_id].position/16)
+				for other in blockers:
+					var center=Vector2i(other/16)
 					for y in range(-1,2):
 						for x in range(-1,2):
 							var cell=center+Vector2i(x,y)

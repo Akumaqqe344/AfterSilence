@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "events": [
     {
       "id": "letter",
@@ -39,7 +39,11 @@
         ]
       ],
       "location": "square",
-      "requires": ""
+      "requires": "",
+      "world_action": [
+        "Подними письмо у дороги.",
+        "Pick up the letter by the road."
+      ]
     },
     {
       "id": "guest",
@@ -79,7 +83,11 @@
         ]
       ],
       "location": "square",
-      "requires": "letter"
+      "requires": "letter",
+      "world_action": [
+        "Осмотри оставленную записку.",
+        "Inspect the note."
+      ]
     },
     {
       "id": "epochs",
@@ -119,7 +127,11 @@
         ]
       ],
       "location": "home_sonya",
-      "requires": "guest"
+      "requires": "guest",
+      "world_action": [
+        "Проверь запись у часов.",
+        "Check the note by the clock."
+      ]
     },
     {
       "id": "machine",
@@ -159,24 +171,28 @@
         ]
       ],
       "location": "workshop",
-      "requires": "epochs"
+      "requires": "epochs",
+      "world_action": [
+        "Осмотри выключатель мастерской.",
+        "Inspect the workshop switch."
+      ]
     },
     {
       "id": "bridge",
       "npc": "pavel",
       "zone": "town",
-      "mode": "defense",
+      "mode": "tactics",
       "title": [
         "Защитники моста",
         "Bridge defenders"
       ],
       "context": [
-        "Павел открыл проход. Прикрой мост вместе с ним.",
-        "Pavel opened the crossing. Guard the bridge together."
+        "Павел готовит учение по эвакуации с Марой и гостем. Никто не должен пострадать.",
+        "Pavel prepares an evacuation exercise with Mara and the guest. Nobody should be harmed."
       ],
       "rule": [
-        "Встань между вспышкой и Павлом. E — защитить.",
-        "Stand between the flash and Pavel. E: shield."
+        "Тактическое учение: идти, атаковать, защищаться и помогать. Действия тратятся по очереди.",
+        "Tactical exercise: move, attack, defend and help. Spend actions in turn."
       ],
       "next": [
         "Теперь ритм доверия. Открой «Путешествие»: там есть путь.",
@@ -199,7 +215,11 @@
         ]
       ],
       "location": "bridge",
-      "requires": "machine"
+      "requires": "machine",
+      "world_action": [
+        "Проверь знак перед учением на мосту.",
+        "Check the sign before the bridge exercise."
+      ]
     },
     {
       "id": "memory",
@@ -239,7 +259,11 @@
         ]
       ],
       "location": "square",
-      "requires": "bridge"
+      "requires": "bridge",
+      "world_action": [
+        "Возьми лист с мелодией.",
+        "Take the sheet with the melody."
+      ]
     },
     {
       "id": "garden",
@@ -279,24 +303,28 @@
         ]
       ],
       "location": "garden",
-      "requires": "memory"
+      "requires": "memory",
+      "world_action": [
+        "Осмотри садовую метку.",
+        "Inspect the garden marker."
+      ]
     },
     {
       "id": "crowd",
       "npc": "nadia",
       "zone": "town",
-      "mode": "defense",
+      "mode": "tactics",
       "title": [
         "Не одна против толпы",
         "Not alone"
       ],
       "context": [
-        "Надю окружили встревоженные соседи. Помоги ей.",
-        "Worried neighbors surround Nadia. Help her."
+        "Надя, Лев и гость отрабатывают защиту толпы. Сначала осмотри план.",
+        "Nadia, Lev and the guest rehearse crowd protection. Inspect the plan first."
       ],
       "rule": [
-        "Встань между вспышкой и Надей. E — защитить.",
-        "Stand between the flash and Nadia. E: shield."
+        "Тактическое учение: идти, атаковать, защищаться и помогать. Действия тратятся по очереди.",
+        "Tactical exercise: move, attack, defend and help. Spend actions in turn."
       ],
       "next": [
         "Теперь поезд без рельсов. Открой «Путешествие»: там есть путь.",
@@ -319,7 +347,11 @@
         ]
       ],
       "location": "square",
-      "requires": "garden"
+      "requires": "garden",
+      "world_action": [
+        "Проверь план защиты площади.",
+        "Check the square protection plan."
+      ]
     },
     {
       "id": "train",
@@ -359,7 +391,11 @@
         ]
       ],
       "location": "station",
-      "requires": "crowd"
+      "requires": "crowd",
+      "world_action": [
+        "Прочитай список пассажиров.",
+        "Read the passenger list."
+      ]
     },
     {
       "id": "collision",
@@ -399,7 +435,11 @@
         ]
       ],
       "location": "library",
-      "requires": "train"
+      "requires": "train",
+      "world_action": [
+        "Сверь запись у прохода.",
+        "Check the passage record."
+      ]
     },
     {
       "id": "alina",
@@ -439,7 +479,11 @@
         ]
       ],
       "location": "rift",
-      "requires": "collision"
+      "requires": "collision",
+      "world_action": [
+        "Осмотри след у разлома.",
+        "Inspect the mark by the rift."
+      ]
     },
     {
       "id": "shore",
@@ -479,7 +523,11 @@
         ]
       ],
       "location": "shore",
-      "requires": "alina"
+      "requires": "alina",
+      "world_action": [
+        "Проверь список у берега.",
+        "Check the shore list."
+      ]
     }
   ]
 }

@@ -26,7 +26,9 @@ func run():
 	director._physics_process(3.2)
 	check(director.phase=="ready","packed observation")
 	director.talk("lev");check(game.buttons.has("help"),"packed NPC dialogue")
-	director.start_activity();director.activity.set_physics_process(false)
+	director.begin_preparation();game.player.position=director.preparation_point()
+	check(director.complete_preparation(),"packed required world action")
+	director.activity.set_physics_process(false)
 	director.activity.elapsed=15;director.activity.progress=2
 	game._save(false)
 	await game._load_game()
