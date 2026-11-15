@@ -150,6 +150,24 @@ func _walk(game,actor,goal: Vector2,dt: float,speed: float):
 		return
 	var age=float(actor.get_meta("route_age",0))-dt
 	var route: PackedVector2Array=actor.get_meta("route",PackedVector2Array())
+	var previous_goal: Vector2=actor.get_meta("route_goal",goal)
+	if previous_goal.distance_to(goal)>16:
+		age=0
+		actor.set_meta("stuck_time",0.0)
+	var last_position: Vector2=actor.get_meta("route_last_position",actor.position)
+	var stuck=float(actor.get_meta("stuck_time",0.0))
+	if actor.position.distance_to(goal)>18:
+		stuck+=dt
+	else:
+		stuck=0.0
+		last_position=actor.position
+	if stuck>=2.0:
+		# Replan from the actual position; do not move the resident through walls.
+		if actor.position.distance_to(last_position)<4:
+			age=0
+			route=PackedVector2Array()
+		stuck=0.0
+		last_position=actor.position
 	if age<=0:
 		route=game.world.path_between(actor.position,goal)
 		age=1.0
@@ -157,3 +175,6 @@ func _walk(game,actor,goal: Vector2,dt: float,speed: float):
 	actor.target=route[0] if route.size()>0 else actor.position
 	actor.set_meta("route",route)
 	actor.set_meta("route_age",age)
+	actor.set_meta("route_goal",goal)
+	actor.set_meta("route_last_position",last_position)
+	actor.set_meta("stuck_time",stuck)
