@@ -278,6 +278,7 @@ func play_event(index: int) -> bool:
 func campaign(ending: String):
 	tag=ending
 	await choose("events_new")
+	if game.buttons.has("restart"): await choose("restart")
 	check(not game.in_menu and game.state.flag("event_campaign"),"clean new game")
 	var ok=true
 	for i in range(game.events_controller.events.size()):

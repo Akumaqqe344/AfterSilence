@@ -21,6 +21,10 @@ const BossBattle=preload("res://after_silence/world/boss_battle.gd")
 const Rift=preload("res://after_silence/world/rift_campaign.gd")
 
 
+const ComfortTheme=preload("res://after_silence/ui/comfort_theme.gd")
+var comfort=preload("res://after_silence/ui/comfort_preferences.gd").new()
+var modal_back: Callable
+var settings_volume: Label
 var state=State.new()
 var saves=Saves.new()
 var archive_saves: RefCounted
@@ -99,6 +103,12 @@ func _ready():
 	if "--qa" in OS.get_cmdline_user_args(): event_saves.path="user://qa_events_slot.json"
 	if "--qa" in OS.get_cmdline_user_args(): saves.path="user://qa_episode.json"
 	if "--qa" in OS.get_cmdline_user_args(): rift_saves.path="user://qa_rift_slot.json"
+	if "--qa" in OS.get_cmdline_user_args(): comfort.path="user://qa_comfort.cfg"
+	comfort.load_preferences()
+	if comfort.available:
+		state.language=comfort.language
+		state.volume=comfort.volume
+		if comfort.fullscreen and "--qa" not in OS.get_cmdline_user_args(): DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	for id in ["as_left","as_right","as_up","as_down"]:
 		if not InputMap.has_action(id): InputMap.add_action(id)
 	for item in [["as_left",KEY_A,KEY_LEFT],["as_right",KEY_D,KEY_RIGHT],["as_up",KEY_W,KEY_UP],["as_down",KEY_S,KEY_DOWN]]:
@@ -125,6 +135,10 @@ func _ready():
 	ui.add_child(event_window)
 	_build_world("town",Vector2(600,630))
 	_main_menu()
+	if "--qa-ui-export" in OS.get_cmdline_user_args():
+		var ui_runner=load("res://after_silence/tests/ui_comfort_driver.gd").new()
+		ui_runner.game=self
+		get_tree().root.add_child.call_deferred(ui_runner)
 	if "--qa-events-export" in OS.get_cmdline_user_args():
 		var event_runner=load("res://after_silence/tests/events_export_driver.gd").new()
 		event_runner.game=self
@@ -169,22 +183,11 @@ func _mark_dirty():
 	for id in Achievements.evaluate(state):
 		if is_instance_valid(toast): _notify(t("Достижение: ","Achievement: ")+Story.pair(Achievements.ENTRIES[id],state.language))
 func style(bg: Color, accent: bool=false) -> StyleBoxFlat:
-	var s=StyleBoxFlat.new()
-	s.bg_color=bg
-	s.border_color=Color("67c5bd") if accent else Color("315550")
-	s.set_border_width_all(1)
-	s.border_width_left=3 if accent else 1
-	s.set_content_margin_all(5)
-	s.anti_aliasing=false
-	return s
+	# Existing callers keep their world-specific tint; surfaces share spacing.
+	return ComfortTheme.panel(bg.lerp(ComfortTheme.SURFACE,.78),accent)
 func choice_style(active: bool, pressed: bool=false) -> StyleBoxFlat:
-	var s=StyleBoxFlat.new()
-	s.bg_color=Color("58b2aa") if pressed else Color("327d78") if active else Color.TRANSPARENT
-	s.border_color=Color("8fe3d6") if active else Color.TRANSPARENT
-	s.border_width_left=3 if active else 0
-	s.set_content_margin_all(5)
-	s.anti_aliasing=false
-	return s
+	return ComfortTheme.button(active,pressed)
+
 
 func _setup_ui():
 	var layer=CanvasLayer.new()
@@ -193,35 +196,24 @@ func _setup_ui():
 	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	layer.add_child(ui)
-	var theme=Theme.new()
-	var font=load("res://after_silence/assets/fonts/PressStart2P-Regular.ttf")
-	font.antialiasing=TextServer.FONT_ANTIALIASING_NONE
-	theme.default_font=font
-	theme.default_font_size=10
-	theme.set_color("font_color","Label",Color("dce9e3"))
-	theme.set_stylebox("normal","Button",choice_style(false))
-	theme.set_stylebox("hover","Button",choice_style(true))
-	theme.set_stylebox("focus","Button",choice_style(true))
-	theme.set_stylebox("pressed","Button",choice_style(true,true))
-	theme.set_color("font_color","Button",Color("e2eeea"))
-	theme.set_color("font_hover_color","Button",Color.WHITE)
-	theme.set_color("font_focus_color","Button",Color.WHITE)
-	ui.theme=theme
+	ui.theme=ComfortTheme.create(comfort.large_text)
 	var hud=load("res://after_silence/world/story_hud.gd").new()
 	hud.game=self
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(hud)
 	objective=Label.new()
-	objective.position=Vector2(12,12)
-	objective.size=Vector2(480,44)
-	objective.add_theme_font_size_override("font_size",8)
+	objective.position=Vector2(22,27)
+	objective.size=Vector2(446,36)
+	objective.add_theme_font_size_override("font_size",13)
 	objective.add_theme_color_override("font_outline_color",Color("172126"))
-	objective.add_theme_constant_override("outline_size",4)
+	objective.add_theme_constant_override("outline_size",0)
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(objective)
 	help_button=Button.new()
-	help_button.text="? [H]"
-	help_button.position=Vector2(560,38)
+	help_button.text=t("Помощь · H","Help · H")
+	help_button.position=Vector2(534,39)
+	help_button.size=Vector2(94,28)
+	help_button.add_theme_font_size_override("font_size",12)
 	help_button.pressed.connect(_quest_help)
 	ui.add_child(help_button)
 	status=Label.new()
@@ -232,15 +224,17 @@ func _setup_ui():
 	hint=Label.new()
 	hint.position=Vector2(24,327)
 	hint.size=Vector2(592,23)
-	hint.add_theme_font_size_override("font_size",8)
+	hint.add_theme_font_size_override("font_size",13)
 	hint.add_theme_color_override("font_outline_color",Color("172126"))
 	hint.add_theme_constant_override("outline_size",4)
 	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(hint)
 	toast=Label.new()
-	toast.position=Vector2(40,270)
-	toast.size=Vector2(560,36)
+	toast.position=Vector2(90,278)
+	toast.size=Vector2(460,40)
+	toast.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	toast.add_theme_font_size_override("font_size",13)
 	toast.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	ui.add_child(toast)
 	shade=ColorRect.new()
@@ -258,10 +252,11 @@ func _setup_ui():
 	card_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL
 	card_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
 	card_scroll.follow_focus=true
+	card_scroll.scroll_deadzone=8
 	card.add_child(card_scroll)
 	column=VBoxContainer.new()
 	column.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	column.add_theme_constant_override("separation",7)
+	column.add_theme_constant_override("separation",8)
 	card_scroll.add_child(column)
 	veil=ColorRect.new()
 	veil.color=Color("071319")
@@ -292,47 +287,53 @@ func choice(id: String,ru: String,en: String,action: Callable) -> Dictionary:
 	return {"id":id,"label":t(ru,en),"run":action}
 func _dialog(id: String,title: String,text: String,actions: Array,animated: bool=true,main_layout: bool=false):
 	modal=true
+	modal_back=Callable()
 	shade.show()
 	buttons.clear()
 	if is_instance_valid(modal_tween): modal_tween.kill()
 	modal_backdrop.menu_mode=main_layout
 	modal_backdrop.english=state.language=="en"
 	modal_backdrop.journey_mode=state.flag("event_campaign") and not main_layout
-
+	modal_backdrop.reduce_motion=comfort.reduce_motion
 	modal_backdrop.age=0
 	modal_backdrop.tick=0
 	modal_backdrop.queue_redraw()
-	var target=Vector2(30,34) if main_layout else Vector2(34,32)
-	card.position=target+Vector2(0,9)
-	card.size=Vector2(320,281) if main_layout else Vector2(572,294)
-	var panel_style=style(Color("19372e") if state.flag("event_campaign") and not main_layout else Color(.025,.047,.052,.91))
+	var target=Vector2(28,26) if main_layout else Vector2(30,24)
+	card.position=target
+	card.size=Vector2(330,294) if main_layout else Vector2(580,298)
+	var panel_style=ComfortTheme.panel()
 	if main_layout:
 		panel_style.bg_color=Color.TRANSPARENT
 		panel_style.set_border_width_all(0)
+		panel_style.shadow_size=0
+		panel_style.set_content_margin_all(0)
 	card.add_theme_stylebox_override("panel",panel_style)
-
-	card.modulate.a=0
+	card.modulate.a=1
 	for child in column.get_children():
 		column.remove_child(child)
 		child.queue_free()
 	var header=Label.new()
 	header.text=title
-	header.add_theme_color_override("font_color",Color("c7ebe5"))
-	header.add_theme_font_size_override("font_size",18 if main_layout else 15)
+	header.add_theme_color_override("font_color",ComfortTheme.PEACH)
+	header.add_theme_font_size_override("font_size",23 if main_layout else 21)
 	header.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var portrait_id=id.split("_")[0]
 	if id=="intro": portrait_id="vera"
 	if not main_layout and (portrait_id in actors or portrait_id=="vera"):
 		var row=HBoxContainer.new()
+		row.add_theme_constant_override("separation",12)
+		var portrait_frame=PanelContainer.new()
+		portrait_frame.add_theme_stylebox_override("panel",ComfortTheme.panel(Color("46574f")))
 		var portrait=TextureRect.new()
 		var atlas=AtlasTexture.new()
 		atlas.atlas=player.sheet if portrait_id=="vera" else actors[portrait_id].sheet
 		atlas.region=player.portrait if portrait_id=="vera" else actors[portrait_id].portrait
 		portrait.texture=atlas
-		portrait.custom_minimum_size=Vector2(64,64) if state.flag("event_campaign") else Vector2(42,42)
+		portrait.custom_minimum_size=Vector2(40,40)
 		portrait.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
 		portrait.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		row.add_child(portrait)
+		portrait_frame.add_child(portrait)
+		row.add_child(portrait_frame)
 		header.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		row.add_child(header)
 		column.add_child(row)
@@ -342,14 +343,14 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	body.text=text
 	body.fit_content=true
 	body.scroll_active=false
-	body.custom_minimum_size=Vector2(0,20 if main_layout else 24)
+	body.custom_minimum_size=Vector2(0,24)
 	body.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	body.add_theme_color_override("default_color",Color("a9c6bd"))
-	body.add_theme_font_size_override("normal_font_size",10)
+	body.add_theme_color_override("default_color",ComfortTheme.TEXT)
+	body.add_theme_font_size_override("normal_font_size",15 if comfort.large_text else 13)
 	column.add_child(body)
 	var seen=dialogues.was_seen(id)
 	if id!="": dialogues.record(id,title,text)
-	body.visible_characters=0 if animated and not seen else -1
+	body.visible_characters=0 if animated and not seen and not comfort.instant_text else -1
 	type_progress=0
 	modal_age=0
 	for i in range(actions.size()):
@@ -357,9 +358,10 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		var button=Button.new()
 		button.text=item.label
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
-		button.custom_minimum_size=Vector2(0,31 if main_layout else 32)
-		button.add_theme_font_size_override("font_size",10)
+		button.custom_minimum_size=Vector2(0,34)
+		button.add_theme_font_size_override("font_size",15 if comfort.large_text else 13)
 		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
 		button.pressed.connect(func():
 			if body.visible_characters>=0 and body.visible_characters<body.get_total_character_count():
 				body.visible_characters=-1
@@ -368,15 +370,42 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 			item.run.call())
 		column.add_child(button)
 		buttons[item.id]=button
+		if item.id in ["back","close"]: modal_back=item.run
+		if item.id in ["events_new","events_load","resume","start"] and i==0:
+			var primary=ComfortTheme.button()
+			primary.bg_color=Color("536b59")
+			primary.border_color=ComfortTheme.SAGE
+			button.add_theme_stylebox_override("normal",primary)
 	if seen and animated and not state.flag("event_campaign"):
 		var skip=Label.new()
 		skip.text=t("Уже прочитано · текст показан целиком","Previously read · full text shown")
+		skip.add_theme_color_override("font_color",ComfortTheme.MUTED)
 		column.add_child(skip)
-	if not actions.is_empty(): buttons[actions[0].id].grab_focus()
+	_wire_dialog_focus()
 	card_scroll.scroll_vertical=0
-	modal_tween=create_tween().set_parallel(true)
-	modal_tween.tween_property(card,"position",target,.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	modal_tween.tween_property(card,"modulate:a",1.0,.22)
+	if not comfort.reduce_motion:
+		card.position=target+Vector2(0,5)
+		card.modulate.a=0
+		modal_tween=create_tween().set_parallel(true)
+		modal_tween.tween_property(card,"position",target,.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		modal_tween.tween_property(card,"modulate:a",1.0,.16)
+
+func _wire_dialog_focus():
+	var enabled=[]
+	for button in buttons.values():
+		if not button.disabled:
+			enabled.append(button)
+	if enabled.is_empty(): return
+	for i in range(enabled.size()):
+		var button=enabled[i]
+		var previous=button.get_path_to(enabled[posmod(i-1,enabled.size())])
+		var next=button.get_path_to(enabled[(i+1)%enabled.size()])
+		button.focus_neighbor_top=previous
+		button.focus_neighbor_bottom=next
+		button.focus_previous=previous
+		button.focus_next=next
+	enabled[0].grab_focus()
+
 func _story(id: String,actions: Array=[]):
 	var d=Story.SCENES[id] if id in Story.SCENES else Review.SCENES[id]
 	if actions.is_empty(): actions=[choice("close","Продолжить","Continue",_close)]
@@ -395,8 +424,18 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("ПОСЛЕ ТИШИНЫ","AFTER SILENCE"),t("ПУТЕШЕСТВИЕ / 12 СОБЫТИЙ","THE JOURNEY / 12 EVENTS"),[choice("events_load","Продолжить","Continue",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_new_event_game),choice("archive","Архив прежних историй","Previous stories",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выход","Exit",func():get_tree().quit())],false,true)
-	if not event_saves.exists(): buttons["events_new"].grab_focus()
+	_dialog("",t("После тишины","After Silence"),t("Маленький город. Истории, которые сближают.","A little town. Stories that bring us closer."),[choice("events_load","Продолжить путешествие","Continue journey",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_confirm_new_event),choice("archive","Прежние истории","Earlier stories",_archive_menu),choice("settings","Настройки и комфорт","Settings & comfort",_settings),choice("quit","До встречи","See you soon",func():get_tree().quit())],false,true)
+	buttons["events_load"].disabled=not event_saves.exists()
+	buttons["events_load"].tooltip_text=t("Здесь появится твоё сохранённое путешествие","Your saved journey will appear here") if not event_saves.exists() else t("Вернуться к сохранённой истории","Return to your saved story")
+	_wire_dialog_focus()
+	if not event_saves.exists():
+		var primary=ComfortTheme.button();primary.bg_color=Color("536b59");primary.border_color=ComfortTheme.SAGE
+		buttons["events_new"].add_theme_stylebox_override("normal",primary)
+func _confirm_new_event():
+	if not event_saves.exists():
+		_new_event_game()
+		return
+	_dialog("",t("Начать сначала?","Begin again?"),t("Новое путешествие заменит текущее автосохранение. Прежние истории в архиве останутся.","A new journey replaces the current autosave. Earlier stories in the archive stay safe."),[choice("back","Оставить мою историю","Keep my story",_main_menu),choice("restart","Начать новое путешествие","Begin a new journey",_new_event_game)],false)
 func _archive_menu():
 	in_menu=true
 	_dialog("",t("АРХИВ","ARCHIVE"),t("ПРЕЖНИЕ СОХРАНЕНИЯ","PREVIOUS SAVES"),[choice("load","Продолжить разлом","Continue rift",_continue_rift),choice("rift","Начать разлом заново","Restart rift",_new_rift_game),choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_main_menu)],false,true)
@@ -454,6 +493,9 @@ func _load_game():
 	if not saves.load_state(state):
 		_dialog("",t("Нет читаемого сохранения","No readable save"),t("Основной и резервный файлы не прошли проверку. Они не удалены.","Neither the main nor backup file passed validation. They were not deleted."),[choice("menu","В меню","Main menu",_main_menu)],false)
 		return
+	if comfort.available:
+		state.language=comfort.language
+		state.volume=comfort.volume
 	_setup_services()
 	var checkpoint=state.minigame.duplicate(true)
 	var event_checkpoint=state.event_state.duplicate(true)
@@ -509,8 +551,11 @@ func _build_world(id: String,p: Vector2):
 		camera.position_smoothing_speed=6
 		player.add_child(camera)
 		zoom_button=Button.new()
-		zoom_button.text="− / +  Камера [Z]"
-		zoom_button.position=Vector2(440,38)
+		zoom_button.text="Z · − / +"
+		zoom_button.position=Vector2(534,72)
+		zoom_button.size=Vector2(94,26)
+		zoom_button.add_theme_font_size_override("font_size",12)
+		zoom_button.tooltip_text=t("Приблизить или отдалить камеру","Zoom the camera in or out")
 		zoom_button.pressed.connect(_toggle_zoom)
 		ui.add_child(zoom_button)
 	world.sorter.add_child(player)
@@ -557,7 +602,7 @@ func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	caption.position=Vector2(-75,-85)
 	caption.size=Vector2(150,28)
 	caption.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	caption.add_theme_font_size_override("font_size",10)
+	caption.add_theme_font_size_override("font_size",12)
 	caption.add_theme_color_override("font_outline_color",Color("172126"))
 	caption.add_theme_constant_override("outline_size",4)
 	caption.hide()
@@ -628,6 +673,11 @@ func _notify(text: String):
 	if is_instance_valid(toast_tween): toast_tween.kill()
 	toast.modulate.a=0
 	toast_tween=create_tween()
+	if comfort.reduce_motion:
+		toast.modulate.a=1
+		toast_tween.tween_interval(3.4)
+		toast_tween.tween_property(toast,"modulate:a",0,0)
+		return
 	toast_tween.tween_property(toast,"modulate:a",1,.18)
 	toast_tween.tween_interval(2.8)
 	toast_tween.tween_property(toast,"modulate:a",0,.6)
@@ -702,7 +752,11 @@ func _unhandled_key_input(event):
 		elif event.physical_keycode>=KEY_1 and event.physical_keycode<=KEY_9:
 			var index=int(event.physical_keycode-KEY_1)
 			if index<buttons.size(): buttons.values()[index].pressed.emit()
-		elif event.physical_keycode==KEY_ESCAPE and not in_menu:
+		elif event.physical_keycode==KEY_ESCAPE:
+			if modal_back.is_valid():
+				modal_back.call()
+				return
+			if in_menu: return
 			_close()
 			if state.flag("event_campaign") and events_controller.phase=="failure":
 				events_controller.phase="ready"
@@ -1024,10 +1078,82 @@ func _pause():
 	slot_button.pressed.connect(expedition.slots)
 	column.add_child(slot_button)
 	buttons["slots"]=slot_button
+	_wire_dialog_focus()
 func _settings():
-	_dialog("",t("Настройки","Settings"),t("Язык, звук и окно. Изменения записываются при сохранении истории.","Language, audio and window. Settings are stored with your story."),[choice("lang","Русский / English","English / Русский",func():state.language="en" if state.language=="ru" else "ru";_settings()),choice("quiet","Звук −","Volume −",func():state.volume=maxf(0,state.volume-.1);audio.set_scene(state.echo,state.volume,state.zone);_settings()),choice("loud","Звук +","Volume +",func():state.volume=minf(1,state.volume+.1);audio.set_scene(state.echo,state.volume,state.zone);_settings()),choice("fullscreen","Полный экран / окно","Fullscreen / window",func():DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN else DisplayServer.WINDOW_MODE_FULLSCREEN)),choice("back","Назад","Back",func():
+	_dialog("",t("Настройки и комфорт","Settings & comfort"),t("Устройся поудобнее. Всё сохраняется сразу.","Make yourself comfortable. Changes save immediately."),[choice("back","Готово · Esc","Done · Esc",func():
 		if in_menu: _main_menu()
 		else: _pause())],false)
+	var row=HBoxContainer.new()
+	row.custom_minimum_size.y=28
+	settings_volume=Label.new()
+	settings_volume.custom_minimum_size.x=116
+	settings_volume.text=t("Звук","Sound")+" · %d%%"%roundi(state.volume*100)
+	row.add_child(settings_volume)
+	var slider=HSlider.new()
+	slider.name="VolumeSlider"
+	slider.min_value=0;slider.max_value=100;slider.step=5
+	slider.value=roundi(state.volume*100)
+	slider.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	slider.custom_minimum_size.y=28
+	slider.tooltip_text=t("Громкость · стрелки влево / вправо","Volume · left / right arrows")
+	slider.value_changed.connect(func(value):
+		state.volume=value/100.0
+		audio.set_scene(state.echo,state.volume,state.zone)
+		settings_volume.text=t("Звук","Sound")+" · %d%%"%roundi(value)
+		_save_comfort())
+	row.add_child(slider)
+	column.add_child(row)
+	column.move_child(row,2)
+	var grid=GridContainer.new()
+	grid.name="ComfortOptions"
+	grid.columns=2
+	grid.add_theme_constant_override("h_separation",8)
+	grid.add_theme_constant_override("v_separation",8)
+	var entries=[
+		["lang",t("Язык · Русский","Language · English"),func():state.language="en" if state.language=="ru" else "ru";_save_comfort();_settings();buttons["lang"].grab_focus()],
+		["fullscreen",t("Окно / полный экран","Window / fullscreen"),func():DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN else DisplayServer.WINDOW_MODE_FULLSCREEN);_save_comfort()],
+		["large_text",t("Крупный текст","Larger text"),func():_toggle_comfort("large_text")],
+		["reduce_motion",t("Меньше анимаций","Reduced motion"),func():_toggle_comfort("reduce_motion")],
+		["instant_text",t("Текст сразу","Instant dialogue"),func():_toggle_comfort("instant_text")],
+		["controls",t("Как играть","How to play"),_controls_help]]
+	for entry in entries:
+		var button=Button.new()
+		button.name=entry[0];button.text=entry[1]
+		if entry[0] in ["large_text","reduce_motion","instant_text"]:
+			button.text=("✓  " if comfort.get(entry[0]) else "○  ")+button.text
+		button.custom_minimum_size=Vector2(0,34)
+		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
+		button.pressed.connect(entry[2])
+		grid.add_child(button)
+		buttons[entry[0]]=button
+	column.add_child(grid)
+	column.move_child(grid,3)
+	for button in buttons.values():
+		button.focus_neighbor_top=NodePath();button.focus_neighbor_bottom=NodePath()
+		button.focus_previous=NodePath();button.focus_next=NodePath()
+	slider.grab_focus()
+
+func _save_comfort():
+	comfort.language=state.language;comfort.volume=state.volume
+	comfort.fullscreen=DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN
+	if comfort.save_preferences()!=OK:
+		_notify(t("Не удалось сохранить настройки.","Could not save preferences."))
+	help_button.text=t("Помощь · H","Help · H")
+
+func _toggle_comfort(key: String):
+	comfort.set(key,not comfort.get(key))
+	_save_comfort()
+	ui.theme=ComfortTheme.create(comfort.large_text)
+	objective.add_theme_font_size_override("font_size",15 if comfort.large_text else 13)
+	hint.add_theme_font_size_override("font_size",15 if comfort.large_text else 13)
+	event_window.goal.add_theme_font_size_override("font_size",13 if comfort.large_text else 12)
+	_settings()
+	buttons[key].grab_focus()
+
+func _controls_help():
+	_dialog("",t("Путешествуй в своём темпе","Explore at your own pace"),t("WASD или стрелки — идти\nE — поговорить или действовать\nПробел — прыжок · Shift — бег\nT — места и дорога · J — журнал · I — предметы\nEsc — пауза или вернуться назад\n\nВ меню: Tab / Shift+Tab — выбор, Enter — открыть.\nВ бою: стрелки — цель, E — подтвердить, Tab — действия.","WASD or arrows — move\nE — talk or interact\nSpace — jump · Shift — run\nT — places & directions · J — journal · I — items\nEsc — pause or go back\n\nMenus: Tab / Shift+Tab to choose, Enter to open.\nCombat: arrows to aim, E to confirm, Tab for actions."),[choice("back","К настройкам","Back to settings",_settings)],false)
+
 func _notification(what):
 	if what==NOTIFICATION_WM_CLOSE_REQUEST:
 		_save(false)

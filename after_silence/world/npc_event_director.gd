@@ -14,7 +14,7 @@ var preparing=false
 var pending: Dictionary={}
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
-	status=Label.new();status.position=Vector2(12,58);status.add_theme_font_size_override("font_size",8);add_child(status)
+	status=Label.new();status.position=Vector2(490,42);status.add_theme_font_size_override("font_size",12);add_child(status)
 func enabled() -> bool: return game.state.flag("event_campaign") and not game.in_menu
 func owns(id: String) -> bool:
 	return enabled() and index<events.size() and id==events[index].npc and phase not in ["travel","finished"]

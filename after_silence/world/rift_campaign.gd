@@ -54,18 +54,18 @@ func _ready() -> void:
 	title_label=Label.new()
 	title_label.position=Vector2(65,32)
 	title_label.size=Vector2(520,28)
-	title_label.add_theme_font_size_override("font_size",12)
+	title_label.add_theme_font_size_override("font_size",18)
 	add_child(title_label)
 	brief_label=Label.new()
 	brief_label.position=Vector2(66,70)
 	brief_label.size=Vector2(510,88)
 	brief_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	brief_label.add_theme_font_size_override("font_size",9)
+	brief_label.add_theme_font_size_override("font_size",13)
 	add_child(brief_label)
 	status_label=Label.new()
 	status_label.position=Vector2(65,327)
 	status_label.size=Vector2(520,24)
-	status_label.add_theme_font_size_override("font_size",8)
+	status_label.add_theme_font_size_override("font_size",12)
 	add_child(status_label)
 	actions=VBoxContainer.new()
 	actions.position=Vector2(66,183)
@@ -114,8 +114,8 @@ func add_action(label: String, callback: Callable, available: bool=true) -> void
 	var button=Button.new()
 	button.text=label
 	button.alignment=HORIZONTAL_ALIGNMENT_LEFT
-	button.custom_minimum_size=Vector2(480,28)
-	button.add_theme_font_size_override("font_size",9)
+	button.custom_minimum_size=Vector2(480,32)
+	button.add_theme_font_size_override("font_size",13)
 	button.disabled=not available
 	button.pressed.connect(callback)
 	actions.add_child(button)
@@ -470,9 +470,9 @@ func epilogue() -> String:
 
 func _draw() -> void:
 	if not active: return
-	draw_rect(Rect2(Vector2.ZERO,size),Color("071015f2"))
-	draw_rect(Rect2(17,17,size.x-34,size.y-34),Color("408e88"),false,2)
-	draw_rect(Rect2(17,17,74,3),Color("95ded1"))
+	draw_rect(Rect2(Vector2.ZERO,size),Color("292d38fa"))
+	draw_style_box(game.ComfortTheme.panel(),Rect2(17,17,size.x-34,size.y-34))
+	draw_rect(Rect2(32,18,60,2),game.ComfortTheme.SAGE)
 	if phase!="play": return
 	draw_rect(ARENA,Color("10242a"))
 	match play_mode():

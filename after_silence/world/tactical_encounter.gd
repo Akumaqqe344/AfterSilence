@@ -97,8 +97,10 @@ func make_ui():
 	bar=HBoxContainer.new();bar.position=Vector2(16,260);bar.size=Vector2(576,32);bar.add_theme_constant_override("separation",4)
 	game.event_window.frame.add_child(bar)
 	for entry in [["move","Идти","Move"],["attack","Атака · 2","Attack · 2"],["defend","Защита · 1","Guard · 1"],["help","Помочь · 2","Help · 2"],["end","Конец хода","End turn"],["retreat","Отойти","Retreat"]]:
-		var button=Button.new();button.text=game.t(entry[1],entry[2]);button.custom_minimum_size=Vector2(91,30);button.add_theme_font_size_override("font_size",8)
+		var button=Button.new();button.text=game.t(entry[1],entry[2]);button.custom_minimum_size=Vector2(91,32);button.add_theme_font_size_override("font_size",11)
+		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
 		var kind: String=entry[0]
+		button.tooltip_text=game.t({"move":"Дойти до клетки · 1 очко за шаг","attack":"Атаковать выбранную цель · 2 очка","defend":"Прикрыться до следующего хода · 1 очко","help":"Восстановить стойкость союзника · 2 очка","end":"Передать ход следующему участнику","retreat":"Покинуть учение. Можно попробовать снова."}[kind],{"move":"Move to a cell · 1 point per step","attack":"Attack a target · 2 points","defend":"Guard until your next turn · 1 point","help":"Restore an ally's health · 2 points","end":"Pass the turn to the next participant","retreat":"Leave this exercise. You can retry."}[kind])
 		button.pressed.connect(func():
 			if kind in ["move","attack","help"]:
 				action=kind
@@ -245,7 +247,14 @@ func mouse_input(position_in_viewport: Vector2):
 func refresh():
 	if not is_instance_valid(bar): return
 	var player_turn=stage=="battle" and board.phase=="active" and board.active_id()=="vera" and not game.modal and not paused and resume_goal==Vector2.INF
-	for kind in controls: controls[kind].disabled=not player_turn if kind!="retreat" else completed or board.phase in ["victory","defeat","retreated"]
+	for kind in controls:
+		controls[kind].disabled=not player_turn if kind!="retreat" else completed or board.phase in ["victory","defeat","retreated"]
+		var selected=player_turn and kind==action
+		if not controls[kind].has_meta("selected") or controls[kind].get_meta("selected",false)!=selected:
+			controls[kind].set_meta("selected",selected)
+			var selection_style=game.ComfortTheme.button(selected)
+			selection_style.content_margin_left=4;selection_style.content_margin_right=4
+			controls[kind].add_theme_stylebox_override("normal",selection_style)
 	var current=board.active_id()
 	var health=[]
 	for id in ids(): health.append(game.named(id).split(" · ")[0]+": "+str(board.units[id].hp)+"/"+str(board.units[id].max_hp))
