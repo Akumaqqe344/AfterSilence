@@ -28,9 +28,6 @@ func build(id: String, distorted: bool):
 	paths=[]
 	if id=="town":
 		paths=[[Vector2(600,170),Vector2(600,850),24.0],[Vector2(260,500),Vector2(1050,500),24.0]]
-		for x in [260,960]:
-			paths.append([Vector2(x,320),Vector2(x,500),18.0])
-			paths.append([Vector2(x,760),Vector2(x,840),18.0])
 		paths.append([Vector2(260,840),Vector2(1450,840),20.0])
 		paths.append([Vector2(1450,500),Vector2(1450,1120),20.0])
 		paths.append([Vector2(1050,500),Vector2(1450,500),24.0])
@@ -41,7 +38,6 @@ func build(id: String, distorted: bool):
 	elif id in ["orchard","harbor"]:
 		dimensions=Vector2(1200,900)
 		paths=[[Vector2(600,740),Vector2(600,350),24.0],[Vector2(200,500),Vector2(1000,500),22.0]]
-		for x in [280,600,920]: paths.append([Vector2(x,320),Vector2(x,500),18.0])
 	if id=="town":
 		paths.append([Vector2(1450,500),Vector2(1710,500),24.0])
 		paths.append([Vector2(600,850),Vector2(600,1200),24.0])
@@ -49,8 +45,22 @@ func build(id: String, distorted: bool):
 		for x in [1250,1550]: paths.append([Vector2(x,748),Vector2(x,840),18.0])
 		paths.append([Vector2(1450,840),Vector2(1550,840),20.0])
 		paths.append([Vector2(1550,308),Vector2(1550,500),18.0])
-		paths.append([Vector2(1270,974),Vector2(1450,974),18.0])
 		paths.append([Vector2(360,1200),Vector2(950,1200),18.0])
+	for entry in Homes.approaches(id,echo):
+		var porch: Vector2=entry[0]
+		var junction: Vector2=entry[3]
+		if entry[2]=="riverside_rest":
+			# Follow the dry north bank, outside the gazebo's foundation.
+			paths.append([porch+Vector2(0,-12),porch+Vector2(0,24),18.0])
+			paths.append([porch+Vector2(0,24),Vector2(1190,974),18.0])
+			paths.append([Vector2(1190,974),junction,18.0])
+			continue
+		paths.append([porch+Vector2(0,-12),Vector2(porch.x,junction.y),18.0])
+		if porch.x!=junction.x: paths.append([Vector2(porch.x,junction.y),junction,18.0])
+	if id in ["orchard","harbor"]:
+		# A walkable loop keeps the central well out of the only approach road.
+		var corners=[Vector2(560,380),Vector2(640,380),Vector2(640,460),Vector2(560,460)]
+		for i in range(4): paths.append([corners[i],corners[(i+1)%4],18.0])
 	terrain = TileMapLayer.new()
 	terrain.tile_set = make_tiles()
 	add_child(terrain)
@@ -86,6 +96,9 @@ func build(id: String, distorted: bool):
 	else: Homes.build(self)
 	preload("res://after_silence/world/landscape.gd").build(self)
 	decorate()
+	if id in ["town","orchard","harbor"]:
+		var village=preload("res://after_silence/world/village_details.gd").new()
+		village.world=self;village.z_index=-1;add_child(village)
 	add_light(Vector2(480,390) if id=="library" else Vector2(750,560) if id=="forest" else Vector2(600,445))
 	grid = AStarGrid2D.new()
 	grid.region = Rect2i(0,0,int(dimensions.x/16),int(dimensions.y/16))
@@ -109,11 +122,8 @@ func make_tiles() -> TileSet:
 	var tiles=TileSet.new()
 	tiles.tile_size=Vector2i(16,16)
 	for i in range(3):
-		var texture=load("res://after_silence/assets/art100/"+["grass","dirt","floor"][i]+".png")
-		var image=texture.get_image()
-		image.resize(320,320,Image.INTERPOLATE_NEAREST)
 		var source=TileSetAtlasSource.new()
-		source.texture=ImageTexture.create_from_image(image)
+		source.texture=preload("res://after_silence/world/surface_textures.gd").atlas(["grass","dirt","floor"][i])
 		source.texture_region_size=Vector2i(16,16)
 		for y in range(20):
 			for x in range(20): source.create_tile(Vector2i(x,y))
@@ -121,9 +131,9 @@ func make_tiles() -> TileSet:
 	return tiles
 
 func build_district():
-	for x in [280,600,920]:
-		prop("house",Vector2(x,300),0 if zone=="orchard" else 2)
-		spot("district_house_"+str([280,600,920].find(x)),Vector2(x,328),"none")
+	for entry in Homes.exteriors(zone,echo):
+		prop("house",entry[0],entry[1])
+		spot(entry[2],entry[0]+Vector2(0,28),"none")
 	prop("well",Vector2(600,420))
 func boundary(r: Rect2):
 	obstacles.append(r)
@@ -169,6 +179,7 @@ func prop(kind: String, p: Vector2, variant: int=0):
 		node.tex=load("res://after_silence/assets/pechatai/interior/"+file+".png")
 		node.size=node.tex.get_size()*2
 		if kind=="clock": node.size=Vector2(38,62)
+	if node.tex: node.material=preload("res://after_silence/world/surface_textures.gd").material(kind,variant)
 	sorter.add_child(node)
 	if kind=="rug": node.z_index=-1
 	if kind=="bridge": node.z_index=-1
@@ -218,11 +229,10 @@ func spot(id: String,p: Vector2,kind: String="note"):
 		var node=prop(kind,p)
 		node.set_meta("hotspot_id",id)
 func build_town():
-	for i in range(4):
-		var p=[Vector2(260,300),Vector2(960,300),Vector2(260,740),Vector2(960,740)][i]
-		if echo: p+=Vector2(40 if i%2 else -40,32)
-		prop("house",p,i)
-		spot(Homes.IDS[i],p+Vector2(0,28),"none")
+	for entry in Homes.exteriors("town",echo):
+		if entry[2] not in Homes.IDS: continue
+		prop("house",entry[0],entry[1])
+		spot(entry[2],entry[0]+Vector2(0,28),"none")
 	prop("well",Vector2(660,445))
 	spot("photo",Vector2(510,490))
 	spot("poster",Vector2(780,480))

@@ -10,10 +10,10 @@ static func build(world):
 		world.prop("gazebo",Vector2(1270,950))
 		world.boundary(Rect2(1224,916,92,20))
 		world.spot("riverside_rest",Vector2(1270,974),"none")
-		var homes=[Vector2(1250,720),Vector2(1550,720),Vector2(1550,280),Vector2(360,1170),Vector2(950,1170)]
-		for p in homes:
-			world.prop("house",p,int(p.x/10)%4)
-			world.spot("hamlet_house_"+str(homes.find(p)),p+Vector2(0,28),"none")
+		for entry in preload("res://after_silence/world/homes.gd").exteriors("town",world.echo):
+			if not entry[2].begins_with("hamlet_"): continue
+			world.prop("house",entry[0],entry[1])
+			world.spot(entry[2],entry[0]+Vector2(0,28),"none")
 		world.prop("village_board",Vector2(840,470))
 		world.spot("village_hints",Vector2(840,494),"none")
 	# Water rectangles use the exact same field as the renderer. Adjacent blocked

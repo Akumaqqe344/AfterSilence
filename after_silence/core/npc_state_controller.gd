@@ -292,16 +292,7 @@ func _walk(game,actor,goal: Vector2,dt: float,speed: float):
 				if r.get("control","")=="combat":
 					for other in blockers:
 						if next.distance_to(other)<12: yield_to_combat(game,id,other)
-				var reserved=[]
-				for other in blockers:
-					var center=Vector2i(other/16)
-					for y in range(-1,2):
-						for x in range(-1,2):
-							var cell=center+Vector2i(x,y)
-							if geometry.grid.is_in_boundsv(cell) and not geometry.grid.is_point_solid(cell) and Vector2i(actor.position/16)!=cell:
-								reserved.append(cell);geometry.grid.set_point_solid(cell,true)
-				route=navigation.path(geometry,actor.position,goal)
-				for cell in reserved: geometry.grid.set_point_solid(cell,false)
+				route=navigation.path_avoiding(geometry,actor.position,goal,blockers)
 				actor.set_meta("blocked_for",0.0)
 			break
 		actor.set_meta("blocked_for",0.0)

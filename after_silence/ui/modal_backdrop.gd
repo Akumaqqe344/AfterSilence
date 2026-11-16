@@ -12,7 +12,7 @@ func _ready() -> void:
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
 
 func _process(delta: float) -> void:
-	if not visible or not menu_mode or reduce_motion: return
+	if not is_visible_in_tree() or not menu_mode or reduce_motion: return
 	age+=delta
 	var next_tick=int(age*4.0)
 	if next_tick!=tick:
@@ -58,8 +58,8 @@ func _draw() -> void:
 		_plant(Vector2(413,246))
 		_plant(Vector2(578,246),-1)
 		var caption="A little light stays with you" if english else "Маленький свет всегда рядом"
-		draw_string(get_theme_default_font(),Vector2(398,294),caption,HORIZONTAL_ALIGNMENT_LEFT,200,12,DESIGN.TEXT)
+		draw_string(get_theme_default_font(),Vector2(398,294),caption,HORIZONTAL_ALIGNMENT_LEFT,200,7,DESIGN.TEXT)
 	else:
 		_plant(Vector2(613,331),-1)
 	var footer="Take your time · Tab to choose · Enter to open" if english else "Не спеши · Tab — выбрать · Enter — открыть"
-	draw_string(get_theme_default_font(),Vector2(28,size.y-20),footer,HORIZONTAL_ALIGNMENT_LEFT,580,12,DESIGN.MUTED)
+	draw_string(get_theme_default_font(),Vector2(28,size.y-20),footer,HORIZONTAL_ALIGNMENT_LEFT,580,6,DESIGN.MUTED)

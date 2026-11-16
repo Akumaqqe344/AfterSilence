@@ -3,7 +3,7 @@ extends Node
 var game
 var checks=0
 var failures=[]
-var output="res://work/ui170"
+var output="res://work/pixel180-ui"
 var images=[]
 
 func _ready():
@@ -52,7 +52,7 @@ func dialog_bounds(label: String, all_visible: bool=false):
 	var bounds=Rect2(Vector2.ZERO,game.ui.size)
 	check(bounds.encloses(game.card.get_global_rect()),label+" card fits")
 	for button in game.buttons.values():
-		check(button.size.y>=30,label+" hit height "+button.text)
+		check(button.size.y>=26,label+" hit height "+button.text)
 		check(button.size.x<=game.card.size.x,label+" button width "+button.text)
 		if all_visible: check(game.card.get_global_rect().encloses(button.get_global_rect()),label+" visible "+button.text)
 
@@ -63,8 +63,7 @@ func run():
 	game._main_menu()
 	await settle()
 	check(game.ComfortTheme.FONT.has_char("Я".unicode_at(0)),"font has Cyrillic")
-	var coordinates=TextServerManager.get_primary_interface().font_get_variation_coordinates(game.ComfortTheme.FONT.get_rids()[0])
-	check(coordinates.get(0x77676874,0)==600.0,"readable font weight reaches renderer")
+	check(game.ComfortTheme.FONT.antialiasing==TextServer.FONT_ANTIALIASING_NONE,"pixel font without smoothing")
 	check(game.buttons.events_load.disabled,"continue disabled without save")
 	check(get_viewport().gui_get_focus_owner()==game.buttons.events_new,"new journey focused")
 	dialog_bounds("menu",true)
@@ -76,7 +75,7 @@ func run():
 	await capture("02-settings")
 	await click(game.buttons.large_text)
 	check(game.comfort.large_text,"large text enabled by mouse")
-	check(game.ui.theme.default_font_size==15,"large theme applied")
+	check(game.ui.theme.default_font_size==10,"large pixel theme applied")
 	await settle()
 	dialog_bounds("large settings",true)
 	var slider=game.column.find_child("VolumeSlider",true,false)

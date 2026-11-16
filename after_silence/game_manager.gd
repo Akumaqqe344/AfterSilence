@@ -135,6 +135,10 @@ func _ready():
 	ui.add_child(event_window)
 	_build_world("town",Vector2(600,630))
 	_main_menu()
+	if "--qa-pixel-export" in OS.get_cmdline_user_args():
+		var pixel_runner=load("res://after_silence/tests/pixel_world_driver.gd").new()
+		pixel_runner.game=self
+		get_tree().root.add_child.call_deferred(pixel_runner)
 	if "--qa-ui-export" in OS.get_cmdline_user_args():
 		var ui_runner=load("res://after_silence/tests/ui_comfort_driver.gd").new()
 		ui_runner.game=self
@@ -202,29 +206,31 @@ func _setup_ui():
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(hud)
 	objective=Label.new()
-	objective.position=Vector2(22,27)
-	objective.size=Vector2(446,36)
-	objective.add_theme_font_size_override("font_size",13)
+	objective.position=Vector2(20,26)
+	objective.size=Vector2(360,24)
+	objective.add_theme_font_size_override("font_size",8)
 	objective.add_theme_color_override("font_outline_color",Color("172126"))
 	objective.add_theme_constant_override("outline_size",0)
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(objective)
 	help_button=Button.new()
-	help_button.text=t("Помощь · H","Help · H")
-	help_button.position=Vector2(534,39)
-	help_button.size=Vector2(94,28)
-	help_button.add_theme_font_size_override("font_size",12)
+	help_button.text="? · H"
+	help_button.tooltip_text=t("Помощь с текущей задачей","Help with your current goal")
+	help_button.position=Vector2(566,34)
+	help_button.size=Vector2(62,22)
+	help_button.add_theme_font_size_override("font_size",8)
 	help_button.pressed.connect(_quest_help)
 	ui.add_child(help_button)
+	help_button.size=Vector2(62,22)
 	status=Label.new()
 	status.hide()
 	status.position=Vector2(138,55)
-	status.add_theme_font_size_override("font_size",11)
+	status.add_theme_font_size_override("font_size",8)
 	ui.add_child(status)
 	hint=Label.new()
 	hint.position=Vector2(24,327)
 	hint.size=Vector2(592,23)
-	hint.add_theme_font_size_override("font_size",13)
+	hint.add_theme_font_size_override("font_size",8)
 	hint.add_theme_color_override("font_outline_color",Color("172126"))
 	hint.add_theme_constant_override("outline_size",4)
 	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
@@ -234,7 +240,7 @@ func _setup_ui():
 	toast.position=Vector2(90,278)
 	toast.size=Vector2(460,40)
 	toast.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	toast.add_theme_font_size_override("font_size",13)
+	toast.add_theme_font_size_override("font_size",8)
 	toast.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	ui.add_child(toast)
 	shade=ColorRect.new()
@@ -300,7 +306,8 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	modal_backdrop.queue_redraw()
 	var target=Vector2(28,26) if main_layout else Vector2(30,24)
 	card.position=target
-	card.size=Vector2(330,294) if main_layout else Vector2(580,298)
+	card.size=Vector2(330,280) if main_layout else Vector2(536,264)
+	if not main_layout: target=Vector2(52,34);card.position=target
 	var panel_style=ComfortTheme.panel()
 	if main_layout:
 		panel_style.bg_color=Color.TRANSPARENT
@@ -315,7 +322,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	var header=Label.new()
 	header.text=title
 	header.add_theme_color_override("font_color",ComfortTheme.PEACH)
-	header.add_theme_font_size_override("font_size",23 if main_layout else 21)
+	header.add_theme_font_size_override("font_size",13 if main_layout else 12)
 	header.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var portrait_id=id.split("_")[0]
 	if id=="intro": portrait_id="vera"
@@ -346,7 +353,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	body.custom_minimum_size=Vector2(0,24)
 	body.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	body.add_theme_color_override("default_color",ComfortTheme.TEXT)
-	body.add_theme_font_size_override("normal_font_size",15 if comfort.large_text else 13)
+	body.add_theme_font_size_override("normal_font_size",10 if comfort.large_text else 8)
 	column.add_child(body)
 	var seen=dialogues.was_seen(id)
 	if id!="": dialogues.record(id,title,text)
@@ -358,8 +365,8 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		var button=Button.new()
 		button.text=item.label
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
-		button.custom_minimum_size=Vector2(0,34)
-		button.add_theme_font_size_override("font_size",15 if comfort.large_text else 13)
+		button.custom_minimum_size=Vector2(0,26)
+		button.add_theme_font_size_override("font_size",10 if comfort.large_text else 8)
 		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
 		button.pressed.connect(func():
@@ -551,13 +558,14 @@ func _build_world(id: String,p: Vector2):
 		camera.position_smoothing_speed=6
 		player.add_child(camera)
 		zoom_button=Button.new()
-		zoom_button.text="Z · − / +"
-		zoom_button.position=Vector2(534,72)
-		zoom_button.size=Vector2(94,26)
-		zoom_button.add_theme_font_size_override("font_size",12)
+		zoom_button.text="Z · ±"
+		zoom_button.position=Vector2(566,60)
+		zoom_button.size=Vector2(62,22)
+		zoom_button.add_theme_font_size_override("font_size",8)
 		zoom_button.tooltip_text=t("Приблизить или отдалить камеру","Zoom the camera in or out")
 		zoom_button.pressed.connect(_toggle_zoom)
 		ui.add_child(zoom_button)
+		zoom_button.size=Vector2(62,22)
 	world.sorter.add_child(player)
 	player.position=world.recover(p)
 	player.enabled=true
@@ -602,7 +610,7 @@ func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	caption.position=Vector2(-75,-85)
 	caption.size=Vector2(150,28)
 	caption.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	caption.add_theme_font_size_override("font_size",12)
+	caption.add_theme_font_size_override("font_size",8)
 	caption.add_theme_color_override("font_outline_color",Color("172126"))
 	caption.add_theme_constant_override("outline_size",4)
 	caption.hide()
@@ -1121,7 +1129,7 @@ func _settings():
 		button.name=entry[0];button.text=entry[1]
 		if entry[0] in ["large_text","reduce_motion","instant_text"]:
 			button.text=("✓  " if comfort.get(entry[0]) else "○  ")+button.text
-		button.custom_minimum_size=Vector2(0,34)
+		button.custom_minimum_size=Vector2(0,26)
 		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
 		button.pressed.connect(entry[2])
@@ -1139,15 +1147,15 @@ func _save_comfort():
 	comfort.fullscreen=DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN
 	if comfort.save_preferences()!=OK:
 		_notify(t("Не удалось сохранить настройки.","Could not save preferences."))
-	help_button.text=t("Помощь · H","Help · H")
+	help_button.text="? · H"
 
 func _toggle_comfort(key: String):
 	comfort.set(key,not comfort.get(key))
 	_save_comfort()
 	ui.theme=ComfortTheme.create(comfort.large_text)
-	objective.add_theme_font_size_override("font_size",15 if comfort.large_text else 13)
-	hint.add_theme_font_size_override("font_size",15 if comfort.large_text else 13)
-	event_window.goal.add_theme_font_size_override("font_size",13 if comfort.large_text else 12)
+	objective.add_theme_font_size_override("font_size",10 if comfort.large_text else 8)
+	hint.add_theme_font_size_override("font_size",10 if comfort.large_text else 8)
+	event_window.goal.add_theme_font_size_override("font_size",8 if comfort.large_text else 8)
 	_settings()
 	buttons[key].grab_focus()
 

@@ -2,7 +2,7 @@ extends Node2D
 var zone="town"
 var distorted=false
 var dimensions=Vector2.ZERO
-var water=preload("res://after_silence/assets/art100/water.png")
+var water=preload("res://after_silence/world/surface_textures.gd").atlas("water")
 var rug=preload("res://after_silence/assets/art100/rug.png")
 const Water=preload("res://after_silence/world/watercourse.gd")
 func draw_shore():

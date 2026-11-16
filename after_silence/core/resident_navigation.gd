@@ -37,6 +37,25 @@ func path(nav: Dictionary, a: Vector2, b: Vector2) -> PackedVector2Array:
 		result.append(b)
 	return result
 
+func path_avoiding(nav: Dictionary, a: Vector2, b: Vector2, blockers: Array) -> PackedVector2Array:
+	# A nearby free goal must not disappear inside another resident's 3x3 square.
+	# These temporary reservations belong only to this synchronous path query.
+	var reserved=[]
+	var start=Vector2i(a/16)
+	var end=Vector2i(b/16)
+	for other in blockers:
+		var center=Vector2i(other/16)
+		for y in range(-2,3):
+			for x in range(-2,3):
+				var cell=center+Vector2i(x,y)
+				if cell==start or not nav.grid.is_in_boundsv(cell) or nav.grid.is_point_solid(cell): continue
+				if cell==end and b.distance_to(other)>=12: continue
+				if nav.grid.get_point_position(cell).distance_to(other)>=22: continue
+				reserved.append(cell);nav.grid.set_point_solid(cell,true)
+	var result=path(nav,a,b)
+	for cell in reserved: nav.grid.set_point_solid(cell,false)
+	return result
+
 func portals(echo: bool) -> Array:
 	var result = [
 		["town", Vector2(600,170), "library", Vector2(480,590)],

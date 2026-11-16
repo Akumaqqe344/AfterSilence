@@ -39,6 +39,7 @@ func _ready():
 	add_child(collision)
 	sprite=Sprite2D.new()
 	sprite.texture=sheet
+	sprite.material=preload("res://after_silence/world/surface_textures.gd").material("character",0 if is_player else int(sheet.resource_path.hash()))
 	sprite.region_enabled=true
 	sprite.centered=false
 	sprite.scale=Vector2(.7,.7)
