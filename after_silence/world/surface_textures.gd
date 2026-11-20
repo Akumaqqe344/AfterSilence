@@ -12,11 +12,18 @@ static func material(kind: String, variant: int) -> ShaderMaterial:
 		cache[key]=shader_material
 	return cache[key]
 
-static func atlas(kind: String) -> Texture2D:
-	if cache.has(kind): return cache[kind]
+static func atlas(kind: String, zone: String="") -> Texture2D:
+	var key=kind+":"+zone if kind=="grass" else kind
+	if cache.has(key): return cache[key]
 	var extent=80 if kind=="water" else 320
 	var image=Image.create(extent,extent,false,Image.FORMAT_RGBA8)
-	var palette={"grass":["77984f","73934b","809e56","6b8e48","91a963"],"dirt":["b2976b","ae9268","b99e72","9c845e","c4ab7b"],"floor":["9d7953","a47e58","b18a60","785d47","bf966b"],"water":["4d8183","52898b","5b9292","47787d","75a7a0"]}[kind]
+	var palette={"grass":["829360","7f905d","899a66","768853","9eaa75"],"dirt":["ad966d","aa936a","b19a71","94815d","c2ac81"],"floor":["9d7953","a47e58","b18a60","785d47","bf966b"],"water":["507e7c","527f7e","67928b","477371","8eb0a0"]}[kind]
+	if kind=="grass":
+		palette= {
+			"forest":["677e55","657b53","70875b","5b734e","8e9e68"],
+			"orchard":["8f9a60","8a955d","98a369","7e8a55","a7ae73"],
+			"harbor":["9b9a70","96956d","a4a277","8d8d65","b0ad80"]
+		}.get(zone,palette)
 	var colors=[]
 	for hex in palette: colors.append(Color(hex))
 	for y in range(extent):
@@ -38,9 +45,9 @@ static func atlas(kind: String) -> Texture2D:
 			else:
 				if hash_value<80: color=colors[1]
 				elif hash_value<130: color=colors[2]
-				if kind=="grass" and posmod((x/3)*71+(y/4)*37,31)==0:
-					color=colors[3] if y%4>1 else colors[4]
+				if kind=="grass" and hash_value==7:
+					color=colors[3]
 				if kind=="dirt" and hash_value<10: color=colors[4]
 			image.set_pixel(x,y,color)
-	cache[kind]=ImageTexture.create_from_image(image)
-	return cache[kind]
+	cache[key]=ImageTexture.create_from_image(image)
+	return cache[key]

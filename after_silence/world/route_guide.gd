@@ -1,7 +1,7 @@
 extends Control
 
-const DARK=Color("253944ef")
-const TRACE=Color("f0ce8f")
+const DARK=Color("202e25eb")
+const TRACE=Color("ead196")
 const GHOST=Color("34303e")
 const INTERVAL=.20
 const SPACING=43.0
@@ -18,8 +18,8 @@ var tile_skin: StyleBoxFlat
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
 	toggle=Button.new()
-	toggle.position=Vector2(277,290);toggle.size=Vector2(48,21)
-	toggle.add_theme_font_size_override("font_size",8)
+	toggle.position=Vector2(12,323);toggle.size=Vector2(38,25)
+	toggle.add_theme_font_size_override("font_size",11)
 	toggle.focus_mode=Control.FOCUS_NONE
 	toggle.pressed.connect(game._toggle_route_guide)
 	add_child(toggle)
@@ -90,16 +90,15 @@ func _draw():
 	if target.is_empty() or not game.comfort.route_guide or not is_instance_valid(game.world): return
 	var transform=game.world.get_global_transform_with_canvas()
 	var dst: Vector2=transform*target.point
-	var viewport_bounds=Rect2(Vector2(19,64),size-Vector2(38,140))
+	var viewport_bounds=Rect2(Vector2(19,78),size-Vector2(38,154))
 	var close: bool=game.player.position.distance_to(target.point)<=target.range
 	var caption: String=target.label
 	var detail=game.t("Ищи проход рядом","Look for a nearby passage") if route.is_empty() else game.t("До цели · %d шаг.","To goal · %d steps")%ceili(remaining/16)
 	if close:
 		detail=game.t("E · взаимодействовать","E · interact") if target.action else game.t("Ты на месте","You're here")
-	draw_style_box(tile_skin,Rect2(12,282,260,40))
-	draw_rect(Rect2(16,288,2,28),game.ComfortTheme.BRASS)
-	draw_string(get_theme_default_font(),Vector2(23,297),caption,HORIZONTAL_ALIGNMENT_LEFT,235,8,TRACE)
-	draw_string(get_theme_default_font(),Vector2(23,312),detail,HORIZONTAL_ALIGNMENT_LEFT,235,7,game.ComfortTheme.TEXT)
+	draw_style_box(tile_skin,Rect2(55,314,221,34))
+	draw_string(get_theme_default_font(),Vector2(63,328),caption,HORIZONTAL_ALIGNMENT_LEFT,206,11,TRACE)
+	draw_string(get_theme_default_font(),Vector2(63,341),detail,HORIZONTAL_ALIGNMENT_LEFT,206,9,game.ComfortTheme.TEXT)
 	if not route.is_empty() and not close:
 		var points=_markers(route,SPACING+(0 if game.comfort.reduce_motion else 14*travel_age/3))
 		for sample in points:
@@ -122,7 +121,7 @@ func _draw():
 		_arrow(marker,Vector2.DOWN,5,TRACE)
 		if close and target.action:
 			draw_rect(Rect2(marker+Vector2(10,-7),Vector2(17,14)),DARK)
-			draw_string(get_theme_default_font(),marker+Vector2(15,4),"E",HORIZONTAL_ALIGNMENT_LEFT,-1,8,TRACE)
+			draw_string(get_theme_default_font(),marker+Vector2(15,4),"E",HORIZONTAL_ALIGNMENT_LEFT,-1,10,TRACE)
 
 func _markers(points: PackedVector2Array, offset: float) -> Array:
 	var choices=[]

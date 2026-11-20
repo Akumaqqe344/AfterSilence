@@ -54,18 +54,19 @@ func _ready() -> void:
 	title_label=Label.new()
 	title_label.position=Vector2(65,32)
 	title_label.size=Vector2(520,28)
-	title_label.add_theme_font_size_override("font_size",11)
+	title_label.add_theme_font_override("font",preload("res://after_silence/ui/comfort_theme.gd").HEADING)
+	title_label.add_theme_font_size_override("font_size",16)
 	add_child(title_label)
 	brief_label=Label.new()
 	brief_label.position=Vector2(66,70)
 	brief_label.size=Vector2(510,88)
 	brief_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	brief_label.add_theme_font_size_override("font_size",8)
+	brief_label.add_theme_font_size_override("font_size",11)
 	add_child(brief_label)
 	status_label=Label.new()
 	status_label.position=Vector2(65,327)
 	status_label.size=Vector2(520,24)
-	status_label.add_theme_font_size_override("font_size",8)
+	status_label.add_theme_font_size_override("font_size",10)
 	add_child(status_label)
 	actions=VBoxContainer.new()
 	actions.position=Vector2(66,183)
@@ -115,7 +116,7 @@ func add_action(label: String, callback: Callable, available: bool=true) -> void
 	button.text=label
 	button.alignment=HORIZONTAL_ALIGNMENT_LEFT
 	button.custom_minimum_size=Vector2(480,32)
-	button.add_theme_font_size_override("font_size",8)
+	button.add_theme_font_size_override("font_size",11)
 	button.disabled=not available
 	button.pressed.connect(callback)
 	actions.add_child(button)
@@ -470,9 +471,8 @@ func epilogue() -> String:
 
 func _draw() -> void:
 	if not active: return
-	draw_rect(Rect2(Vector2.ZERO,size),Color("172830fa"))
-	draw_style_box(game.ComfortTheme.panel(Color("2b3b47"),true),Rect2(17,17,size.x-34,size.y-34))
-	draw_rect(Rect2(32,18,74,2),game.ComfortTheme.BRASS)
+	draw_rect(Rect2(Vector2.ZERO,size),Color("151f1afa"))
+	draw_style_box(game.ComfortTheme.panel(Color("25322b"),true),Rect2(17,17,size.x-34,size.y-34))
 	if phase!="play": return
 	draw_rect(ARENA,Color("10242a"))
 	match play_mode():
@@ -492,8 +492,8 @@ func _draw() -> void:
 	var font=get_theme_default_font()
 	var accent=game.ComfortTheme.PEACH
 	if play_mode() in ["memory","circuit","herbs"]: draw_board()
-	draw_rect(Rect2(59,80,200,21),Color("233843ec"))
-	draw_string(font,Vector2(67,95),"%02d / 12   ♥ %d   %02d"%[index+1,health,maxi(0,ceili(remaining))],HORIZONTAL_ALIGNMENT_LEFT,-1,8,accent)
+	draw_rect(Rect2(59,80,200,21),Color("25362dec"))
+	draw_string(font,Vector2(67,95),"%02d / 12   ♥ %d   %02d"%[index+1,health,maxi(0,ceili(remaining))],HORIZONTAL_ALIGNMENT_LEFT,-1,11,accent)
 	match play_mode():
 		"route":
 			if index==6:

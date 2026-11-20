@@ -6,8 +6,6 @@ const SHOP=preload("res://after_silence/assets/art120/shop_front.png")
 const TREE=preload("res://after_silence/assets/art100/tree-2.png")
 const LAMP=preload("res://after_silence/assets/props091/way_lamp.png")
 var menu_mode=false
-var english=false
-var journey_mode=false
 var animation_enabled=false
 var finish_mark=false
 var sky_time=0.0
@@ -33,128 +31,72 @@ func _process(dt):
 		frame_budget=0
 		queue_redraw()
 
-func _star(at: Vector2, color: Color) -> void:
-	draw_rect(Rect2(at-Vector2(1,3),Vector2(2,6)),color)
-	draw_rect(Rect2(at-Vector2(3,1),Vector2(6,2)),color)
-
-func _plant(at: Vector2, flip: float=1.0) -> void:
-	draw_line(at,at+Vector2(4*flip,-32),Color("80b59d"),2)
-	for i in range(3):
-		var p=at+Vector2(3*flip,-8-i*8)
-		draw_rect(Rect2(p+Vector2(-11,-4),Vector2(10,4)),Color("a1c6a7"))
-		draw_rect(Rect2(p+Vector2(2,-7),Vector2(9,4)),Color("689b8a"))
-	draw_rect(Rect2(at+Vector2(-9,0),Vector2(21,5)),Color("e7b397"))
-	draw_rect(Rect2(at+Vector2(-6,5),Vector2(15,10)),Color("be8e7b"))
-
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO,size),DESIGN.INK)
-	if menu_mode: _panorama()
-	else: _dialog_backdrop()
-	draw_rect(Rect2(10,10,size.x-20,size.y-20),Color("82989787"),false)
-	for corner in [Vector2(10,10),Vector2(size.x-56,size.y-12)]:
-		draw_rect(Rect2(corner,Vector2(46,2)),DESIGN.BRASS)
 	if menu_mode:
-		_dusk_postcard()
-	if finish_mark and animation_enabled and sky_time<.9: _quiet_victory()
-	var footer="Take your time · Tab to choose · Enter to open" if english else "Не спеши · Tab — выбрать · Enter — открыть"
-	draw_string(get_theme_default_font(),Vector2(28,size.y-20),footer,HORIZONTAL_ALIGNMENT_LEFT,580,6,DESIGN.MUTED)
+		_panorama()
+	else:
+		draw_rect(Rect2(Vector2.ZERO,size),Color("101714bc"))
+	if finish_mark and animation_enabled and sky_time<.9:
+		_quiet_victory()
 
 func _panorama():
-	for y in range(0,360,12):
-		var tint=Color("26354a").lerp(Color("52605c"),float(y)/360.0)
-		draw_rect(Rect2(0,y,640,12),tint)
-	for i in range(20):
-		var x=posmod(i*47+int(sky_time*2),623)
-		var y=50+posmod(i*29,118)
-		draw_rect(Rect2(x,y,mini(19+i%11,640-x),1),Color("b0a3ab49"))
-	for i in range(48):
-		var height=225+roundi(sin(float(i)*.19)*31)+posmod(i*53,27)
-		var x=i*14
-		draw_rect(Rect2(x,height,14,360-height),Color("354b52"))
-	for i in range(8):
-		var x=9+i*81
-		draw_texture_rect(TREE,Rect2(x,179+posmod(i*57,57),85,122),false,Color("465c667f"))
-	for i in range(10):
-		var x=13+i*34
-		draw_rect(Rect2(x,0,34,360),Color(.085,.13,.18,lerpf(.66,.18,i/9.0)))
-	draw_rect(Rect2(0,320,640,40),Color("1626309c"))
+	for y in range(0,360,3):
+		var height=float(y)/360.0
+		var sky=Color("263638").lerp(Color("b78b69"),smoothstep(0.0,.62,height))
+		draw_rect(Rect2(0,y,640,3),sky)
+	var sun=Vector2(496,104)
+	for radius in [48,39,31]:
+		draw_circle(sun,radius,Color("f3c18c18"))
+	draw_circle(sun,26,Color("f5cf96"))
+	for i in range(7):
+		var p=Vector2(279+posmod(i*89+int(sky_time*(2+i%3)),390),53+posmod(i*47,106))
+		draw_rect(Rect2(p,Vector2(35+i*5,2)),Color("f5d1a433"))
+		draw_rect(Rect2(p+Vector2(12,3),Vector2(28+i*4,1)),Color("f5d1a43c"))
+	_hills(168,23,.068,Color("666f59"))
+	_hills(186,18,.039,Color("4a6052"))
+	_hills(209,17,.057,Color("364b43"))
+	for i in range(12):
+		var x=300+i*31
+		draw_texture_rect(TREE,Rect2(x,163+posmod(i*31,30),35,53),false,Color("516958"))
+	draw_rect(Rect2(0,223,640,137),Color("344f4d"))
+	for i in range(81):
+		var x=posmod(i*187+int(sky_time*(1+i%3)),645)
+		var y=227+posmod(i*43,88)
+		var tint=Color("edc28b6b") if absf(x-sun.x)<(y-201)*.58 else Color("a7b29c42")
+		draw_rect(Rect2(x,y,4+i%16,1),tint)
+	_hills(284,10,.052,Color("3c4e3e"))
+	draw_line(Vector2(322,304),Vector2(640,297),Color("8f855d"),3)
+	draw_line(Vector2(318,309),Vector2(640,302),Color("ad9166"),4)
+	draw_texture_rect(TREE,Rect2(289,164,108,154),false,Color("71836b"))
+	draw_texture_rect(HOME,Rect2(417,160,153,122),false,Color("e1c2a4"))
+	draw_texture_rect(SHOP,Rect2(542,194,102,82),false,Color("c6ad8e"))
+	draw_texture_rect(LAMP,Rect2(389,215,35,76),false,Color("ecd1aa"))
+	for radius in [22,15,9]:
+		draw_circle(Vector2(406,241),radius,Color("f2bf7825"))
+	var bob=roundf(sin(sky_time*2)) if animation_enabled else 0
+	draw_texture_rect_region(PORTRAIT,Rect2(492,246+bob,43,66),Rect2(5,8,56,86))
+	for i in range(12):
+		var at=Vector2(332+i*26+roundf(cos(sky_time*.71+i)*7),291+(i*13)%43+roundf(sin(sky_time*.57+i)*6))
+		draw_rect(Rect2(at,Vector2(2,2)),Color("edc685"))
+	for i in range(32):
+		var x=312+posmod(i*83,328)
+		var y=318+posmod(i*47,42)
+		draw_line(Vector2(x,y),Vector2(x+2,y-3-i%5),Color("879777"),1)
+	for x in range(0,408,4):
+		var alpha=1.0-smoothstep(198.0,408.0,float(x))
+		draw_rect(Rect2(x,0,4,360),Color(.075,.106,.091,alpha*.97))
+	draw_rect(Rect2(32,34,23,2),DESIGN.BRASS)
 
-func _dialog_backdrop():
-	for y in range(0,360,16):
-		draw_rect(Rect2(0,y,640,16),Color("1d3039").lerp(Color("304047"),float(y)/360.0))
-	for x in [19,611]:
-		draw_rect(Rect2(x,43,2,269),Color("74958e4b"))
-		for i in range(5):
-			var at=Vector2(x+1,50+i*51)
-			draw_colored_polygon(PackedVector2Array([at+Vector2(0,-3),at+Vector2(3,0),at+Vector2(0,3),at-Vector2(3,0)]),Color("9ab3a177"))
-	_plant(Vector2(613,331),-1)
+func _hills(height: float, amplitude: float, frequency: float, color: Color):
+	for x in range(0,640,4):
+		var y=roundf(height+sin(x*frequency)*amplitude*.35+sin(x*frequency*.31)*amplitude)
+		draw_rect(Rect2(x,y,4,360-y),color)
 
 func _quiet_victory():
 	var t=sky_time/.9
-	for i in range(14):
-		var side=1 if i%2==0 else -1
-		var x=320+side*(237+sin(i*2.4+t*2.0)*16)
-		var y=113+i*10-t*45
+	for i in range(10):
+		var x=320+(-1 if i%2 else 1)*(245+sin(i*2.4+t*2.0)*32)
+		var y=136+i*13-t*35
 		var gold=Color("e4bf8d")
 		gold.a=(1-t)*.78
 		draw_rect(Rect2(Vector2(x,y).round(),Vector2(2+i%2,2+i%2)),gold)
-
-func _dusk_postcard():
-	var frame=Rect2(364,17,264,311)
-	draw_style_box(DESIGN.panel(Color("304752"),true),frame)
-	draw_rect(Rect2(369,22,254,301),Color("101f2d94"))
-	for x in [370,618]:
-		for y in [24,318]:
-			draw_rect(Rect2(x,y,5,3),Color("d0ac83"))
-	for band in range(15):
-		var amount=band/14.0
-		draw_rect(Rect2(378,31+band*9,236,9),Color("292a46").lerp(Color("8e6068"),amount))
-		for x in range(382+band%2*5,610,11):
-			if (x+band*17)%7<3: draw_rect(Rect2(x,38+band*9,2,1),Color(1,.84,.64,.13))
-	draw_circle(Vector2(548,79),30,Color("c6967a36"))
-	draw_circle(Vector2(548,79),24,Color("edc89665"))
-	draw_circle(Vector2(548,79),18,Color("f2d5a4"))
-	draw_rect(Rect2(537,72,12,2),Color("dcb891"))
-	draw_rect(Rect2(549,86,10,2),Color("dcb891"))
-	for i in range(16):
-		var at=Vector2(389+posmod(i*43,215),43+posmod(i*23,60))
-		if at.distance_to(Vector2(548,79))<33: continue
-		if i%5==0: _star(at,Color("a9a6bf"))
-		else: draw_rect(Rect2(at,Vector2(1,1)),Color("d4b9ae"))
-	for i in range(6):
-		var x=roundf(393+posmod(i*47+int(sky_time*(2+i%2)),185))
-		var y=100+i%3*11
-		draw_rect(Rect2(x,y,25,2),Color("ad92987d"))
-		draw_rect(Rect2(x+9,y+3,14,1),Color("f0bca158"))
-	for i in range(29):
-		var height=143+roundi(sin(i*.32)*7)+posmod(i*19,11)
-		draw_rect(Rect2(378+i*8,height,8,197-height),Color("42405a"))
-	draw_rect(Rect2(378,162,236,132),Color("334a55"))
-	draw_texture_rect(TREE,Rect2(378,124,68,87),false,Color("7e9b9c"))
-	draw_texture_rect(HOME,Rect2(410,128,103,84),false,Color("c7ae9b"))
-	draw_texture_rect(SHOP,Rect2(523,152,70,56),false,Color("a7aaa8"))
-	draw_texture_rect(TREE,Rect2(566,126,46,80),false,Color("809da2"))
-	draw_rect(Rect2(378,206,236,61),Color("314756"))
-	for i in range(29):
-		var x=382+posmod(i*27+int(sky_time*(2+i%3)),222)
-		var y=210+posmod(i*17,55)
-		var tint=Color("b1b9b24f") if x<500 else Color("d6b39163")
-		draw_rect(Rect2(x,y,mini(3+i%9,614-x),1),tint)
-	draw_rect(Rect2(378,266,236,28),Color("394b4d"))
-	draw_rect(Rect2(378,266,236,2),Color("b49474"))
-	draw_texture_rect(LAMP,Rect2(395,191,41,78),false,Color("dbc5a6"))
-	var glow_at=Vector2(423,226)
-	for i in range(4):
-		var strength=.055+sin(sky_time*1.3)*.009
-		draw_circle(glow_at,22-i*4,Color(.91,.68,.35,strength))
-	_plant(Vector2(589,267),-1)
-	var bob=roundf(sin(sky_time*2.4)) if animation_enabled else 0
-	draw_rect(Rect2(484,281,48,5),Color("222d3b"))
-	draw_texture_rect_region(PORTRAIT,Rect2(481,201+bob,54,83),Rect2(5,8,56,86))
-	for i in range(9):
-		var at=Vector2(roundf(390+i*25+cos(sky_time*.63+i*2)*10),roundf(229+(i*13)%35+sin(sky_time*.84+i)*7))
-		draw_rect(Rect2(at-Vector2.ONE,Vector2(4,4)),Color("dcb98346"))
-		draw_rect(Rect2(at,Vector2(2,2)),Color("f0d29d"))
-	draw_rect(Rect2(378,294,236,20),Color("282737"))
-	var caption="A light in the town" if english else "Огонёк в городе"
-	draw_string(get_theme_default_font(),Vector2(388,307),caption,HORIZONTAL_ALIGNMENT_LEFT,219,7,DESIGN.TEXT)

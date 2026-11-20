@@ -147,12 +147,12 @@ func _hit() -> void:
 		note="ПОПРОБУЙ СНОВА · СМОТРИ НА ПРЕДУПРЕЖДЕНИЯ" if not english else "TRY AGAIN · WATCH THE WARNINGS"
 func _draw() -> void:
 	if not active: return
-	draw_rect(Rect2(Vector2.ZERO,size),Color("182a34f6"))
-	draw_rect(ARENA.grow(6),Color("344752"))
-	draw_rect(ARENA,Color("172e39"))
+	draw_rect(Rect2(Vector2.ZERO,size),Color("151f1af6"))
+	draw_rect(ARENA.grow(6),Color("33453b"))
+	draw_rect(ARENA,Color("1c2926"))
 	draw_rect(ARENA,Color("96b3a4"),false,2)
-	for x in range(60,580,32): draw_line(Vector2(x,ARENA.position.y),Vector2(x,ARENA.end.y),Color("203c43"),1)
-	for y in range(116,320,32): draw_line(Vector2(ARENA.position.x,y),Vector2(ARENA.end.x,y),Color("203c43"),1)
+	for x in range(60,580,32): draw_line(Vector2(x,ARENA.position.y),Vector2(x,ARENA.end.y),Color("2a3d35"),1)
+	for y in range(116,320,32): draw_line(Vector2(ARENA.position.x,y),Vector2(ARENA.end.x,y),Color("2a3d35"),1)
 	var accent=Color("e283a0") if boss_id=="watcher" else Color("8ce0ce")
 	if phase=="windup":
 		var warning=accent * Color(1,1,1,.2+.3*phase_age/.85)
@@ -171,12 +171,12 @@ func _draw() -> void:
 	Guardian.paint(self,boss+Vector2(0,round(pulse)),1 if boss_id=="watcher" else 0,phase=="exposed")
 	var bob=4*jump_age*(.44-jump_age)/(.44*.44)*20 if jump_age<.44 else 0.0
 	draw_texture_rect_region(PORTRAIT,Rect2(player_pos+Vector2(-24,-45-bob),Vector2(48,52)),Rect2(4,2,56,61),Color.WHITE if invulnerable<=0 else Color("c1d8d2"))
-	draw_rect(Rect2(52,59,160,8),Color("294148"))
+	draw_rect(Rect2(52,59,160,8),Color("2e4037"))
 	draw_rect(Rect2(52,59,160*boss_hp/3.0,8),accent)
-	draw_rect(Rect2(428,59,160,8),Color("294148"))
+	draw_rect(Rect2(428,59,160,8),Color("2e4037"))
 	draw_rect(Rect2(428,59,160*player_hp/3.0,8),Color("9ecbb1"))
 	var font=get_theme_default_font()
 	draw_string(font,Vector2(260,78),("ФАЗА " if not english else "PHASE ")+str(combat_stage()+1),HORIZONTAL_ALIGNMENT_LEFT,-1,9,accent)
 	draw_string(font,Vector2(52,45),"НАБЛЮДАТЕЛЬ" if boss_id=="watcher" and not english else "WATCHER" if boss_id=="watcher" else "СТОРОЖ РЕЛЕ" if not english else "RELAY GUARDIAN",HORIZONTAL_ALIGNMENT_LEFT,-1,10,accent)
-	draw_string(font,Vector2(52,342),note,HORIZONTAL_ALIGNMENT_LEFT,-1,8,Color("d2e7dc"))
+	draw_string(font,Vector2(52,342),note,HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("d2e7dc"))
 	if flash>0 and not reduced_motion: draw_rect(Rect2(Vector2.ZERO,size),Color(.93,.76,.58,flash*.10))

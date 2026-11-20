@@ -76,12 +76,12 @@ func build(id: String, distorted: bool):
 	detail.zone=id
 	detail.distorted=echo
 	detail.dimensions=dimensions
-	add_child(detail)
 	if not paths.is_empty():
 		var borders=load("res://after_silence/world/path_skin.gd").new()
 		borders.world=self
 		borders.z_index=-2
 		add_child(borders)
+	add_child(detail)
 	detail.z_index=-2
 	terrain.z_index=-3
 	boundary(Rect2(0,0,dimensions.x,24))
@@ -123,7 +123,7 @@ func make_tiles() -> TileSet:
 	tiles.tile_size=Vector2i(16,16)
 	for i in range(3):
 		var source=TileSetAtlasSource.new()
-		source.texture=preload("res://after_silence/world/surface_textures.gd").atlas(["grass","dirt","floor"][i])
+		source.texture=preload("res://after_silence/world/surface_textures.gd").atlas(["grass","dirt","floor"][i],zone)
 		source.texture_region_size=Vector2i(16,16)
 		for y in range(20):
 			for x in range(20): source.create_tile(Vector2i(x,y))

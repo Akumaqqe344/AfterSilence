@@ -73,6 +73,9 @@ func click(button: Button):
 
 func test_board_motion():
 	var panel=begin_board(0)
+	await get_tree().process_frame
+	var hint: Button=panel.get_node("Hint")
+	check(not hint.get_rect().intersects(panel.undo_button.get_rect()) and not panel.undo_button.get_rect().intersects(panel.reset_button.get_rect()),"trial tools keep separate hit areas")
 	check(is_instance_valid(game.event_window.entrance),"board enters with animation")
 	await get_tree().create_timer(.10).timeout
 	check(game.event_window.decoration.time>.04,"board decorative motion advances")

@@ -12,11 +12,11 @@ func draw_shore():
 			var depth=Water.depth(zone,p)
 			if depth< -16: continue
 			var rect=Rect2(x,y,4,4)
-			if depth< -8: draw_rect(rect,Color("718c55"))
-			elif depth<0: draw_rect(rect,Color("bbac75"))
+			if depth< -8: draw_rect(rect,Color("83936c"))
+			elif depth<0: draw_rect(rect,Color("baa77d"))
 			else:
 				draw_texture_rect_region(water,rect,Rect2(posmod(x,80),posmod(y,80),4,4))
-				if depth<3: draw_rect(Rect2(x,y,4,1),Color("84b6a0"))
+				if depth<3: draw_rect(Rect2(x,y,4,1),Color("8fb19d"))
 			if depth< -6 and posmod(x*13+y*7,41)==0:
 				draw_line(p,p+Vector2(-2,-9),Color("526e3c"),2)
 				draw_line(p+Vector2(3,0),p+Vector2(4,-12),Color("8fa65b"),2)

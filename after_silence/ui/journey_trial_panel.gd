@@ -75,6 +75,7 @@ func _pair(words: Array) -> String:
 func _label(at: Vector2, bounds: Vector2, caption: String) -> Label:
 	var label=Label.new()
 	label.position=at;label.size=bounds;label.text=caption
+	label.add_theme_font_size_override("font_size",12 if game.comfort.large_text else 11)
 	label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	label.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	add_child(label)
@@ -82,13 +83,15 @@ func _label(at: Vector2, bounds: Vector2, caption: String) -> Label:
 
 func _tool(id: String, caption: String, y: int, action: Callable) -> Button:
 	var button=Button.new()
-	button.name=id;button.text=caption;button.position=Vector2(386,y);button.size=Vector2(176,24)
+	button.name=id;button.text=caption;button.position=Vector2(386,y)
+	button.add_theme_font_size_override("font_size",12 if game.comfort.large_text else 11)
 	for state in ["normal","hover","pressed","disabled"]:
 		var skin=ThemeArt.button(state in ["hover","pressed"],state=="pressed")
 		skin.content_margin_top=2;skin.content_margin_bottom=2
 		if state=="disabled": skin.bg_color=Color("343b46")
 		button.add_theme_stylebox_override(state,skin)
 	button.pressed.connect(action);add_child(button)
+	button.size=Vector2(176,24)
 	game.ComfortMotion.wire_button(button,game.comfort)
 	return button
 

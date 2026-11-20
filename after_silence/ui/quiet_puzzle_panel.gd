@@ -35,6 +35,7 @@ func _ready() -> void:
 	var instructions=Label.new()
 	instructions.position=Vector2(411,12)
 	instructions.size=Vector2(149,70)
+	instructions.add_theme_font_size_override("font_size",12 if game.comfort.large_text else 11)
 	instructions.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	instructions.text=game.t(SIDES[model.mode][0],SIDES[model.mode][1])
 	add_child(instructions)
@@ -45,7 +46,7 @@ func _ready() -> void:
 	feedback.position=Vector2(20,195)
 	feedback.size=Vector2(536,16)
 	feedback.add_theme_color_override("font_color",ThemeArt.PEACH)
-	feedback.text=game.t("Можно спокойно пробовать.","Take your time and try things.")
+	feedback.text=""
 	add_child(feedback)
 	var count: int=Puzzle.SIZES[model.mode]
 	var columns=5 if model.mode=="tubes" else 3 if model.mode=="seeds" else 4
@@ -89,9 +90,10 @@ func _button(caption: String, y: int, action: Callable) -> Button:
 	var button=Button.new()
 	button.text=caption
 	button.position=Vector2(411,y)
-	button.size=Vector2(149,26)
+	button.add_theme_font_size_override("font_size",12 if game.comfort.large_text else 11)
 	button.pressed.connect(action)
 	add_child(button)
+	button.size=Vector2(149,26)
 	game.ComfortMotion.wire_button(button,game.comfort)
 	return button
 

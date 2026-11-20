@@ -222,19 +222,21 @@ func _setup_ui():
 	route_guide.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(route_guide)
 	objective=Label.new()
-	objective.position=Vector2(20,26)
-	objective.size=Vector2(360,24)
-	objective.add_theme_font_size_override("font_size",8)
+	objective.position=Vector2(22,26)
+	objective.size=Vector2(339,40)
+	objective.max_lines_visible=2
+	objective.add_theme_constant_override("line_spacing",-2)
+	objective.add_theme_font_size_override("font_size",13 if comfort.large_text else 11)
 	objective.add_theme_color_override("font_outline_color",Color("172126"))
 	objective.add_theme_constant_override("outline_size",0)
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(objective)
 	help_button=Button.new()
-	help_button.text="? · H"
+	help_button.text="?  H"
 	help_button.tooltip_text=t("Помощь с текущей задачей","Help with your current goal")
 	help_button.position=Vector2(566,34)
 	help_button.size=Vector2(62,22)
-	help_button.add_theme_font_size_override("font_size",8)
+	help_button.add_theme_font_size_override("font_size",11)
 	help_button.pressed.connect(_quest_help)
 	ui.add_child(help_button)
 	help_button.size=Vector2(62,22)
@@ -246,9 +248,9 @@ func _setup_ui():
 	hint=Label.new()
 	hint.position=Vector2(24,327)
 	hint.size=Vector2(592,23)
-	hint.add_theme_font_size_override("font_size",8)
+	hint.add_theme_font_size_override("font_size",13 if comfort.large_text else 11)
 	hint.add_theme_color_override("font_outline_color",Color("172126"))
-	hint.add_theme_constant_override("outline_size",4)
+	hint.add_theme_constant_override("outline_size",3)
 	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(hint)
@@ -256,7 +258,7 @@ func _setup_ui():
 	toast.position=Vector2(90,278)
 	toast.size=Vector2(460,40)
 	toast.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	toast.add_theme_font_size_override("font_size",8)
+	toast.add_theme_font_size_override("font_size",11)
 	toast.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	ui.add_child(toast)
 	shade=ColorRect.new()
@@ -314,19 +316,17 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	buttons.clear()
 	if is_instance_valid(modal_tween): modal_tween.kill()
 	modal_backdrop.menu_mode=main_layout
-	modal_backdrop.english=state.language=="en"
-	modal_backdrop.journey_mode=state.flag("event_campaign") and not main_layout
 	modal_backdrop.finish_mark=id.ends_with("_decision")
 	modal_backdrop.configure_motion(not comfort.reduce_motion)
-	var target=Vector2(28,26) if main_layout else Vector2(30,24)
+	var target=Vector2(32,43) if main_layout else Vector2(61,31)
 	card.position=target
-	card.size=Vector2(330,280) if main_layout else Vector2(536,264)
-	if not main_layout: target=Vector2(52,34);card.position=target
-	var panel_style=ComfortTheme.panel()
+	card.size=Vector2(268,287) if main_layout else Vector2(518,298)
+	var panel_style: StyleBox=ComfortTheme.panel()
 	if main_layout:
-		panel_style=ComfortTheme.panel(Color("1b2b35ce"))
-		panel_style.border_color=Color("677c8270")
-		panel_style.set_content_margin_all(9)
+		panel_style=StyleBoxEmpty.new()
+	else:
+		panel_style.content_margin_left=16
+		panel_style.content_margin_right=16
 	card.add_theme_stylebox_override("panel",panel_style)
 	card.modulate.a=1
 	for child in column.get_children():
@@ -335,7 +335,8 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	var header=Label.new()
 	header.text=title
 	header.add_theme_color_override("font_color",ComfortTheme.PEACH)
-	header.add_theme_font_size_override("font_size",18 if main_layout else 12)
+	header.add_theme_font_override("font",ComfortTheme.HEADING)
+	header.add_theme_font_size_override("font_size",31 if main_layout else 20)
 	header.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var portrait_id=id.split("_")[0]
 	if id=="intro": portrait_id="vera"
@@ -366,8 +367,10 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	body.custom_minimum_size=Vector2(0,24)
 	body.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	body.add_theme_color_override("default_color",ComfortTheme.TEXT)
-	body.add_theme_font_size_override("normal_font_size",10 if comfort.large_text else 8)
+	body.add_theme_font_size_override("normal_font_size",14 if comfort.large_text else 12)
+	if main_layout: body.add_theme_color_override("default_color",ComfortTheme.MUTED)
 	column.add_child(body)
+	body.visible=not text.is_empty()
 	var seen=dialogues.was_seen(id)
 	if id!="": dialogues.record(id,title,text)
 	body.visible_characters=0 if animated and not seen and not comfort.instant_text else -1
@@ -379,7 +382,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		button.text=item.label
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
 		button.custom_minimum_size=Vector2(0,26)
-		button.add_theme_font_size_override("font_size",10 if comfort.large_text else 8)
+		button.add_theme_font_size_override("font_size",14 if comfort.large_text else 12)
 		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
 		button.pressed.connect(func():
@@ -393,17 +396,18 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		if item.id in ["back","close"]: modal_back=item.run
 		if item.id in ["events_new","events_load","resume","start"] and i==0:
 			var primary=ComfortTheme.button(true)
-			primary.bg_color=Color("415854")
+			primary.bg_color=Color("3c503c")
 			button.add_theme_stylebox_override("normal",primary)
 		ComfortMotion.wire_button(button,comfort)
-	if seen and animated and not state.flag("event_campaign"):
-		var skip=Label.new()
-		skip.text=t("Уже прочитано · текст показан целиком","Previously read · full text shown")
-		skip.add_theme_color_override("font_color",ComfortTheme.MUTED)
-		column.add_child(skip)
 	_wire_dialog_focus()
 	card_scroll.scroll_vertical=0
-	modal_tween=ComfortMotion.enter(card,comfort,Vector2(-7,3) if main_layout else Vector2(0,6),.26)
+	modal_tween=ComfortMotion.enter(card,comfort,Vector2(-14,0) if main_layout else Vector2(0,10),.33)
+	if main_layout and is_instance_valid(modal_tween):
+		var delay=.025
+		for button in buttons.values():
+			button.modulate.a=.55
+			modal_tween.tween_property(button,"modulate:a",1.0,.16).set_delay(delay)
+			delay+=.025
 
 func _wire_dialog_focus():
 	var enabled=[]
@@ -439,12 +443,12 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("После тишины","After Silence"),t("Путешествие Веры по городу, который помнит.","Vera's journey through the town that remembers."),[choice("events_load","Продолжить путешествие","Continue journey",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_confirm_new_event),choice("archive","Архив историй","Story archive",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выйти из игры","Quit game",func():get_tree().quit())],false,true)
+	_dialog("",t("После тишины","After Silence"),t("Вера возвращается в город, где исчезла её сестра.","Vera returns to the town where her sister disappeared."),[choice("events_load","Продолжить путешествие","Continue journey",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_confirm_new_event),choice("archive","Архив историй","Story archive",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выйти из игры","Quit game",func():get_tree().quit())],false,true)
 	buttons["events_load"].disabled=not event_saves.exists()
 	buttons["events_load"].tooltip_text=t("Здесь появится твоё сохранённое путешествие","Your saved journey will appear here") if not event_saves.exists() else t("Вернуться к сохранённой истории","Return to your saved story")
 	_wire_dialog_focus()
 	if not event_saves.exists():
-		var primary=ComfortTheme.button(true);primary.bg_color=Color("415854");primary.border_color=ComfortTheme.PEACH
+		var primary=ComfortTheme.button(true);primary.bg_color=Color("3c503c");primary.border_color=ComfortTheme.PEACH
 		buttons["events_new"].add_theme_stylebox_override("normal",primary)
 func _confirm_new_event():
 	if not event_saves.exists():
@@ -572,10 +576,10 @@ func _build_world(id: String,p: Vector2):
 		camera.position_smoothing_speed=6
 		player.add_child(camera)
 		zoom_button=Button.new()
-		zoom_button.text="Z · ±"
+		zoom_button.text="±  Z"
 		zoom_button.position=Vector2(566,60)
 		zoom_button.size=Vector2(62,22)
-		zoom_button.add_theme_font_size_override("font_size",8)
+		zoom_button.add_theme_font_size_override("font_size",11)
 		zoom_button.tooltip_text=t("Приблизить или отдалить камеру","Zoom the camera in or out")
 		zoom_button.pressed.connect(_toggle_zoom)
 		ui.add_child(zoom_button)
@@ -769,6 +773,9 @@ func _unhandled_key_input(event):
 
 	if cutscenes.running: return
 	if modal:
+		if event.physical_keycode==KEY_M and column.has_node("DistrictMap"):
+			_close()
+			return
 		if event.physical_keycode==KEY_E and is_instance_valid(body): body.visible_characters=-1
 		elif event.physical_keycode>=KEY_1 and event.physical_keycode<=KEY_9:
 			var index=int(event.physical_keycode-KEY_1)
@@ -781,6 +788,7 @@ func _unhandled_key_input(event):
 			_close()
 		return
 	match event.physical_keycode:
+		KEY_M: _district_map()
 		KEY_T: if state.flag("event_campaign"): journey.open()
 		KEY_G: if state.flag("event_campaign"): _toggle_route_guide()
 		KEY_H: _quest_help()
@@ -791,6 +799,24 @@ func _unhandled_key_input(event):
 		KEY_TAB: if not state.flag("rift_mode"): _shift()
 		KEY_SPACE: player.jump(Input.is_physical_key_pressed(KEY_SHIFT))
 		KEY_ESCAPE: _pause()
+func _district_map():
+	if not is_instance_valid(world) or not is_instance_valid(player): return
+	var atlas=preload("res://after_silence/ui/district_map.gd").new()
+	atlas.game=self
+	var actions=[choice("close","Закрыть карту","Close map",_close)]
+	if state.flag("event_campaign"):
+		actions.push_front(choice("places","Места и маршруты","Places & directions",_travel_window))
+	_dialog("",t("Карта · ","Map · ")+atlas.district_name(),"",actions,false)
+	column.add_child(atlas)
+	column.move_child(atlas,1)
+	var footer=HBoxContainer.new()
+	footer.add_theme_constant_override("separation",8)
+	column.add_child(footer)
+	for button in buttons.values():
+		button.reparent(footer,false)
+		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	_wire_dialog_focus()
+
 func _travel_window():
 	if state.flag("event_campaign"): journey.open()
 func _toggle_zoom():
@@ -1095,7 +1121,7 @@ func _item(id: String):
 		_dialog("",t("Красная лента","Red ribbon"),t("Обернуть лентой металлические пряжки? Она уменьшит слышимость бега, но Соня больше не получит её как знак обещания.","Wrap the ribbon around your buckles? Running becomes quieter, but you cannot give it to Sonya as a token of your promise."),[choice("use","Смягчить шаги","Soften footsteps",func():state.give("ribbon",-1);state.set_flag("soft_steps");_close()),choice("keep","Оставить для Сони","Keep for Sonya",func():state.set_flag("ribbon_kept");_close())])
 	else: _notify(t("Используйте предмет у подходящего объекта.","Use this item at the matching object."))
 func _pause():
-	_dialog("",t("Пауза","Pause"),t("Город подождёт.","The town will wait."),[choice("resume","Продолжить","Resume",_close),choice("save","Сохранить","Save",func():_save();_close()),choice("load","Загрузить","Load",_load_game),choice("settings","Настройки","Settings",_settings),choice("menu","В меню","Main menu",func():_save(false);_main_menu())],false)
+	_dialog("",t("Пауза","Pause"),"",[choice("resume","Продолжить","Resume",_close),choice("save","Сохранить","Save",func():_save();_close()),choice("load","Загрузить","Load",_load_game),choice("settings","Настройки","Settings",_settings),choice("menu","В меню","Main menu",func():_save(false);_main_menu())],false)
 	var slot_button=Button.new()
 	slot_button.text=t("Три слота сохранения","Three save slots")
 	slot_button.custom_minimum_size=Vector2(0,32)
@@ -1104,7 +1130,7 @@ func _pause():
 	buttons["slots"]=slot_button
 	_wire_dialog_focus()
 func _settings():
-	_dialog("",t("Настройки и комфорт","Settings & comfort"),t("Устройся поудобнее. Всё сохраняется сразу.","Make yourself comfortable. Changes save immediately."),[choice("back","Готово · Esc","Done · Esc",func():
+	_dialog("",t("Настройки","Settings"),t("Изменения сохраняются сразу.","Changes save automatically."),[choice("back","Готово · Esc","Done · Esc",func():
 		if in_menu: _main_menu()
 		else: _pause())],false)
 	var row=HBoxContainer.new()
@@ -1164,19 +1190,19 @@ func _save_comfort():
 	comfort.fullscreen=DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN
 	if comfort.save_preferences()!=OK:
 		_notify(t("Не удалось сохранить настройки.","Could not save preferences."))
-	help_button.text="? · H"
+	help_button.text="?  H"
 
 func _toggle_comfort(key: String):
 	comfort.set(key,not comfort.get(key))
 	_save_comfort()
 	ui.theme=ComfortTheme.create(comfort.large_text)
-	objective.add_theme_font_size_override("font_size",10 if comfort.large_text else 8)
-	hint.add_theme_font_size_override("font_size",10 if comfort.large_text else 8)
+	objective.add_theme_font_size_override("font_size",13 if comfort.large_text else 11)
+	hint.add_theme_font_size_override("font_size",13 if comfort.large_text else 11)
 	_settings()
 	buttons[key].grab_focus()
 
 func _controls_help():
-	_dialog("",t("Путешествуй в своём темпе","Explore at your own pace"),t("WASD или стрелки — идти\nE — поговорить или действовать\nПробел — прыжок · Shift — бег\nT — места и дорога · J — журнал · I — предметы\nEsc — пауза или возврат\n\nВ лабиринте: WASD, стрелки или мышь.\nВ головоломке: мышь или Tab и Enter.","WASD or arrows — move\nE — talk or interact\nSpace — jump · Shift — run\nT — places & directions · J — journal · I — items\nEsc — pause or go back\n\nMaze: WASD, arrows, or mouse.\nPuzzles: mouse, or Tab and Enter."),[choice("back","К настройкам","Back to settings",_settings)],false)
+	_dialog("",t("Управление","Controls"),t("WASD или стрелки — идти\nE — поговорить или действовать\nПробел — прыжок · Shift — бег\nM — карта · T — места · J — журнал · I — предметы\nEsc — пауза или возврат\n\nВ лабиринте: WASD, стрелки или мышь.\nВ головоломке: мышь или Tab и Enter.","WASD or arrows — move\nE — talk or interact\nSpace — jump · Shift — run\nM — map · T — places · J — journal · I — items\nEsc — pause or go back\n\nMaze: WASD, arrows, or mouse.\nPuzzles: mouse, or Tab and Enter."),[choice("back","К настройкам","Back to settings",_settings)],false)
 
 func _notification(what):
 	if what==NOTIFICATION_WM_CLOSE_REQUEST:
