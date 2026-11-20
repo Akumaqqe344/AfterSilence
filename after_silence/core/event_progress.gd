@@ -1,5 +1,7 @@
 extends RefCounted
-const MODES=["escort","rhythm","stealth","switches","epochs","route","defense","evacuation","dodge","repair","tactics"]
+const Puzzle=preload("res://after_silence/core/quiet_puzzle.gd")
+const MODES=["escort","rhythm","stealth","switches","epochs","route","defense","evacuation","dodge","repair","tactics","tubes","pairs","seeds","lights","shelves"]
+const PUZZLE_STOPS={3:"tubes",5:"pairs",6:"seeds",9:"lights",11:"shelves"}
 static func valid(data: Dictionary) -> bool:
 	if data.is_empty(): return true
 	var version=data.get("version",1)
@@ -11,13 +13,18 @@ static func valid(data: Dictionary) -> bool:
 	if not activity is Dictionary: return false
 	if not activity.is_empty():
 		if activity.get("mode","") not in MODES: return false
+		if Puzzle.SIZES.has(activity.mode):
+			if PUZZLE_STOPS.get(int(index))!=activity.mode or not activity.has("moves"): return false
+			if not Puzzle.new(activity.mode).restore(activity.moves): return false
 		if activity.mode=="tactics":
 			if not activity.get("tactics") is Dictionary or not preload("res://after_silence/world/tactical_encounter.gd").valid(activity.tactics): return false
 			if int(index) not in [4,7] or activity.tactics.encounter!=("bridge" if int(index)==4 else "crowd"): return false
 		for key in ["elapsed","progress","hp","step","alert","heat"]:
 			var n=activity.get(key)
 			if not (n is int or n is float) or not is_finite(float(n)) or n<0 or n>10000: return false
-		if activity.hp>5 or activity.elapsed>110: return false
+		if activity.hp>5 or activity.elapsed>(3600 if activity.mode=="epochs" else 110): return false
+		if activity.has("maze"):
+			if activity.mode!="epochs" or not activity.maze is Dictionary or not preload("res://after_silence/core/sonya_maze_layout.gd").valid(activity.maze): return false
 		if activity.get("epoch",0) not in [0,1,0.0,1.0]: return false
 		var p=activity.get("npc")
 		if not p is Array or p.size()!=2: return false

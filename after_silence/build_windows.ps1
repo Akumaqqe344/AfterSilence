@@ -16,6 +16,8 @@ if (-not $SkipTests) {
     Invoke-CheckedGodot 'work/tactics-test.log' @('--headless','--path','.','--script','after_silence/tests/run_tactics.gd','--','--qa')
     Invoke-CheckedGodot 'work/npc-routes-test.log' @('--headless','--path','.','--script','after_silence/tests/run_npc_routes.gd','--','--qa')
     Invoke-CheckedGodot 'work/journey140-test.log' @('--headless','--path','.','--script','after_silence/tests/run_journey140.gd','--','--qa')
+    Invoke-CheckedGodot 'work/quiet-puzzles-test.log' @('--headless','--path','.','--script','after_silence/tests/run_quiet_puzzles.gd','--','--qa')
+    Invoke-CheckedGodot 'work/minigame-fixes-test.log' @('--headless','--path','.','--script','after_silence/tests/run_minigame_fixes.gd','--','--qa')
     Invoke-CheckedGodot 'work/landscape120-test.log' @('--headless','--path','.','--script','after_silence/tests/run_landscape120.gd','--','--qa')
     Invoke-CheckedGodot 'work/merge110-test.log' @('--headless','--path','.','--script','after_silence/tests/run_merge110.gd','--','--qa')
     Invoke-CheckedGodot 'work/gut-all.log' @('--headless','--path','.','-s','addons/gut/gut_cmdln.gd','-gdir=res://test/unit/,res://after_silence/tests/','-gexit')

@@ -151,6 +151,10 @@ func _ready():
 		var input_runner=load("res://after_silence/tests/input_playthrough_driver.gd").new()
 		input_runner.game=self
 		get_tree().root.add_child.call_deferred(input_runner)
+	if "--qa-puzzles-export" in OS.get_cmdline_user_args() and "--qa" in OS.get_cmdline_user_args():
+		var puzzle_runner=load("res://after_silence/tests/quiet_puzzles_driver.gd").new()
+		puzzle_runner.game=self
+		get_tree().root.add_child.call_deferred(puzzle_runner)
 	if "--qa-export" in OS.get_cmdline_user_args():
 		var runner=load("res://after_silence/tests/episode_driver.gd").new()
 		runner.game=self
@@ -300,9 +304,6 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	modal_backdrop.menu_mode=main_layout
 	modal_backdrop.english=state.language=="en"
 	modal_backdrop.journey_mode=state.flag("event_campaign") and not main_layout
-	modal_backdrop.reduce_motion=comfort.reduce_motion
-	modal_backdrop.age=0
-	modal_backdrop.tick=0
 	modal_backdrop.queue_redraw()
 	var target=Vector2(28,26) if main_layout else Vector2(30,24)
 	card.position=target
@@ -523,6 +524,8 @@ func _save(notify: bool=true):
 	state.minigame=preload("res://after_silence/core/minigame_checkpoint.gd").capture(rift) if rift.active else {}
 	if not state.flag("event_campaign"): objectives.refresh()
 	state.position=player.position
+	if state.flag("event_campaign") and is_instance_valid(events_controller.activity) and events_controller.activity.mode=="epochs" and is_instance_valid(events_controller.activity.maze) and events_controller.activity.maze.in_view:
+		state.position=events_controller.activity.maze.source_player_position
 	if saves.save(state):
 		dirty=false
 		if notify: _notify(t("История сохранена","Story saved"))
@@ -579,7 +582,7 @@ func _build_world(id: String,p: Vector2):
 	atmosphere.echo=state.echo
 	atmosphere.anchor=player
 	world.add_child(atmosphere)
-	world.modulate=Color("7b93b3") if state.echo else Color("b5c6b6")
+	world.modulate=ComfortTheme.world_light(id,state.clock>=20 or state.clock<7,state.echo)
 	npcs.populate(self)
 	enemy=null
 	if id=="forest":
@@ -596,9 +599,12 @@ func _build_world(id: String,p: Vector2):
 		world.spot("rift_next",rift.STOPS[rift.index],"trace")
 	if is_instance_valid(events_controller): events_controller.attach_activity(id)
 	if is_instance_valid(events_controller): events_controller.populate_preparation()
+	if is_instance_valid(events_controller): events_controller.refresh_mementos()
 func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	var actor=Actor.new()
-	actor.sheet=load(path)
+	var appearance=preload("res://after_silence/core/npc_appearance.gd")
+	actor.sheet=appearance.sheet(id) if appearance.PROFILES.has(id) else load(path)
+	actor.body_height=appearance.height(id)
 	actor.npc_color=color
 	actor.position=p
 	actor.target=actor.position
@@ -628,7 +634,10 @@ func _physics_process(dt):
 	if not is_instance_valid(player): return
 	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active and not rift.active and not adventure.expanded
 	var npc_enabled=enabled
-	if state.flag("event_campaign") and event_window.active and is_instance_valid(events_controller.activity) and events_controller.activity.mode=="tactics": enabled=false
+	if state.flag("event_campaign") and event_window.active and is_instance_valid(events_controller.activity):
+		var activity=events_controller.activity
+		if activity.mode=="tactics" or activity.puzzle!=null: enabled=false
+		if activity.puzzle!=null: npc_enabled=false
 	player.enabled=enabled
 	if is_instance_valid(enemy):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
@@ -657,7 +666,7 @@ func _physics_process(dt):
 		var zone=state.residents[target].zone
 		if zone in Homes.IDS and zone!=state.zone: objective.text=t("Найдите ","Find ")+named(target)+" · "+Story.pair(Homes.NAMES[Homes.IDS.find(zone)],state.language)
 	var night=state.clock>=20 or state.clock<7
-	var tint=Color("7b93b3") if state.echo else Color("7b889f") if night else Color("b5c6b6")
+	var tint=ComfortTheme.world_light(state.zone,night,state.echo)
 	world.modulate=world.modulate.lerp(tint,minf(1,dt*2))
 	status.text=t("Отголоски: ","Echoes: ")+str(state.charges)+"/3 · "+t("Улики: ","Clues: ")+str(state.evidence.size())+"/"+str(State.CLUES.size())+" · "+("%02d:%02d"%[int(state.clock),int(fmod(state.clock,1)*60)])
 	var nearby=_nearest()
@@ -720,6 +729,7 @@ func can_interact(id: String) -> bool:
 	if not state.flag("rift_mode"): return true
 	return id not in ["photo","poster","ledger","clock","diagram","testimony","signature","medical","relay","mirror","catalog","library_light","ribbon","trace","shelter","home_memory"]
 func _object_name(id: String) -> String:
+	if actors.has(id): return named(id)
 	if id=="event_preparation": return events_controller.pair(events_controller.events[events_controller.index].world_action)
 	if id=="village_hints": return adventure.label(id)
 	if id.begins_with("hamlet_house_"): return adventure.label(id)
@@ -745,6 +755,7 @@ func _unhandled_key_input(event):
 	if transitions.busy: return
 	if rift.active: return
 	if state.flag("event_campaign") and event_window.active:
+		if is_instance_valid(event_window.puzzle_panel): return
 		if event.physical_keycode==KEY_SPACE: player.jump(Input.is_physical_key_pressed(KEY_SHIFT))
 		elif event.physical_keycode in [KEY_T,KEY_J,KEY_H,KEY_I]: event_window.toggle_pause()
 		return

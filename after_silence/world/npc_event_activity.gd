@@ -30,50 +30,110 @@ var original_tint=Color.WHITE
 var extra_actor
 var initiator
 var tactics
+var participants: Array=[]
+var origins: Dictionary={}
+var in_view=false
+var view_checkpoint: Dictionary={}
+var maze
+var puzzle
+var vision_points=PackedVector2Array()
 func start(owner,kind: String,actor,origin: Vector2):
-	game=owner;mode=kind;npc=actor;center=origin
-	zone=game.state.zone
-	initiator=actor
+	game=owner;mode=kind;center=origin;zone=game.state.zone;initiator=actor;npc=actor
+	original_tint=game.world.modulate
+	var puzzles=preload("res://after_silence/core/quiet_puzzle.gd")
+	if puzzles.SIZES.has(mode):
+		puzzle=puzzles.new(mode)
+		return
 	if mode=="tactics":
-		original_tint=game.world.modulate
 		tactics=preload("res://after_silence/world/tactical_encounter.gd").new()
 		add_child(tactics);tactics.start(game,self,game.events_controller.events[game.events_controller.index].id)
 		return
-	if mode=="stealth":
-		extra_actor=game.Actor.new();extra_actor.sheet=load("res://after_silence/assets/pechatai/npc/inventor.png")
-		extra_actor.npc_color=Color("c9c7dd");extra_actor.position=game.world.recover(center+Vector2(0,-30));extra_actor.enabled=false;extra_actor.scripted=true
-		game.world.sorter.add_child(extra_actor);npc=extra_actor
-	original_tint=game.world.modulate
+	if mode=="stealth": npc=game.actors.guest
+	take_participant(npc)
+	if mode=="stealth": npc.position=game.world.recover(center+Vector2(0,-30));npc.target=npc.position
 	if mode=="epochs":
-		gate_grid=game.world.grid
-		for i in range(2):
-			var body=StaticBody2D.new();body.position=center+Vector2(-65 if i==0 else 65,-75)
-			var shape=CollisionShape2D.new();var rect=RectangleShape2D.new();rect.size=Vector2(12,80);shape.shape=rect
-			body.add_child(shape);add_child(body);gates.append(shape)
-			var rect_bounds=game.World.foot_bounds(Rect2(body.position-Vector2(6,40),Vector2(12,80)))
-			for y in range(floori(rect_bounds.position.y/16),ceili(rect_bounds.end.y/16)+1):
-				for x in range(floori(rect_bounds.position.x/16),ceili(rect_bounds.end.x/16)+1):
-					var cell=Vector2i(x,y)
-					if game.world.grid.is_in_boundsv(cell) and rect_bounds.has_point(Vector2(cell)*16+Vector2(8,8)):
-						gate_base[cell]=game.world.grid.is_point_solid(cell)
-		set_epoch(0)
-	npc.scripted=true
+		maze=preload("res://after_silence/world/sonya_maze.gd").new()
+		maze.game=game;maze.activity=self;maze.process_mode=Node.PROCESS_MODE_DISABLED;add_child(maze)
+		rule=game.t("Проведи Соню к выходу. Двери меняются сами; E рядом с дверью — переключить.","Guide Sonya to the exit. Doors cycle; E near a door switches them.")
+	if mode=="dodge":
+		rule=game.t("Удерживай E — защита. Во время открытия подойди к Алине и нажми E.","Hold E to guard. During an opening, approach Alina and press E.")
 	if mode=="evacuation":
-		for i in range(3):
-			var follower=game.Actor.new()
-			follower.sheet=load("res://after_silence/assets/pechatai/npc/"+["lora","inventor","orest"][i]+".png")
+		var ids=["nadia","lev","child"] if game.events_controller.events[game.events_controller.index].id=="train" else ["nadia","child","mara"]
+		for i in range(ids.size()):
+			var follower=game.actors[ids[i]]
+			take_participant(follower)
 			follower.position=game.world.recover(center+Vector2(-170+i*120,-80))
-			follower.enabled=false;follower.scripted=true
-			game.world.sorter.add_child(follower);followers.append(follower)
+			follower.target=follower.position;follower.set_meta("rescued",false);followers.append(follower)
+	in_view=true
+
+func take_participant(person):
+	var id: String=person.get_meta("resident_id")
+	if not origins.has(id):
+		origins[id]={"position":[person.position.x,person.position.y],"zone":game.state.residents[id].zone,"managed":person.managed_motion,"mask":person.collision_mask}
+	if person not in participants: participants.append(person)
+	person.set_meta("activity_owner",get_instance_id());person.managed_motion=false;person.enabled=false;person.scripted=true
+	person.collision_mask=1;person.target=person.position
+	if person.get_parent()!=game.world.sorter: person.reparent(game.world.sorter,false)
+	person.show()
+	var event=game.events_controller.events[game.events_controller.index].id
+	person.set_appearance(preload("res://after_silence/core/npc_appearance.gd").sheet(id,event),preload("res://after_silence/core/npc_appearance.gd").height(id))
+
+func begin_view():
+	if mode=="tactics" or puzzle!=null: return
+	if not in_view:
+		var saved=view_checkpoint.duplicate(true);view_checkpoint.clear()
+		for person in participants:
+			take_participant(person)
+		in_view=true
+		if not saved.is_empty(): restore(saved)
+
+func end_view():
+	if mode=="tactics" or not in_view: return
+	view_checkpoint=checkpoint()
+	if is_instance_valid(maze): maze.close()
+	in_view=false;repair_hold=false;guard=0
+	for person in participants:
+		if not is_instance_valid(person): continue
+		var id: String=person.get_meta("resident_id")
+		var origin=origins[id]
+		person.position=Vector2(origin.position[0],origin.position[1]);person.target=person.position
+		person.scripted=false;person.managed_motion=origin.managed;person.collision_mask=origin.mask
+		person.remove_meta("activity_owner")
+		person.set_appearance(preload("res://after_silence/core/npc_appearance.gd").sheet(id),preload("res://after_silence/core/npc_appearance.gd").height(id))
+		game.npcs.attach(game,id)
+
+func pause_actors():
+	repair_hold=false;guard=0
+	for person in participants:
+		if is_instance_valid(person): person.scripted=false;person.velocity=Vector2.ZERO
+
+func action_input(event: InputEventKey):
+	var key=event.physical_keycode if event.physical_keycode!=0 else event.keycode
+	if key!=KEY_E: return
+	repair_hold=event.pressed and not game.modal
+	if event.pressed and not event.echo and not game.modal: interact()
+
+func guarding() -> bool:
+	return mode in ["defense","dodge"] and (repair_hold or guard>0)
+
 func checkpoint() -> Dictionary:
+	if not in_view and not view_checkpoint.is_empty(): return view_checkpoint.duplicate(true)
 	var people=[]
 	for person in followers: people.append({"position":[person.position.x,person.position.y],"rescued":person.get_meta("rescued",false)})
 	var data={"epoch":epoch,"mode":mode,"elapsed":elapsed,"progress":progress,"hp":hp,"step":step,"alert":alert,"heat":heat,"recruited":recruited.duplicate(),"followers":people,"npc":[npc.position.x,npc.position.y]}
 	if mode=="tactics": data.tactics=tactics.checkpoint()
+	if puzzle!=null: data.moves=puzzle.checkpoint()
+	if mode=="epochs" and is_instance_valid(maze): data.maze=maze.capture()
 	return data
 func restore(data: Dictionary):
+	if puzzle!=null:
+		puzzle.restore(data.get("moves",[]))
+		return
 	if mode=="tactics":
 		if not tactics.restore(data.get("tactics",{})): tactics.stage="invalid"
+		return
+	if not in_view:
+		view_checkpoint=data.duplicate(true)
 		return
 	for key in ["elapsed","progress","alert","heat"]: set(key,float(data.get(key,0)))
 	hp=int(data.get("hp",5));step=int(data.get("step",0))
@@ -86,8 +146,10 @@ func restore(data: Dictionary):
 		followers[i].set_meta("rescued",people[i].rescued)
 		followers[i].visible=not people[i].rescued
 	last_wave=int(elapsed/2.2)-1
-	if mode=="epochs": set_epoch(int(data.get("epoch",0)))
+	if mode=="epochs" and data.has("maze"): maze.restore(data.maze)
 func set_epoch(value: int):
+	if is_instance_valid(maze):
+		epoch=posmod(value,2);maze.set_phase(epoch);return
 	epoch=value%2
 	clear_gate_navigation()
 	for i in range(gates.size()): gates[i].set_deferred("disabled",i==epoch)
@@ -128,10 +190,14 @@ func _physics_process(dt):
 		game._notify(game.t("Встреча восстановлена. Поговори с другом.","The meeting was restored. Talk to your friend."));return
 	tick(minf(dt,.05))
 func tick(dt: float):
-	if not active: return
+	if not active or puzzle!=null: return
 	if mode=="tactics":
 		tactics.tick(dt);return
 	elapsed+=dt;guard=maxf(0,guard-dt);invulnerable=maxf(0,invulnerable-dt)
+	if mode=="epochs" and is_instance_valid(maze):
+		maze.tick(dt)
+		if maze.finished(): progress=1;win()
+		queue_redraw();return
 	var player=game.player
 	var limits=Rect2(center-Vector2(235,145),Vector2(470,330))
 	if not limits.has_point(player.position): player.position=game.world.recover(player.position.clamp(limits.position,limits.end))
@@ -147,24 +213,25 @@ func tick(dt: float):
 			if int(elapsed)>step+1: step=int(elapsed);hit()
 		"stealth":
 			move_actor(npc,route_point(int(elapsed/5)),dt,48)
-			var direction=look_dir
 			var delta=player.position-npc.position
-			var seen=delta.length()<160 and direction.normalized().dot(delta.normalized())>.55 and game.world.sees(npc.position,player.position)
+			vision_points=preload("res://after_silence/core/vision_sector.gd").polygon(npc.position,look_dir,game.world.walkable)
+			var seen=preload("res://after_silence/core/vision_sector.gd").contains_body(vision_points,player.position,50)
 			alert=clampf(alert+dt*(1 if seen else -.65),0,3)
 			if not seen and delta.length()<210: progress+=dt
 			if alert>=2.5: hit();alert=0
 		"switches","epochs","route":
 			if mode=="route" and player.position.distance_to(route_point(step))<34: progress+=1;step+=1
 		"defense","dodge":
+			if mode=="dodge" and repair_hold: _counter_opening()
 			var wave=int(elapsed/2.2)
 			if wave!=last_wave and fmod(elapsed,2.2)>1.4:
 				last_wave=wave
 				var lane=posmod(wave,3)
 				var attack_x=center.x+(lane-1)*90
 				if mode=="dodge":
-					if absf(player.position.x-attack_x)<30: hit()
+					if absf(player.position.x-attack_x)<30 and not guarding(): hit()
 				else:
-					if absf(player.position.x-attack_x)<48 and player.position.distance_to(npc.position)<180 and guard>0: progress+=1
+					if absf(player.position.x-attack_x)<48 and player.position.distance_to(npc.position)<180 and guarding(): progress+=1
 					else: hit()
 		"evacuation":
 			for i in range(followers.size()):
@@ -184,10 +251,12 @@ func tick(dt: float):
 	if elapsed>=110: lose()
 	queue_redraw()
 func goal() -> float:
+	if puzzle!=null: return puzzle.goal()
+	if mode=="epochs" and is_instance_valid(maze): return 1
 	if mode=="tactics": return 2
 	return {"escort":4,"rhythm":30,"stealth":30,"switches":8,"epochs":8,"route":8,"defense":14,"evacuation":3,"dodge":5,"repair":24}.get(mode,1)
 func interact():
-	if not active or game.modal: return
+	if not active or game.modal or puzzle!=null: return
 	if mode=="tactics": tactics.confirm();return
 	var p=game.player.position
 	match mode:
@@ -197,21 +266,20 @@ func interact():
 		"switches":
 			if p.distance_to(route_point(step))<65: progress+=1;step+=1;game.audio.ping(game.state.volume)
 		"epochs":
-			set_epoch(1-epoch)
-			if p.distance_to(route_point(step))<65: progress+=1;step+=1
+			if is_instance_valid(maze): maze.interact()
 		"defense": guard=.7
 		"dodge":
-			var opening=int(elapsed/6.6)+1
-			if int(elapsed/2.2)%3==2 and fmod(elapsed,2.2)>1.5 and p.distance_to(npc.position)<100 and step!=opening: progress+=1;step=opening
+			guard=.8;_counter_opening()
 		"evacuation":
 			for i in range(followers.size()):
 				if not followers[i].get_meta("rescued",false) and p.distance_to(followers[i].position)<65 and i not in recruited: recruited.append(i)
 func _input(event):
-	if event is InputEventKey and event.physical_keycode==KEY_E and not event.pressed: repair_hold=false
+	if game.event_window.active: return
 	if not active or game.modal: return
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode==KEY_E:
-		repair_hold=true
-		interact();get_viewport().set_input_as_handled()
+	if event is InputEventKey: action_input(event)
+func _counter_opening():
+	var opening=int(elapsed/6.6)+1
+	if int(elapsed/2.2)%3==2 and fmod(elapsed,2.2)>1.5 and game.player.position.distance_to(npc.position)<100 and step!=opening: progress+=1;step=opening
 func hit():
 	if invulnerable>0 or game.player.elevation>6: return
 	hp-=1;invulnerable=1.0
@@ -225,16 +293,17 @@ func win():
 	active=false;completed.emit()
 func _exit_tree():
 	if moving_world: return
+	if not is_instance_valid(game) or game.is_queued_for_deletion(): return
+	end_view()
 	clear_gate_navigation()
 	if is_instance_valid(initiator): initiator.scripted=false
 	if is_instance_valid(extra_actor): extra_actor.queue_free()
 	if is_instance_valid(game) and is_instance_valid(game.world) and game.world.zone==zone: game.world.modulate=original_tint
 	if is_instance_valid(npc): npc.scripted=false;npc.modulate=Color.WHITE
-	for actor in followers:
-		if is_instance_valid(actor): actor.queue_free()
 func _draw():
 	if not active: return
-	if mode=="tactics": return
+	if mode=="tactics" or puzzle!=null: return
+	if mode=="epochs": return
 	var font=game.ui.theme.default_font
 	var tint=Color("89d8ca")
 	if mode in ["escort","route","switches","epochs"]:
@@ -248,17 +317,11 @@ func _draw():
 		draw_arc(npc.position+Vector2(0,-75),14+fmod(elapsed,1.0)*15,0,TAU,24,tint if ready else Color("e283a0"),2)
 		draw_string(font,npc.position+Vector2(-5,-72),"E",HORIZONTAL_ALIGNMENT_LEFT,-1,10,tint)
 	if mode=="stealth":
-		var direction=look_dir.angle()
-		var points=PackedVector2Array([npc.position])
-		for i in range(17):
-			var ray=Vector2.from_angle(direction-.9+i*1.8/16.0)
-			var end=npc.position
-			for distance in range(8,161,8):
-				var point=npc.position+ray*distance
-				if not game.world.walkable(point): break
-				end=point
-			points.append(end)
-		draw_colored_polygon(points,Color(.9,.35,.5,.2))
+		if vision_points.size()>2: draw_colored_polygon(vision_points,Color(.9,.35,.5,.2))
+	if guarding():
+		draw_circle(game.player.position+Vector2(0,-22),23,Color(.48,.85,.8,.15))
+		draw_arc(game.player.position+Vector2(0,-22),23,0,TAU,24,tint,2)
+		draw_string(font,game.player.position+Vector2(-4,-50),"E",HORIZONTAL_ALIGNMENT_LEFT,-1,8,tint)
 	if mode in ["defense","dodge"]:
 		if mode=="dodge": preload("res://after_silence/world/pixel_guardian.gd").paint(self,center+Vector2(0,-118),1,int(elapsed/2.2)%3==2)
 		var lane=posmod(int(elapsed/2.2),3)

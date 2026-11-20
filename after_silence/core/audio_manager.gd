@@ -12,13 +12,13 @@ func wave(echo: bool, effect: bool = false) -> AudioStreamWAV:
 	var key=zone+str(echo)+str(effect)
 	if cache.has(key): return cache[key]
 	var rate = 16000
-	var length = 0.12 if effect else 4.0
+	var length = 0.18 if effect else 4.0
 	var data = PackedByteArray()
 	data.resize(int(length * rate) * 2)
 	for i in range(int(length * rate)):
 		var t = float(i) / rate
 		var base={"town":110.0,"library":82.0,"forest":66.0}.get(zone,110.0)
-		var f = 660.0 if effect else base*(0.667 if echo else 1.0)
+		var f = 392.0 if effect else base*(0.667 if echo else 1.0)
 		var value = sin(TAU*f*t)*0.07 + sin(TAU*f*2*t)*0.012
 		value *= minf(1.0,t/.012)
 		value *= pow(maxf(0, 1.0-t/length), 2) if effect else pow(sin(PI*t/length),2)

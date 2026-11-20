@@ -61,6 +61,7 @@ func dispose(game):
 func capture(game):
 	for id in game.actors:
 		if not is_instance_valid(game.actors[id]) or not state.residents.has(id): continue
+		if game.actors[id].has_meta("activity_owner") or game.actors[id].has_meta("arena_control"): continue
 		var p=game.actors[id].position
 		state.residents[id].x=p.x;state.residents[id].y=p.y
 func detach(game):
@@ -97,15 +98,15 @@ func populate(game):
 		game._npc(id,p,"res://after_silence/assets/pechatai/npc/"+PROFILE[id][3]+".png")
 		var actor=game.actors[id]
 		actor.set_meta("resident_id",id);actor.managed_motion=true
-		if id=="child": actor.scale=Vector2.ONE*.8
 		attach(game,id)
 	for id in game.actors: attach(game,id)
 func attach(game,id: String):
 	var actor=game.actors[id]
+	if actor.has_meta("activity_owner") or actor.has_meta("arena_control"): return
 	var present=visible_here(id,state.zone)
 	var parent=game.world.sorter if present else pool
 	if actor.get_parent()!=parent: actor.reparent(parent,false)
-	actor.visible=present;actor.collision_layer=4 if present else 0
+	actor.visible=present and not actor.get_meta("minigame_hidden",false);actor.collision_layer=4 if actor.visible else 0
 	actor.collision_mask=0 if actor.managed_motion else 1
 func request(id: String, zone: String, point: Vector2,role: String="story"):
 	if role!="combat" and state.residents[id].get("control","")=="returning":
@@ -189,6 +190,8 @@ func update(game, dt: float, enabled: bool):
 	for id in PROFILE:
 		var actor=game.actors[id]
 		var r=state.residents[id]
+		if actor.has_meta("activity_owner") or actor.has_meta("arena_control"): continue
+		if actor.get_meta("minigame_hidden",false): actor.enabled=false;actor.managed_velocity=Vector2.ZERO;continue
 		if r.get("control","")=="yielding" and not combat_running:
 			r.control="returning";r.return_to=r.yield_origin.duplicate(true);r.erase("yield_origin")
 			requests[id]=r.return_to.duplicate(true);r.assignment=r.return_to.duplicate(true)

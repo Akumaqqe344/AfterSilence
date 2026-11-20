@@ -4,20 +4,9 @@ const DESIGN=preload("res://after_silence/ui/comfort_theme.gd")
 var menu_mode=false
 var english=false
 var journey_mode=false
-var reduce_motion=false
-var age=0.0
-var tick=0
 
 func _ready() -> void:
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
-
-func _process(delta: float) -> void:
-	if not is_visible_in_tree() or not menu_mode or reduce_motion: return
-	age+=delta
-	var next_tick=int(age*4.0)
-	if next_tick!=tick:
-		tick=next_tick
-		queue_redraw()
 
 func _star(at: Vector2, color: Color) -> void:
 	draw_rect(Rect2(at-Vector2(1,3),Vector2(2,6)),color)
@@ -38,14 +27,13 @@ func _draw() -> void:
 	draw_rect(Rect2(10,10,46,2),DESIGN.SAGE)
 	draw_rect(Rect2(size.x-56,size.y-12,46,2),DESIGN.PEACH)
 	if menu_mode:
-		draw_style_box(DESIGN.panel(Color("354b4c")),Rect2(379,31,230,279))
+		draw_style_box(DESIGN.panel(Color("443953")),Rect2(379,31,230,279))
 		draw_circle(Vector2(548,78),23,Color("f4d8a9"))
-		draw_circle(Vector2(557,71),22,Color("354b4c"))
+		draw_circle(Vector2(557,71),22,Color("443953"))
 		for i in range(10):
 			var x=400+posmod(i*47,185)
 			var y=51+posmod(i*31,86)
-			var light=0.60+0.16*sin(age*.65+i) if not reduce_motion else .7
-			_star(Vector2(x,y),Color(0.93,0.88,0.72,light))
+			_star(Vector2(x,y),Color("bcaeac" if i%3==0 else "897f95"))
 		for i in range(6):
 			var x=392+i*34
 			var y=174-posmod(i*13,27)

@@ -137,18 +137,18 @@
       "id": "machine",
       "npc": "lev",
       "zone": "library",
-      "mode": "repair",
+      "mode": "tubes",
       "title": [
         "Сердце мастерской",
         "Workshop heart"
       ],
       "context": [
-        "Лев ждёт в мастерской. Механизм перегревается.",
-        "Lev waits in his workshop. The machine overheats."
+        "Рассортируй охлаждающую смесь.",
+        "Sort the cooling mixture."
       ],
       "rule": [
-        "Удерживай E рядом со Львом. Отпускай, когда шкала красная.",
-        "Hold E near Lev. Release when the gauge turns red."
+        "Один цвет на пробирку.",
+        "One color per tube."
       ],
       "next": [
         "Теперь защитники моста. Открой «Путешествие»: там есть путь.",
@@ -225,18 +225,18 @@
       "id": "memory",
       "npc": "child",
       "zone": "town",
-      "mode": "rhythm",
+      "mode": "pairs",
       "title": [
-        "Ритм доверия",
-        "Rhythm of trust"
+        "Открытки доверия",
+        "Cards of trust"
       ],
       "context": [
-        "Ребёнок боится говорить. Повтори знакомый ритм.",
-        "The child is afraid to speak. Repeat a familiar rhythm."
+        "Найди пары на любимых открытках.",
+        "Find pairs in the child's favorite cards."
       ],
       "rule": [
-        "Нажимай E, когда кольцо становится бирюзовым.",
-        "Press E when the ring turns teal."
+        "Соедини одинаковые знаки.",
+        "Pair the matching symbols."
       ],
       "next": [
         "Теперь сын из будущего. Открой «Путешествие»: там есть путь.",
@@ -261,26 +261,26 @@
       "location": "square",
       "requires": "bridge",
       "world_action": [
-        "Возьми лист с мелодией.",
-        "Take the sheet with the melody."
+        "Подбери конверт с открытками.",
+        "Pick up the envelope of cards."
       ]
     },
     {
       "id": "garden",
       "npc": "child",
       "zone": "town",
-      "mode": "escort",
+      "mode": "seeds",
       "title": [
         "Сын из будущего",
         "Son from tomorrow"
       ],
       "context": [
-        "Проведи сына Нади из будущего через сад.",
-        "Lead Nadia's future son through the garden."
+        "Посади цветы вдоль дороги домой.",
+        "Grow flowers along the way home."
       ],
       "rule": [
-        "Иди рядом с ребёнком. Обходи красные вспышки.",
-        "Stay near the child. Avoid red flashes."
+        "Посади и полей все шесть грядок.",
+        "Plant and water all six plots."
       ],
       "next": [
         "Теперь не одна против толпы. Открой «Путешествие»: там есть путь.",
@@ -305,8 +305,8 @@
       "location": "garden",
       "requires": "memory",
       "world_action": [
-        "Осмотри садовую метку.",
-        "Inspect the garden marker."
+        "Забери семена у садовой метки.",
+        "Collect the seeds by the garden marker."
       ]
     },
     {
@@ -401,18 +401,18 @@
       "id": "collision",
       "npc": "mara",
       "zone": "forest",
-      "mode": "route",
+      "mode": "lights",
       "title": [
         "Столкновение городов",
         "Colliding towns"
       ],
       "context": [
-        "Мара нашла путь между двумя версиями библиотеки.",
-        "Mara found a route between two versions of the library."
+        "Зажги три сигнала между городами.",
+        "Light three signals between the towns."
       ],
       "rule": [
-        "Пройди безопасные проходы по порядку. Красное опасно.",
-        "Follow safe passages in order. Red means danger."
+        "Поменяй соседние огни и собери ряд из трёх.",
+        "Swap neighboring lights to make a line of three."
       ],
       "next": [
         "Теперь рука алины. Открой «Путешествие»: там есть путь.",
@@ -489,18 +489,18 @@
       "id": "shore",
       "npc": "sonya",
       "zone": "town",
-      "mode": "evacuation",
+      "mode": "shelves",
       "title": [
         "Последний берег",
         "The final shore"
       ],
       "context": [
-        "Последние жители ждут у воды. Выведи всех вместе.",
-        "The last residents wait by the water. Lead them out."
+        "Разложи метки для семей у воды.",
+        "Sort the tags for the families by the water."
       ],
       "rule": [
-        "E рядом с жителем. Проведи троих к безопасной зоне.",
-        "E near a resident. Escort three to the safe area."
+        "Собери четыре тройки одинаковых меток.",
+        "Make four sets of three matching tags."
       ],
       "next": [
         "Берег в безопасности.",

@@ -1,6 +1,14 @@
 extends Control
 const Activity=preload("res://after_silence/world/npc_event_activity.gd")
+const Puzzle=preload("res://after_silence/core/quiet_puzzle.gd")
 const CHARACTERS={"child":["Ребёнок Нади","Nadia's child","ella"],"alina":["Алина","Alina","lora"],"guest":["Гость","Guest","scientist"]}
+const PUZZLE_MEMORIES={
+	"machine":["В мастерской снова прохладно. Теперь слышно, как тикают часы.","The workshop is cool again. I can hear the clock now."],
+	"memory":["Я оставил тебе открытку с солнцем.","I saved the card with the sun for you."],
+	"garden":["Если я забуду дорогу домой, цветы подскажут.","If I forget the way home, the flowers will show me."],
+	"collision":["Теперь оба города видят свет из окон библиотеки.","Both towns can see the light in the library windows now."],
+	"shore":["У каждой семьи нашлась своя метка. Никого не потеряли.","Every family found its tag. Nobody was left behind."],
+}
 var events: Array=JSON.parse_string(FileAccess.get_file_as_string("res://after_silence/data/npc_events.json")).events
 var game
 var index=0
@@ -96,7 +104,7 @@ func arrive(context=true):
 		if saved.phase=="decision": phase="decision";show_decision()
 		elif saved.phase=="failure": failure()
 		elif not saved.get("activity",{}).is_empty():
-			make_activity(saved.activity);activity.active=false;phase="suspended"
+			make_activity(saved.activity);activity.end_view();activity.active=false;phase="suspended"
 			if activity.mode=="tactics": activity.tactics.set_paused(true)
 			game._notify(game.t("Событие восстановлено. E — продолжить.","The event is restored. E: continue."))
 		elif saved.phase=="action": phase="action";populate_preparation()
@@ -119,8 +127,11 @@ func npc_state() -> String:
 	return {"ready":"ready_to_talk","running":"helping","suspended":"waiting","decision":"returned","travel":"walking","failure":"afraid","finished":"idle"}.get(phase,"left")
 func talk(id: String) -> bool:
 	if not enabled(): return false
-	if index>=events.size(): return true
+	if index>=events.size():
+		tell_puzzle_memory(id)
+		return true
 	if id!=events[index].npc or phase=="travel":
+		if tell_puzzle_memory(id): return true
 		var key="event_smalltalk_"+id+"_"+str(index)
 		if not game.state.flag(key):
 			game.state.set_flag(key);game._notify(game.t("Загляни в «Путешествие»: там ждут друзья.","Travel shows where your friends are waiting."))
@@ -134,6 +145,16 @@ func talk(id: String) -> bool:
 	elif phase=="decision": show_decision()
 	elif phase=="failure": failure()
 	return true
+func tell_puzzle_memory(id: String) -> bool:
+	for i in range(events.size()-1,-1,-1):
+		var event=events[i]
+		var key="event_reflection_"+event.id
+		if event.npc!=id or not PUZZLE_MEMORIES.has(event.id): continue
+		if not game.state.flag("event_done_"+event.id) or game.state.flag(key): continue
+		game.state.set_flag(key)
+		game._dialog(id+"_reflection_"+event.id,game.named(id),pair(PUZZLE_MEMORIES[event.id]),[game.choice("close","Закрыть","Close",game._close)],false)
+		return true
+	return false
 func start_activity(checkpoint: Dictionary={}):
 	if not is_instance_valid(npc) or phase not in ["ready","observe","action","failure","running","suspended"]: return
 	if not game.state.flag("event_action_"+events[index].id):
@@ -156,6 +177,19 @@ func populate_preparation():
 	var event=events[index]
 	if game.state.zone!=game.journey.places[event.location].zone or game.state.flag("event_action_"+event.id): return
 	game.world.spot("event_preparation",preparation_point(),"note")
+func refresh_mementos():
+	if not enabled() or not is_instance_valid(game.world): return
+	var art=preload("res://after_silence/world/quiet_memento.gd")
+	for event in events:
+		if event.mode not in Puzzle.SIZES or not game.state.flag("event_done_"+event.id): continue
+		var place=game.journey.places[event.location]
+		if place.zone!=game.state.zone: continue
+		var node_name="Memento_"+event.id
+		if game.world.sorter.has_node(node_name): continue
+		var prop=art.new()
+		prop.name=node_name;prop.kind=event.mode
+		prop.position=game.npcs.safe_point(place.zone,Vector2(place.point[0],place.point[1])+Vector2(90,45))
+		game.world.sorter.add_child(prop)
 func begin_preparation():
 	if index>=events.size() or game.state.flag("event_done_"+events[index].id): return
 	if game.state.flag("event_action_"+events[index].id): start_activity();return
@@ -168,8 +202,9 @@ func complete_preparation() -> bool:
 	clear_preparation();start_activity();return true
 func make_activity(checkpoint: Dictionary={}):
 	activity=Activity.new();game.world.add_child(activity)
-	npc.managed_motion=false;npc.collision_mask=1
 	var kind=events[index].mode
+	var legacy=Puzzle.LEGACY.get(events[index].id,"")
+	if legacy!="" and checkpoint.get("mode","")==legacy: kind=legacy
 	# Preserve an already active 0.15 defense scene; new attempts use tactics.
 	if kind=="tactics" and checkpoint.get("mode","")=="defense": kind="defense"
 	activity.start(game,kind,npc,center)
@@ -195,18 +230,11 @@ func detach_activity():
 		game.npcs.request(events[index].npc,game.state.zone,npc.position)
 	activity.moving_world=true
 	activity.reparent(game.npcs.pool,false);activity.hide()
-	for actor in activity.followers+[activity.extra_actor]:
-		if not is_instance_valid(actor): continue
-		actor.scripted=false;actor.enabled=false;actor.set_physics_process(false)
-		actor.reparent(game.npcs.pool,false)
 	activity.moving_world=false
 func attach_activity(zone: String):
 	if not is_instance_valid(activity) or index>=events.size() or game.journey.places[events[index].location].zone!=zone: return
 	activity.moving_world=true
 	activity.reparent(game.world,false);activity.show()
-	for actor in activity.followers+[activity.extra_actor]:
-		if not is_instance_valid(actor): continue
-		actor.reparent(game.world.sorter,false)
 	activity.moving_world=false
 	if activity.mode=="epochs":
 		activity.gate_grid=game.world.grid
@@ -214,9 +242,6 @@ func attach_activity(zone: String):
 func resume_activity():
 	game._close();phase="running";activity.active=true
 	if activity.mode=="tactics": activity.tactics.set_paused(false)
-	else: npc.managed_motion=false;npc.collision_mask=1
-	for actor in activity.followers+[activity.extra_actor]:
-		if is_instance_valid(actor): actor.set_physics_process(true)
 	game.event_window.open()
 func suspend():
 	if is_instance_valid(activity): activity.active=false
@@ -228,11 +253,14 @@ func suspend():
 		for person in activity.followers:
 			if is_instance_valid(person): person.scripted=false
 	phase="suspended"
-	if not is_instance_valid(activity) or activity.mode!="tactics": game.player.position=game.world.recover(npc.position+Vector2(0,65))
+	if not is_instance_valid(activity) or (activity.puzzle==null and activity.mode not in ["tactics","epochs"]):
+		game.player.position=game.world.recover(npc.position+Vector2(0,65))
 	game._save(false)
 func success():
 	game.event_window.close();phase="decision"
-	npc.modulate=Color("a1e0ca");game.create_tween().tween_property(npc,"modulate",Color.WHITE,.7)
+	if not game.comfort.reduce_motion:
+		npc.modulate=Color("a1e0ca");game.create_tween().tween_property(npc,"modulate",Color.WHITE,.7)
+	game._save(false)
 	game.audio.scene_cue("memory",game.state.volume);show_decision()
 func show_decision():
 	var actions=[]
@@ -245,6 +273,7 @@ func choose(option: Array):
 	game.state.set_flag("event_done_"+event.id)
 	game.state.set_flag("event_choice_"+event.id+"_"+option[0])
 	game.state.set_flag("place_changed_"+event.location)
+	refresh_mementos()
 	game.npcs.change_relation(option[3],int(option[4]));game.living.remember(event.npc,"help")
 	game.state.tokens=mini(999,game.state.tokens+1)
 	game.state.history.append({"speaker":pair(event.title),"body":option[2] if game.state.language=="en" else option[1]})

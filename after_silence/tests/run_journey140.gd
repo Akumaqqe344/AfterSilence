@@ -94,47 +94,31 @@ func run():
 			director._physics_process(3.2);check(director.phase=="ready","NPC ready "+event.id)
 			director.talk(event.npc);check(game.buttons.has("help"),"NPC conversation "+event.id)
 			if ending==0 and index==0: await shot("conversation")
-			var base_tint=game.world.modulate
 			fulfill_action();var activity=director.activity
 			activity.set_physics_process(false);activity.npc.set_physics_process(false);game.player.set_physics_process(false)
-			check(game.event_window.active and game.world.get_parent()==game.event_window.viewport,"custom viewport "+event.id)
+			if activity.puzzle!=null:
+				check(game.event_window.active and is_instance_valid(game.event_window.puzzle_panel),"puzzle panel "+event.id)
+			elif activity.mode=="epochs":
+				check(game.event_window.active and activity.maze.in_view,"isolated maze "+event.id)
+			else:
+				check(game.event_window.active and game.world.get_parent()==game.event_window.viewport,"custom viewport "+event.id)
 			game.event_window.toggle_pause();check(game.modal,"window pause")
 			game.event_window.resume();check(not game.modal,"window resume")
-			for hit in range(5): activity.invulnerable=0;activity.hit()
-			if activity.mode=="tactics": activity.tactics.board.units.vera.hp=0;activity.tactics.board.outcome()
-			activity.tick(.01)
-			check(director.phase=="failure" and not game.event_window.active,"defeat exits viewport "+event.id)
-			if activity.mode=="epochs": check(game.world.modulate==base_tint,"era tint restored after failure")
-			game.body.visible_characters=-1
-			game.buttons.retry.pressed.emit();activity=director.activity;activity.set_physics_process(false);activity.npc.set_physics_process(false)
-			check(activity.hp==5,"retry "+event.id)
+			if activity.puzzle!=null:
+				var panel=game.event_window.puzzle_panel
+				for attempt in range(80):
+					if not activity.active: break
+					var move: Array=activity.puzzle.hint()
+					if move.is_empty(): break
+					for tile in move: panel.tiles[tile].pressed.emit()
+				check(activity.puzzle.won() and director.phase=="decision","puzzle victory "+event.id)
 			if activity.mode=="epochs":
-				await process_frame
-				check(activity.original_tint==base_tint and game.world.modulate==Color("d1c7a2"),"retry preserves base tint and reapplies era")
-			if activity.mode=="tactics": await play_tactics(activity)
-			else: activity.invulnerable=10000
-			for frame in range(2200):
-				if not activity.active: break
-				if ending==0 and frame==200: await shot(event.id)
-				var t=activity.elapsed
-				match activity.mode:
-					"rhythm":
-						if absf(fmod(t,1.0)-.5)<.025: activity.interact()
-					"defense": game.player.position=activity.center+Vector2((int(t/2.2)%3-1)*90,0);activity.interact()
-					"dodge": game.player.position=activity.npc.position;activity.interact()
-					"stealth": game.player.position=activity.npc.position-activity.look_dir*70
-					"escort": game.player.position=activity.route_point(activity.step);activity.npc.position=game.player.position+Vector2(-20,0)
-					"switches","epochs","route":
-						game.player.position=activity.route_point(activity.step)
-						if activity.mode!="route" and int(t*10)%10==0: activity.interact()
-					"evacuation":
-						for i in range(activity.followers.size()):
-							if activity.followers[i].get_meta("rescued",false): continue
-							game.player.position=activity.followers[i].position;activity.interact();activity.followers[i].position=activity.route_point(1)
-					"repair": game.player.position=activity.npc.position+Vector2(0,35);activity.repair_hold=activity.heat<1.0
-				activity.tick(.05)
-			check(director.phase=="decision","victory "+event.id)
-			check(activity.tactics.board.phase=="victory" if activity.mode=="tactics" else activity.elapsed>=30 and activity.elapsed<=110,"completed mechanics "+event.id)
+				var exit=activity.maze.model.point(activity.maze.Layout.EXIT)
+				game.player.position=exit;activity.npc.position=exit
+				activity.tick(.01)
+				check(director.phase=="decision","maze exit restores world")
+			if activity.puzzle==null and activity.mode!="epochs":
+				await exercise_action(index,ending)
 			if ending==0 and index==11: await shot("final-choice")
 			var option=event.choices[ending if index==11 else 0]
 			var relation=game.state.relations[option[3]]
@@ -147,6 +131,43 @@ func run():
 		check(game.state.flag("events_final_"+("together" if ending==0 else "home")),"distinct final choice")
 		if ending==0: await shot("final")
 		game._close()
+	await verify_checkpoint()
+func exercise_action(index: int,ending: int):
+	var director=game.events_controller
+	var event=director.events[index]
+	var activity=director.activity
+	for hit in range(5): activity.invulnerable=0;activity.hit()
+	if activity.mode=="tactics": activity.tactics.board.units.vera.hp=0;activity.tactics.board.outcome()
+	activity.tick(.01)
+	check(director.phase=="failure" and not game.event_window.active,"defeat exits viewport "+event.id)
+	game.body.visible_characters=-1
+	game.buttons.retry.pressed.emit();activity=director.activity;activity.set_physics_process(false);activity.npc.set_physics_process(false)
+	check(activity.hp==5,"retry "+event.id)
+	if activity.mode=="tactics": await play_tactics(activity)
+	else: activity.invulnerable=10000
+	for frame in range(2200):
+		if not activity.active: break
+		if ending==0 and frame==200: await shot(event.id)
+		var t=activity.elapsed
+		match activity.mode:
+			"rhythm":
+				if absf(fmod(t,1.0)-.5)<.025: activity.interact()
+			"defense": game.player.position=activity.center+Vector2((int(t/2.2)%3-1)*90,0);activity.interact()
+			"dodge": game.player.position=activity.npc.position;activity.interact()
+			"stealth": game.player.position=activity.npc.position-activity.look_dir*70
+			"escort": game.player.position=activity.route_point(activity.step);activity.npc.position=game.player.position+Vector2(-20,0)
+			"switches","epochs","route":
+				game.player.position=activity.route_point(activity.step)
+				if activity.mode!="route" and int(t*10)%10==0: activity.interact()
+			"evacuation":
+				for i in range(activity.followers.size()):
+					if activity.followers[i].get_meta("rescued",false): continue
+					game.player.position=activity.followers[i].position;activity.interact();activity.followers[i].position=activity.route_point(1)
+			"repair": game.player.position=activity.npc.position+Vector2(0,35);activity.repair_hold=activity.heat<1.0
+		activity.tick(.05)
+	check(director.phase=="decision","victory "+event.id)
+	check(activity.tactics.board.phase=="victory" if activity.mode=="tactics" else activity.elapsed>=30 and activity.elapsed<=110,"completed mechanics "+event.id)
+func verify_checkpoint():
 	game._new_event_game();game.set_physics_process(false);game.events_controller.set_physics_process(false)
 	fixture_at(0)
 	var director=game.events_controller

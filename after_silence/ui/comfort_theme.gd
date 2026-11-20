@@ -2,12 +2,18 @@ extends RefCounted
 ## Shared palette and control states for the whole desktop interface.
 const FONT_FILE=preload("res://after_silence/assets/fonts/PressStart2P-Regular.ttf")
 static var FONT: Font=_make_font()
-const INK=Color("292d38")
-const SURFACE=Color("343946")
+const INK=Color("262637")
+const SURFACE=Color("38364b")
 const TEXT=Color("fff3e2")
 const MUTED=Color("c6cccf")
-const SAGE=Color("a9d8bf")
-const PEACH=Color("f3bd9d")
+const SAGE=Color("b5d4bd")
+const PEACH=Color("efbe9e")
+
+static func world_light(zone: String, night: bool, echo: bool) -> Color:
+	if echo: return Color("a0a7c8")
+	if night: return Color("999bb7")
+	if zone=="forest" or zone=="library": return Color("cbd1ba")
+	return Color("ded9bf")
 
 static func _make_font() -> Font:
 	var font=FONT_FILE.duplicate()
@@ -28,7 +34,7 @@ static func panel(bg: Color=SURFACE, accent: bool=false) -> StyleBoxFlat:
 	return box
 
 static func button(active: bool=false, pressed: bool=false) -> StyleBoxFlat:
-	var box=panel(Color("536b65") if pressed else Color("46574f") if active else Color("3c4350"))
+	var box=panel(Color("5a625f") if pressed else Color("4e585c") if active else Color("414055"))
 	box.border_color=SAGE if active else Color("68727b")
 	box.content_margin_top=4
 	box.content_margin_bottom=4

@@ -89,7 +89,7 @@ func run():
 	check(is_equal_approx(float(config.get_value("comfort","volume",-1)),game.state.volume),"volume persisted")
 	await click(game.buttons.reduce_motion)
 	check(game.comfort.reduce_motion,"reduced motion enabled")
-	check(game.modal_backdrop.reduce_motion,"backdrop obeys reduced motion")
+	check(not game.modal_backdrop.is_processing(),"menu artwork remains static")
 	await click(game.buttons.instant_text)
 	await capture("03-comfort-large")
 	await tap(KEY_ESCAPE)

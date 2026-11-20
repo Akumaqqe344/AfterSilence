@@ -32,6 +32,11 @@ func motion(direction: Vector2):
 		else: Input.action_release(item[0])
 func dt() -> float: return get_physics_process_delta_time()
 func steer(point: Vector2):
+	var activity=game.events_controller.activity if is_instance_valid(game.events_controller) else null
+	if is_instance_valid(activity) and activity.mode=="epochs" and is_instance_valid(activity.maze) and activity.maze.in_view:
+		var delta=point-game.player.position
+		motion(delta.normalized() if delta.length()>4 else Vector2.ZERO)
+		return
 	nav_age-=dt()
 	if nav_zone!=game.state.zone or nav_target.distance_to(point)>20 or nav_age<=0:
 		nav_path=game.world.path_between(game.player.position,point)
@@ -119,7 +124,10 @@ func exercise_recovery() -> bool:
 	await tap(KEY_E);await choose("resume")
 	check(game.event_window.active,"resume after load")
 	motion(Vector2.ZERO)
-	await get_tree().create_timer(112).timeout
+	var age=0.0
+	while director.phase=="running" and age<115:
+		await get_tree().physics_frame
+		age+=dt()
 	check(director.phase=="failure" and not game.event_window.active,"real defeat")
 	if director.phase!="failure": return false
 	check(game.buttons.retry.has_focus(),"retry receives focus")
@@ -147,7 +155,7 @@ func mouse_at(position: Vector2):
 	for pressed in [true,false]:
 		var event=InputEventMouseButton.new();event.button_index=MOUSE_BUTTON_LEFT;event.position=position;event.global_position=position;event.pressed=pressed
 		game.get_viewport().push_input(event,true)
-		await get_tree().process_frame
+	await get_tree().process_frame
 func tactical_load():
 	var director=game.events_controller
 	var before=director.activity.tactics.board.capture()
@@ -195,8 +203,28 @@ func play_event(index: int) -> bool:
 	var sampled=false
 	var tactical_saved=false
 	var tactical_mouse=false
+	if activity.puzzle!=null:
+		var panel=game.event_window.puzzle_panel
+		var at=game.player.position
+		if tag=="together":
+			await shot("playing-"+event.id)
+			await tap(KEY_ESCAPE)
+			check(game.event_window.pause_panel.visible,"puzzle pauses "+event.id)
+			await tap(KEY_ESCAPE)
+			check(panel.is_ancestor_of(game.get_viewport().gui_get_focus_owner()),"puzzle focus restored "+event.id)
+		for attempt in range(80):
+			if director.phase!="running": break
+			var move: Array=activity.puzzle.hint()
+			check(not move.is_empty(),"reachable puzzle move "+event.id)
+			if move.is_empty(): break
+			for tile in move:
+				if tag=="together": await mouse_click(panel.tiles[tile])
+				else: await button(panel.tiles[tile])
+		check(game.player.position==at,"puzzle does not move player "+event.id)
+		check(activity.puzzle.won(),"puzzle solved by input "+event.id)
 	while director.phase=="running" and age_play<112:
 		activity=director.activity
+		if activity.puzzle!=null: break
 		var t=activity.tactics.age if activity.mode=="tactics" else activity.elapsed
 		if t>8 and not sampled:
 			sampled=true
@@ -230,7 +258,11 @@ func play_event(index: int) -> bool:
 			await get_tree().physics_frame;age_play+=dt()
 			continue
 		match activity.mode:
-			"escort","route","switches","epochs":
+			"epochs":
+				aim=activity.maze.guidance()
+				for i in range(activity.maze.closed.size()):
+					if activity.maze.closed[i] and game.player.position.distance_to(activity.maze.model.point(activity.maze.Layout.DOORS[i]))<70: interact=true
+			"escort","route","switches":
 				aim=activity.route_point(activity.step)
 				interact=activity.mode in ["switches","epochs"] and game.player.position.distance_to(aim)<48
 				if activity.mode=="escort" and game.player.position.distance_to(activity.npc.position)>100: aim=activity.npc.position+Vector2(12,12)

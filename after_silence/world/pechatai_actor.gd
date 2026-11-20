@@ -23,6 +23,7 @@ var jump_peak=28.0
 var elevation=0.0
 var clips: Dictionary={}
 var npc_speed=30.0
+var body_height=52.0
 var managed_motion=false
 var managed_velocity=Vector2.ZERO
 var npc_anchor=Vector2(32,92)
@@ -47,12 +48,20 @@ func _ready():
 	add_child(sprite)
 	if not is_player:
 		var bounds=sheet.get_image().get_region(Rect2i(0,0,64,96)).get_used_rect()
-		var scale_factor=58.0/maxf(1,bounds.size.y)
+		var scale_factor=body_height/maxf(1,bounds.size.y)
 		sprite.scale=Vector2.ONE*scale_factor
 		npc_anchor=Vector2(bounds.position.x+bounds.size.x*.5,bounds.end.y)
 		portrait=Rect2(bounds.position,Vector2(bounds.size.x,bounds.size.y*.52))
 	if is_player:
 		for id in ["walk","run","idle","diagonal-run","jump","jump-diagonal"]: clips[id]=load("res://after_silence/assets/pechatai/player/"+id+".png")
+func set_appearance(texture: Texture2D, height: float):
+	sheet=texture;body_height=height
+	if not is_instance_valid(sprite): return
+	sprite.texture=sheet
+	var bounds=sheet.get_image().get_region(Rect2i(0,0,64,96)).get_used_rect()
+	sprite.scale=Vector2.ONE*body_height/maxf(1,bounds.size.y)
+	npc_anchor=Vector2(bounds.position.x+bounds.size.x*.5,bounds.end.y)
+	portrait=Rect2(bounds.position,Vector2(bounds.size.x,bounds.size.y*.52))
 func jump(long_jump: bool=false) -> bool:
 	if not enabled or scripted or jump_age<jump_duration: return false
 	jump_duration=.68 if long_jump else .44
