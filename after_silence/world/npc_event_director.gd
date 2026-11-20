@@ -216,10 +216,9 @@ func suspend():
 	game._save(false)
 func success():
 	game.event_window.close();phase="decision"
-	if is_instance_valid(activity) and activity.reality!=null:
-		match events[index].id:
-			"bridge": game.state.set_flag("safe_patrol")
-			"crowd": game.state.set_flag("calm_nadia")
+	match events[index].id:
+		"bridge": game.state.set_flag("safe_patrol")
+		"crowd": game.state.set_flag("calm_nadia")
 	if not game.comfort.reduce_motion:
 		npc.modulate=Color("a1e0ca");game.create_tween().tween_property(npc,"modulate",Color.WHITE,.7)
 	game._save(false)

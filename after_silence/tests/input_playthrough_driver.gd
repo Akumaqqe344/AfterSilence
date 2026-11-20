@@ -117,7 +117,7 @@ func play_reality(index: int,id: String) -> bool:
 	var model=director.activity.reality
 	var panel=game.event_window.puzzle_panel
 	var origin: Vector2=game.player.position
-	if index==0 and tag=="together":
+	if index==2 and tag=="together":
 		await shot("maze-original")
 		var wrong: Vector2i=model.PORTALS[0] if model.PORTALS[0]!=model.destination() else model.PORTALS[1]
 		await maze_key_path(model,wrong)
@@ -180,6 +180,22 @@ func play_event(index: int) -> bool:
 	if activity.reality!=null:
 		if not await play_reality(index,event.id): return false
 		activity=director.activity
+	if activity.trial!=null:
+		var trial=activity.trial
+		var panel=game.event_window.puzzle_panel
+		if tag=="together":
+			await shot("playing-"+event.id)
+			await tap(KEY_ESCAPE)
+			check(game.event_window.pause_panel.visible,"trial pauses "+event.id)
+			await tap(KEY_ESCAPE)
+			check(panel.is_ancestor_of(game.get_viewport().gui_get_focus_owner()),"trial focus restored "+event.id)
+		for attempt in range(trial.MOVE_LIMIT):
+			if director.phase!="running": break
+			var action: int=trial.hint()
+			if action<0: break
+			if tag=="together": await mouse_click(panel.action_buttons[action])
+			else: await button(panel.action_buttons[action])
+		check(trial.won(),"unique trial solved by input "+event.id)
 	if activity.puzzle!=null:
 		var panel=game.event_window.puzzle_panel
 		var at=game.player.position

@@ -1,15 +1,9 @@
 extends RefCounted
 ## A portal changes the room's topology and remaps its doors. Movement is grid based.
-const STOPS={0:"letter",1:"guest",2:"epochs",4:"bridge",7:"crowd",8:"train",10:"alina"}
+const STOPS={2:"epochs"}
 const SIGILS=["◆","●","+"]
 const ORDERS={
-	"letter":[0,1],
-	"guest":[1,0,2],
 	"epochs":[0,2,1],
-	"bridge":[2,1,0],
-	"crowd":[1,2,1,0],
-	"train":[2,0,2,1],
-	"alina":[0,1,2,1,0],
 }
 const ENTRY=Vector2i(4,5)
 const PORTALS=[Vector2i(1,0),Vector2i(4,0),Vector2i(7,0)]
@@ -31,7 +25,7 @@ var scene_number: int
 func _init(id: String):
 	scene_id=id
 	order=ORDERS[id]
-	scene_number=ORDERS.keys().find(id)
+	scene_number=2 # The existing Sonya layout and checkpoints use this offset.
 
 func walkable(point: Vector2i) -> bool:
 	if not Rect2i(0,0,9,7).has_point(point): return false

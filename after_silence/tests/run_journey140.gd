@@ -100,6 +100,14 @@ func run():
 					if route.is_empty(): break
 					for cell in route: panel._step(cell,false)
 				check(maze.won() and director.phase=="decision","reality maze victory "+event.id)
+			elif activity.trial!=null:
+				var panel=game.event_window.puzzle_panel
+				for attempt in range(activity.trial.MOVE_LIMIT):
+					if director.phase!="running": break
+					var action: int=activity.trial.hint()
+					if action<0: break
+					panel.action_buttons[action].pressed.emit()
+				check(activity.trial.won() and director.phase=="decision","new trial victory "+event.id)
 			if ending==0 and index==11: await shot("final-choice")
 			var option=event.choices[ending if index==11 else 0]
 			var relation=game.state.relations[option[3]]
@@ -118,13 +126,13 @@ func verify_checkpoint():
 	fixture_at(0)
 	var director=game.events_controller
 	fulfill_action()
-	var model=director.activity.reality
-	for tile in model.route(model.destination()): model.move(tile)
+	var model=director.activity.trial
+	model.perform(model.hint())
 	var checkpoint=model.capture()
 	game.event_window.leave()
 	check(director.phase=="suspended" and game.world.get_parent()==game,"safe window exit")
 	await game._load_game()
-	check(director.phase=="suspended" and director.activity.reality.capture()==checkpoint,"suspended save resume")
+	check(director.phase=="suspended" and director.activity.trial.capture()==checkpoint,"suspended save resume")
 	director.resume_activity();check(game.event_window.active,"reopen preserved activity")
 	game.event_window.leave()
 	var retained=director.activity
@@ -138,7 +146,7 @@ func verify_checkpoint():
 	retained=director.activity
 	check(is_instance_valid(retained) and director.phase=="suspended","suspended board returns in the event world")
 	director.resume_activity()
-	check(game.event_window.active and retained.reality.capture()==checkpoint,"suspended activity resumes after house visit")
+	check(game.event_window.active and retained.trial.capture()==checkpoint,"suspended activity resumes after house visit")
 	game.event_window.leave()
 	var old=game.state.to_data();old.event_state={"index":2,"phase":"observe","activity":{}}
 	old.flags["event_done_letter"]=true;old.flags["event_done_song"]=true

@@ -1,6 +1,7 @@
 extends Control
 const QuietPanel=preload("res://after_silence/ui/quiet_puzzle_panel.gd")
 const RealityPanel=preload("res://after_silence/ui/reality_maze_panel.gd")
+const TrialPanel=preload("res://after_silence/ui/journey_trial_panel.gd")
 var game
 var frame: Panel
 var title: Label
@@ -53,6 +54,10 @@ func open():
 		puzzle_panel=RealityPanel.new()
 		puzzle_panel.model=activity.reality;puzzle_panel.resident=director.npc
 		controls_hint.text=game.t("Мышь / WASD / стрелки · Esc: пауза","Mouse / WASD / arrows · Esc: pause")
+	elif activity.trial!=null:
+		puzzle_panel=TrialPanel.new()
+		puzzle_panel.model=activity.trial
+		controls_hint.text=game.t("Мышь или Tab и Enter · Esc: пауза","Mouse or Tab and Enter · Esc: pause")
 	else:
 		puzzle_panel=QuietPanel.new()
 		puzzle_panel.model=activity.puzzle

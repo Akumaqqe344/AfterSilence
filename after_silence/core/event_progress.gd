@@ -2,7 +2,8 @@ extends RefCounted
 
 const Puzzle=preload("res://after_silence/core/quiet_puzzle.gd")
 const Reality=preload("res://after_silence/core/reality_maze.gd")
-const MODES=["tubes","pairs","seeds","lights","shelves","reality"]
+const Trials=preload("res://after_silence/core/journey_trials.gd")
+const MODES=["tubes","pairs","seeds","lights","shelves","reality","letter_press","footprints","balance","signal_grid","railway","echo_tuning"]
 const PUZZLE_STOPS={3:"tubes",5:"pairs",6:"seeds",9:"lights",11:"shelves"}
 # Recognize obsolete save markers so a valid story slot can be migrated.
 const RETIRED=["escort","rhythm","stealth","switches","epochs","route","defense","evacuation","dodge","repair","tactics"]
@@ -20,8 +21,11 @@ static func valid(data: Dictionary) -> bool:
 	var mode=activity.get("mode","")
 	if mode in RETIRED: return true
 	if mode=="reality":
+		if Trials.STOPS.has(int(index)): return activity.get("reality") is Dictionary
 		var id: String=Reality.STOPS.get(int(index),"")
 		return id!="" and Reality.new(id).restore(activity.get("reality"))
+	if mode in Trials.ACTIONS:
+		return Trials.STOPS.get(int(index))==mode and Trials.new(mode).restore(activity.get("moves"))
 	return mode in Puzzle.SIZES and PUZZLE_STOPS.get(int(index))==mode and Puzzle.new(mode).restore(activity.get("moves"))
 
 static func upgrade(data: Dictionary, event: Dictionary) -> Dictionary:

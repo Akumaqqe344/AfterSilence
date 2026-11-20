@@ -5,18 +5,18 @@
       "id": "letter",
       "npc": "lev",
       "zone": "town",
-      "mode": "reality",
+      "mode": "letter_press",
       "title": [
         "Письмо Льва",
         "Lev's letter"
       ],
       "context": [
-        "Найди дорогу по знакам на письме.",
-        "Follow the signs on the letter."
+        "Лев растерял обрывки письма. Помоги их собрать.",
+        "Lev found torn pieces of the letter. Help put them together."
       ],
       "rule": [
-        "Запомни знаки и пройди через двери в нужном порядке.",
-        "Remember the signs and take the doors in order."
+        "Поворачивай обрывки, пока линии письма не сойдутся.",
+        "Rotate the fragments until the writing lines up."
       ],
       "next": [
         "Теперь гость праздника. Открой «Путешествие»: там есть путь.",
@@ -41,26 +41,26 @@
       "location": "square",
       "requires": "",
       "world_action": [
-        "Подними письмо у дороги.",
-        "Pick up the letter by the road."
+        "Подбери обрывки письма у дороги.",
+        "Pick up the torn letter by the road."
       ]
     },
     {
       "id": "guest",
       "npc": "mara",
       "zone": "library",
-      "mode": "reality",
+      "mode": "footprints",
       "title": [
         "Гость праздника",
         "Festival guest"
       ],
       "context": [
-        "Разгадай след гостя по оставленным знакам.",
-        "Decode the guest's trail of signs."
+        "Мара нашла следы гостя под окнами.",
+        "Mara found the guest's tracks by the windows."
       ],
       "rule": [
-        "Запомни знаки и пройди через двери в нужном порядке.",
-        "Remember the signs and take the doors in order."
+        "Выбирай след по форме и метке из улики.",
+        "Choose the trace with the shape and mark in the clue."
       ],
       "next": [
         "Теперь комнаты двух времён. Открой «Путешествие»: там есть путь.",
@@ -85,8 +85,8 @@
       "location": "square",
       "requires": "letter",
       "world_action": [
-        "Осмотри оставленную записку.",
-        "Inspect the note."
+        "Осмотри записку с приметами следа.",
+        "Inspect the note with the trace markings."
       ]
     },
     {
@@ -181,18 +181,18 @@
       "id": "bridge",
       "npc": "pavel",
       "zone": "town",
-      "mode": "reality",
+      "mode": "balance",
       "title": [
         "Защитники моста",
         "Bridge defenders"
       ],
       "context": [
-        "Найди с Павлом проход через отражение моста.",
-        "Find a passage through the bridge reflection with Pavel."
+        "Павлу нужно поровну распределить груз на мосту.",
+        "Pavel needs to balance the cargo on the bridge."
       ],
       "rule": [
-        "Запомни знаки и пройди через двери в нужном порядке.",
-        "Remember the signs and take the doors in order."
+        "Загрузи обе чаши одинаковым весом.",
+        "Load both sides with equal weight."
       ],
       "next": [
         "Теперь открытки доверия. Открой «Путешествие»: там есть путь.",
@@ -217,8 +217,8 @@
       "location": "bridge",
       "requires": "machine",
       "world_action": [
-        "Сверь метки на знаке у моста.",
-        "Check the marks on the sign by the bridge."
+        "Сверь метки на грузе у моста.",
+        "Check the cargo tags by the bridge."
       ]
     },
     {
@@ -313,18 +313,18 @@
       "id": "crowd",
       "npc": "nadia",
       "zone": "town",
-      "mode": "reality",
+      "mode": "signal_grid",
       "title": [
         "Не одна против толпы",
         "Not alone"
       ],
       "context": [
-        "Покажи Наде безопасный путь через копии площади.",
-        "Show Nadia the safe way through the copies of the square."
+        "Надя нашла схему фонарей, которые осветят путь с площади.",
+        "Nadia found a plan for lighting the way from the square."
       ],
       "rule": [
-        "Запомни знаки и пройди через двери в нужном порядке.",
-        "Remember the signs and take the doors in order."
+        "Включи группы фонарей по числам на схеме.",
+        "Light the runs shown by the numbers on the plan."
       ],
       "next": [
         "Теперь поезд без рельсов. Открой «Путешествие»: там есть путь.",
@@ -349,26 +349,26 @@
       "location": "square",
       "requires": "garden",
       "world_action": [
-        "Проверь план защиты площади.",
-        "Check the square protection plan."
+        "Подними схему сигнальных фонарей.",
+        "Pick up the signal light plan."
       ]
     },
     {
       "id": "train",
       "npc": "pavel",
       "zone": "town",
-      "mode": "reality",
+      "mode": "railway",
       "title": [
         "Поезд без рельсов",
         "Train without tracks"
       ],
       "context": [
-        "Найди с Павлом выход из повторяющихся вагонов.",
-        "Find the exit from the repeating carriages with Pavel."
+        "Павел нашёл пульт для трёх вагонов.",
+        "Pavel found controls for three carriages."
       ],
       "rule": [
-        "Запомни знаки и пройди через двери в нужном порядке.",
-        "Remember the signs and take the doors in order."
+        "Переводи стрелки и отправляй вагоны к нужным станциям.",
+        "Set the switches and send each carriage to its station."
       ],
       "next": [
         "Теперь столкновение городов. Открой «Путешествие»: там есть путь.",
@@ -393,8 +393,8 @@
       "location": "station",
       "requires": "crowd",
       "world_action": [
-        "Прочитай список пассажиров.",
-        "Read the passenger list."
+        "Прочитай список станций у платформы.",
+        "Read the station list at the platform."
       ]
     },
     {
@@ -445,18 +445,18 @@
       "id": "alina",
       "npc": "alina",
       "zone": "forest",
-      "mode": "reality",
+      "mode": "echo_tuning",
       "title": [
         "Рука Алины",
         "Alina's hand"
       ],
       "context": [
-        "Помоги Алине пройти сквозь отражения разлома.",
-        "Help Alina through the rift's reflections."
+        "Эхо Алины распадается. Настрой приёмник.",
+        "Alina's echo is breaking up. Tune the receiver."
       ],
       "rule": [
-        "Запомни знаки и пройди через двери в нужном порядке.",
-        "Remember the signs and take the doors in order."
+        "Совмести две волны, затем запиши эхо.",
+        "Align the two waves, then record the echo."
       ],
       "next": [
         "Теперь последний берег. Открой «Путешествие»: там есть путь.",
@@ -481,8 +481,8 @@
       "location": "rift",
       "requires": "collision",
       "world_action": [
-        "Осмотри след у разлома.",
-        "Inspect the mark by the rift."
+        "Осмотри приёмник у разлома.",
+        "Inspect the receiver by the rift."
       ]
     },
     {

@@ -24,12 +24,12 @@ func test_every_portal_is_reachable_in_every_room_and_reflection():
 		assert_true(maze.won(),id)
 
 func test_checkpoint_restores_reflection_and_rejects_wall_and_portal():
-	var origin=Maze.new("guest")
+	var origin=Maze.new("epochs")
 	var wrong: Vector2i=Maze.PORTALS[0] if origin.destination()!=Maze.PORTALS[0] else Maze.PORTALS[1]
 	assert_eq(enter(origin,wrong),"reflect")
 	origin.move(origin.route(origin.destination())[0])
 	var data=JSON.parse_string(JSON.stringify(origin.capture()))
-	var other=Maze.new("guest")
+	var other=Maze.new("epochs")
 	assert_true(other.restore(data))
 	assert_eq(other.capture(),origin.capture())
 	assert_eq(other.move(Vector2i(0,0)),"")
@@ -40,7 +40,7 @@ func test_checkpoint_restores_reflection_and_rejects_wall_and_portal():
 	assert_eq(other.capture(),origin.capture())
 
 func test_only_new_maze_stops_accept_maze_checkpoints():
-	var checkpoint={"mode":"reality","reality":Maze.new("letter").capture(),"npc":[600,600],"elapsed":0,"progress":0,"hp":5,"step":0,"alert":0,"heat":0}
+	var checkpoint={"mode":"reality","reality":Maze.new("epochs").capture()}
 	var save={"version":3,"index":0,"phase":"suspended","activity":checkpoint}
 	assert_true(EventProgress.valid(save))
 	save.index=3
@@ -49,15 +49,15 @@ func test_only_new_maze_stops_accept_maze_checkpoints():
 	checkpoint.mode="escort"
 	checkpoint.erase("reality")
 	assert_true(EventProgress.valid(save),"pre-0.20 saves remain readable")
-	var migrated=EventProgress.upgrade(save,{"id":"letter","mode":"reality"})
-	assert_eq(migrated.activity,{"mode":"reality","reality":Maze.new("letter").capture()})
+	var migrated=EventProgress.upgrade(save,{"id":"letter","mode":"letter_press"})
+	assert_eq(migrated.activity,{"mode":"letter_press","moves":[]})
 	assert_eq(migrated.index,save.index)
 	assert_eq(migrated.phase,"suspended")
 
 func test_failed_legacy_scene_restarts_on_its_replacement():
 	var save={"version":3,"index":1,"phase":"failure","activity":{"mode":"stealth","elapsed":16}}
-	var migrated=EventProgress.upgrade(save,{"id":"guest","mode":"reality"})
+	var migrated=EventProgress.upgrade(save,{"id":"guest","mode":"footprints"})
 	assert_eq(migrated.phase,"suspended")
-	assert_eq(migrated.activity.mode,"reality")
+	assert_eq(migrated.activity.mode,"footprints")
 	assert_true(EventProgress.valid(migrated))
-	assert_eq(EventProgress.upgrade({"phase":"decision"},{"id":"guest","mode":"reality"}),{"phase":"decision"})
+	assert_eq(EventProgress.upgrade({"phase":"decision"},{"id":"guest","mode":"footprints"}),{"phase":"decision"})
