@@ -59,13 +59,10 @@ func shot(name: String):
 	await RenderingServer.frame_post_draw
 	var path=screenshot_dir.path_join(tag+"-"+name+".png")
 	get_tree().root.get_texture().get_image().save_png(path);shots.append(path)
-func dismiss():
-	if game.modal and game.buttons.has("watch"): await choose("watch")
 func walk(point: Vector2,radius: float=18,timeout: float=90) -> bool:
 	var age=0.0
 	while game.player.position.distance_to(point)>radius and age<timeout:
 		if game.modal:
-			await dismiss()
 			if game.modal: motion(Vector2.ZERO);await get_tree().physics_frame;age+=dt();continue
 		steer(point)
 		await get_tree().physics_frame;age+=dt()
@@ -84,7 +81,6 @@ func travel(zone: String) -> bool:
 		var age=0.0
 		while (game.state.zone!=edge[2] or game.transitions.busy) and age<8:
 			await get_tree().physics_frame;age+=dt()
-		await dismiss()
 		if game.state.zone!=edge[2]:
 			print("TRAVEL BLOCK: edge=",edge," zone=",game.state.zone," player=",game.player.position," nearest=",game._nearest()," modal=",game.modal," buttons=",game.buttons.keys())
 			return false
@@ -132,7 +128,7 @@ func play_reality(index: int,id: String) -> bool:
 		check(director.phase=="suspended" and director.activity.reality.reflected,"reflected room restored")
 		if director.phase!="suspended": return false
 		if not await walk(director.npc.position+Vector2(0,30),12): return false
-		await tap(KEY_E);await choose("resume")
+		await tap(KEY_E)
 		if not game.event_window.active: return false
 		model=director.activity.reality
 		panel=game.event_window.puzzle_panel
@@ -162,18 +158,13 @@ func play_event(index: int) -> bool:
 		check(false,"meeting approach "+event.id);return false
 	var age=0.0
 	while director.phase in ["travel","observe"] and age<180:
-		await dismiss()
 		await get_tree().physics_frame;age+=dt()
 	check(director.phase=="ready","ready "+event.id)
 	if director.phase!="ready": return false
 	if not await walk(director.npc.position+Vector2(0,30),15): return false
 	await tap(KEY_E)
-	await choose("help")
-	check(director.phase=="action" or game.state.flag("event_action_"+event.id),"dialogue precedes world action "+event.id)
-	if director.phase=="action":
-		if not await walk(director.preparation_point(),12): check(false,"reachable world action "+event.id);return false
-		await tap(KEY_E)
-	check(game.state.flag("event_action_"+event.id),"world action persisted "+event.id)
+	check(director.phase=="running" and not game.modal,"one interaction opens board "+event.id)
+	check(game.state.flag("event_action_"+event.id),"board start persisted "+event.id)
 	check(game.event_window.active,"viewport "+event.id)
 	if not game.event_window.active: return false
 	var activity=director.activity

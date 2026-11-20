@@ -20,18 +20,13 @@ func fixture_at(index: int):
 	director.index=index
 	var place=game.journey.places[director.events[index].location]
 	game._build_world(place.zone,Vector2(place.point[0],place.point[1])+Vector2(0,65))
-	director.prepare(false)
+	director.prepare()
 	game._close()
 	for frame in range(3000):
 		if director.phase!="travel": break
 		game.npcs.update(game,.05,true)
 		director._physics_process(0)
 	game._close()
-func fulfill_action():
-	var director=game.events_controller
-	director.begin_preparation()
-	game.player.position=director.preparation_point()
-	director.complete_preparation()
 func run():
 	Engine.time_scale=8;Engine.physics_ticks_per_second=480;Engine.max_physics_steps_per_frame=64;Engine.max_fps=240
 	create_timer(1200).timeout.connect(func():push_error("Journey QA watchdog");quit(2))
@@ -78,9 +73,9 @@ func run():
 			check(game.journey.unlocked(event.location),"unlock "+event.id)
 			game.player.position=director.npc.position+Vector2(0,60)
 			director._physics_process(3.2);check(director.phase=="ready","NPC ready "+event.id)
-			director.talk(event.npc);check(game.buttons.has("help"),"NPC conversation "+event.id)
-			if ending==0 and index==0: await shot("conversation")
-			fulfill_action();var activity=director.activity
+			check(director.talk(event.npc) and not game.modal,"NPC starts trial "+event.id)
+			if ending==0 and index==0: await shot("letter")
+			var activity=director.activity
 			check(game.event_window.active and is_instance_valid(game.event_window.puzzle_panel),"board opens "+event.id)
 			game.event_window.toggle_pause();check(game.modal,"window pause")
 			game.event_window.resume();check(not game.modal,"window resume")
@@ -115,7 +110,7 @@ func run():
 			check(game.state.flag("event_done_"+event.id) and game.state.flag("place_changed_"+event.location),"world outcome "+event.id)
 			check(game.state.relations[option[3]]>relation,"relationship outcome "+event.id)
 			if index<11:
-				check(director.phase in ["travel","observe"],"next stage available")
+				check(director.phase in ["travel","ready"],"next stage available")
 				game._close()
 		check(game.state.flag("events_final_"+("together" if ending==0 else "home")),"distinct final choice")
 		if ending==0: await shot("final")
@@ -125,7 +120,7 @@ func verify_checkpoint():
 	game._new_event_game();game.set_physics_process(false);game.events_controller.set_physics_process(false)
 	fixture_at(0)
 	var director=game.events_controller
-	fulfill_action()
+	director.talk(director.events[0].npc)
 	var model=director.activity.trial
 	model.perform(model.hint())
 	var checkpoint=model.capture()

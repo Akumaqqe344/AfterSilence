@@ -16,12 +16,17 @@ static func accent(kind: String) -> Color:
 static func _texture(kind: String) -> Texture2D:
 	if mats.has(kind): return mats[kind]
 	var base=Color(THEMES[kind][0])
-	var surface=Image.create(64,48,false,Image.FORMAT_RGBA8)
-	for y in range(48):
-		for x in range(64):
+	var surface=Image.create(96,64,false,Image.FORMAT_RGBA8)
+	for y in range(64):
+		for x in range(96):
 			var grain=posmod(x*19+y*31+posmod(x+y*7,13)*9,59)
-			var inset=((y%12==0) or (y%12==1 and x%5<3)) and kind in ["tubes","balance","pairs","shelves","letter_press"]
-			var tint=base.darkened(.15) if inset else base.lightened(.07) if grain<4 else base.darkened(.06) if grain>54 else base
+			var wood=kind in ["tubes","balance","pairs","shelves","letter_press"]
+			var band=posmod(y+int(sin(x*.13)*2.0),16)
+			var tint=base
+			if wood and band==0: tint=base.darkened(.13)
+			elif wood and band==1: tint=base.lightened(.045)
+			elif grain<4: tint=base.lightened(.06)
+			elif grain>54: tint=base.darkened(.045)
 			surface.set_pixel(x,y,tint)
 	mats[kind]=ImageTexture.create_from_image(surface)
 	return mats[kind]

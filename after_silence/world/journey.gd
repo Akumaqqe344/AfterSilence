@@ -47,8 +47,6 @@ func guide_target() -> Dictionary:
 			if spot.id==portal:
 				return {"point":spot.position,"label":_portal_label(portal),"action":true,"id":portal,"range":28.0}
 		return {}
-	if director.phase=="action":
-		return {"point":director.preparation_point(),"label":game.t("Предмет для задания","Quest item"),"action":true,"id":"event_preparation","range":55.0}
 	if director.phase!="travel" and is_instance_valid(director.npc):
 		var ready=director.phase in ["ready","suspended","decision"]
 		return {"point":director.npc.position,"label":game.named(event.npc).split(" · ")[0],"action":ready,"id":event.npc,"range":52.0}

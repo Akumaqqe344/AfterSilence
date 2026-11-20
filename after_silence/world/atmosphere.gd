@@ -59,15 +59,7 @@ func _draw():
 		var p=Vector2(fposmod(i*97.0-age*speed*.2,720)-360,fposmod(i*71.0+age*speed,440)-220)
 		if zone=="forest": draw_line(p,p+Vector2(-2,7),Color(.62,.76,.8,.13 if not echo else .22))
 		else: draw_rect(Rect2(p.round(),Vector2(1,1)),Color("dfceb64e"))
-	if zone in ["town","harbor","orchard"]:
-		for i in range(22):
-			var cell=(position/32).floor()*32
-			var anchor_at=cell+Vector2(posmod(i*67,580)-290,posmod(i*41,300)-150)
-			var world=anchor_at+Vector2(roundf(sin(i+age*.72)*7),0)
-			if Water.depth(zone,world)<8: continue
-			var glint=(world-position).round()
-			draw_rect(Rect2(glint,Vector2(5+i%8,1)),Color("a9e1d964"))
-			if i%4==0: draw_rect(Rect2(glint+Vector2(2,3),Vector2(4,1)),Color("b3e3e23a"))
+	if zone in ["town","harbor"]: _water_glints()
 	for mote in motes:
 		var at=(mote.start-position+mote.velocity*mote.age).round()
 		draw_rect(Rect2(at,Vector2(3,2)),Color(.72,.61,.48,(1.0-mote.age/.35)*.7))
@@ -81,3 +73,19 @@ func _draw():
 			draw_rect(Rect2(offset.round(),Vector2(2,2) if dusk else Vector2(3,1)),tint)
 	if echo:
 		for i in range(4): draw_rect(Rect2(-360,-180+i*100+sin(age*.15+i)*25,720,12),Color(.4,.5,.65,.025))
+
+func _water_glints():
+	var cell=(position/54).floor()
+	for row in range(-4,5):
+		for column in range(-6,7):
+			var seed_point=Vector2i(cell)+Vector2i(column,row)
+			var seed_value=posmod((seed_point.x*73856093)^(seed_point.y*19349663),997)
+			var phase=fposmod(age*.42+seed_value*.049,1.0)
+			var at=Vector2(seed_point)*54+Vector2(seed_value%49,(seed_value*19)%50)
+			var length=6+seed_value%10
+			at.x+=roundf(phase*11)
+			if Water.depth(zone,at)<9 or Water.depth(zone,at+Vector2(length,0))<9: continue
+			var p=(at-position).round()
+			var alpha=sin(phase*PI)*.48
+			draw_rect(Rect2(p,Vector2(length,1)),Color(.78,.86,.73,alpha))
+			draw_rect(Rect2(p+Vector2(3,2),Vector2(length*.45,1)),Color(.76,.86,.79,alpha*.46))

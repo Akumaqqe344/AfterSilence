@@ -57,8 +57,7 @@ func begin_board(index: int):
 	var place=game.journey.places[event.location]
 	var site=Vector2(place.point[0],place.point[1])
 	test_route(index,place.zone,site+Vector2(0,70),event.npc,"ready")
-	game.state.set_flag("event_action_"+event.id)
-	director.start_activity()
+	director.talk(event.npc)
 	check(game.event_window.active,"visual board opens "+event.id)
 	return game.event_window.puzzle_panel
 
@@ -118,10 +117,12 @@ func run():
 	var time=game.modal_backdrop.sky_time
 	await get_tree().create_timer(.32).timeout
 	check(game.modal_backdrop.sky_time>time+.15,"actual animated menu")
+	check(game.modal_backdrop.menu_actor_pose(.0)!=game.modal_backdrop.menu_actor_pose(.5),"walking advances the menu sprite and position")
 	await shot("01-dusk")
 	game.comfort.reduce_motion=true
 	game._main_menu()
 	check(not game.modal_backdrop.is_processing(),"reduced motion stops menu animation")
+	check(game.modal_backdrop.menu_actor_pose(0)==game.modal_backdrop.menu_actor_pose(8),"menu sprite holds a resting pose with reduced motion")
 	game.comfort.reduce_motion=false
 	game._new_event_game();game._close()
 	game.set_physics_process(false);game.events_controller.set_physics_process(false)
@@ -129,8 +130,7 @@ func run():
 	game.story_hud.announce(game.t("Площадь","Square"))
 	check(game.story_hud.arrival_age>0,"zone arrival ribbon appears")
 	await shot("02-npc")
-	test_route(0,"town",Vector2(888,675),"event_preparation","action")
-	await shot("03-object")
+	check(game.world.interactables.all(func(spot):return spot.id!="event_preparation"),"no detached quest trigger")
 	test_route(9,"town",Vector2(609,640),"to_library")
 	test_route(3,"town",Vector2(607,773),"home_lev")
 	test_route(6,"town",Vector2(1264,700),"visit_orchard")

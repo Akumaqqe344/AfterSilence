@@ -13,6 +13,7 @@ var interactables: Array = []
 var zone = "town"
 var echo = false
 var story_mode=false
+var visual_comfort
 var paths: Array=[]
 var glow_texture: Texture2D
 func build(id: String, distorted: bool):

@@ -2,6 +2,7 @@ extends CharacterBody2D
 signal footstep(loud: bool)
 signal landed
 # Pechatai character.js: 180 / 1.65 / 1300 / 1600, normalized eight-way input.
+const Appearance=preload("res://after_silence/core/npc_appearance.gd")
 const SPEED=180.0
 const ACCEL=1300.0
 const DECEL=1600.0
@@ -30,6 +31,8 @@ var managed_velocity=Vector2.ZERO
 var npc_anchor=Vector2(32,92)
 var portrait=Rect2(8,0,48,48)
 var visual_comfort
+var animated_idle=false
+var idle_clock=0.0
 var settle_age=0.0
 var sprite_step=0.0
 func _ready():
@@ -114,6 +117,10 @@ func _physics_process(dt):
 	elevation=4*p*(1-p)*jump_peak if p<1 else 0.0
 	inspect_time=maxf(0,inspect_time-dt)
 	var frame=int(phase)%4 if moving else 0
+	if animated_idle and not moving:
+		if visual_comfort!=null and not visual_comfort.reduce_motion:
+			idle_clock=fposmod(idle_clock+dt,12.0)
+		frame=idle_frame()
 	var row=facing
 	var size=Vector2(64,96)
 	var anchor=Vector2(32,92)
@@ -134,6 +141,8 @@ func _physics_process(dt):
 		sprite.texture=clips[clip]
 	sprite.region_rect=Rect2(Vector2(frame,row)*size,size)
 	sprite.position=(-anchor*.7-Vector2(0,elevation)) if is_player else -npc_anchor*sprite.scale
+	if animated_idle and not moving and visual_comfort!=null and not visual_comfort.reduce_motion:
+		sprite.position.y-=roundf(.7*sin(idle_clock*1.8))
 	if is_player:
 		var show_motion=visual_comfort!=null and not visual_comfort.reduce_motion
 		var lean=clampf(motion.x/(320 if running else 250)*.047,-.047,.047) if show_motion else 0.0
@@ -142,6 +151,10 @@ func _physics_process(dt):
 		sprite_step=lerpf(sprite_step,lift,minf(1,dt*16))
 		if show_motion: sprite.position.y-=roundf(sprite_step-settle_age*7)
 	queue_redraw()
+func idle_frame() -> int:
+	if visual_comfort==null or visual_comfort.reduce_motion: return Appearance.REST_FRAME
+	return Appearance.BLINK_FRAME if fposmod(idle_clock,4.0)>3.84 else Appearance.REST_FRAME
+
 func _draw():
 	var shrink=maxf(.4,1-elevation/28*.45)
 	draw_set_transform(Vector2.ZERO,0,Vector2(shrink,shrink*.32))

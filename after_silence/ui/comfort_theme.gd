@@ -1,8 +1,8 @@
 extends RefCounted
 ## Shared palette and control states for the whole desktop interface.
-const FONT_FILE=preload("res://after_silence/assets/fonts/Nunito-Regular.ttf")
-static var FONT: Font=_weighted_font(485)
-static var HEADING: Font=_weighted_font(720)
+const FONT_FILE=preload("res://after_silence/assets/fonts/PixelifySans.ttf")
+static var FONT: Font=_weighted_font(475)
+static var HEADING: Font=_weighted_font(660)
 const INK=Color("141c1a")
 const SURFACE=Color("222e2a")
 const TEXT=Color("f6efdd")
@@ -29,7 +29,7 @@ static func panel(bg: Color=SURFACE, accent: bool=false) -> StyleBoxFlat:
 	box.border_color=BRASS if accent else EDGE
 	box.set_border_width_all(1)
 	box.border_width_bottom=1
-	box.set_corner_radius_all(3)
+	box.set_corner_radius_all(2)
 	box.set_content_margin_all(12)
 	box.shadow_color=Color("080d0b70")
 	box.shadow_size=4
@@ -38,8 +38,8 @@ static func panel(bg: Color=SURFACE, accent: bool=false) -> StyleBoxFlat:
 	return box
 
 static func button(active: bool=false, pressed: bool=false) -> StyleBoxFlat:
-	var box=panel(Color("4a4c36") if pressed else Color("38483a") if active else Color("2b3831"))
-	box.border_color=PEACH if active else Color("435448")
+	var box=panel(Color("594938") if pressed else Color("3b4a3a") if active else Color("2a392f"))
+	box.border_color=BRASS if active else Color("4a5b4a")
 	box.content_margin_top=4
 	box.content_margin_bottom=4
 	box.content_margin_left=10
@@ -50,7 +50,7 @@ static func button(active: bool=false, pressed: bool=false) -> StyleBoxFlat:
 static func create(large: bool=false) -> Theme:
 	var result=Theme.new()
 	result.default_font=FONT
-	result.default_font_size=14 if large else 11
+	result.default_font_size=14 if large else 12
 	for type in ["Label","Button","CheckButton","CheckBox","RichTextLabel"]:
 		result.set_color("font_color",type,TEXT)
 	result.set_color("default_color","RichTextLabel",TEXT)

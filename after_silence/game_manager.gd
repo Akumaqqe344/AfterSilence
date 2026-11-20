@@ -336,7 +336,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	header.text=title
 	header.add_theme_color_override("font_color",ComfortTheme.PEACH)
 	header.add_theme_font_override("font",ComfortTheme.HEADING)
-	header.add_theme_font_size_override("font_size",31 if main_layout else 20)
+	header.add_theme_font_size_override("font_size",33 if main_layout else 20)
 	header.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var portrait_id=id.split("_")[0]
 	if id=="intro": portrait_id="vera"
@@ -367,7 +367,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	body.custom_minimum_size=Vector2(0,24)
 	body.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	body.add_theme_color_override("default_color",ComfortTheme.TEXT)
-	body.add_theme_font_size_override("normal_font_size",14 if comfort.large_text else 12)
+	body.add_theme_font_size_override("normal_font_size",15 if comfort.large_text else 13)
 	if main_layout: body.add_theme_color_override("default_color",ComfortTheme.MUTED)
 	column.add_child(body)
 	body.visible=not text.is_empty()
@@ -382,7 +382,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		button.text=item.label
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
 		button.custom_minimum_size=Vector2(0,26)
-		button.add_theme_font_size_override("font_size",14 if comfort.large_text else 12)
+		button.add_theme_font_size_override("font_size",14 if comfort.large_text else 13)
 		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
 		button.pressed.connect(func():
@@ -443,7 +443,7 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("После тишины","After Silence"),t("Вера возвращается в город, где исчезла её сестра.","Vera returns to the town where her sister disappeared."),[choice("events_load","Продолжить путешествие","Continue journey",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_confirm_new_event),choice("archive","Архив историй","Story archive",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выйти из игры","Quit game",func():get_tree().quit())],false,true)
+	_dialog("",t("После тишины","After Silence"),t("Вера ищет сестру в городе, который забывает.","Vera searches for her sister in a town that forgets."),[choice("events_load","Продолжить путешествие","Continue journey",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_confirm_new_event),choice("archive","Архив историй","Story archive",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выйти из игры","Quit game",func():get_tree().quit())],false,true)
 	buttons["events_load"].disabled=not event_saves.exists()
 	buttons["events_load"].tooltip_text=t("Здесь появится твоё сохранённое путешествие","Your saved journey will appear here") if not event_saves.exists() else t("Вернуться к сохранённой истории","Return to your saved story")
 	_wire_dialog_focus()
@@ -457,7 +457,7 @@ func _confirm_new_event():
 	_dialog("",t("Начать сначала?","Begin again?"),t("Новое путешествие заменит текущее автосохранение. Прежние истории в архиве останутся.","A new journey replaces the current autosave. Earlier stories in the archive stay safe."),[choice("back","Оставить мою историю","Keep my story",_main_menu),choice("restart","Начать новое путешествие","Begin a new journey",_new_event_game)],false)
 func _archive_menu():
 	in_menu=true
-	_dialog("",t("АРХИВ","ARCHIVE"),t("ПРЕЖНИЕ СОХРАНЕНИЯ","PREVIOUS SAVES"),[choice("load","Продолжить разлом","Continue rift",_continue_rift),choice("rift","Начать разлом заново","Restart rift",_new_rift_game),choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_main_menu)],false,true)
+	_dialog("",t("Архив","Archive"),t("Прежние истории","Earlier stories"),[choice("load","Продолжить разлом","Continue rift",_continue_rift),choice("rift","Начать разлом заново","Restart rift",_new_rift_game),choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_main_menu)],false,true)
 func _new_event_game():
 	var lang=state.language
 	var volume=state.volume
@@ -562,6 +562,7 @@ func _build_world(id: String,p: Vector2):
 		world=World.new()
 		add_child(world)
 	world.story_mode=state.flag("event_campaign")
+	world.visual_comfort=comfort
 	world.build(id,state.echo)
 	state.zone=id
 	state.set_flag("explored_"+id)
@@ -615,12 +616,14 @@ func _build_world(id: String,p: Vector2):
 	if is_instance_valid(adventure): adventure.populate()
 	if id=="town" and rift.phase=="travel" and state.flag("rift_mode") and not state.flag("rift_finished") and rift.index<rift.STOPS.size():
 		world.spot("rift_next",rift.STOPS[rift.index],"trace")
-	if is_instance_valid(events_controller): events_controller.populate_preparation()
 	if is_instance_valid(events_controller): events_controller.refresh_mementos()
 func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	var actor=Actor.new()
 	var appearance=preload("res://after_silence/core/npc_appearance.gd")
-	actor.sheet=appearance.sheet(id) if appearance.PROFILES.has(id) else load(path)
+	actor.animated_idle=appearance.PROFILES.has(id)
+	actor.visual_comfort=comfort
+	actor.idle_clock=posmod(id.hash(),380)/100.0
+	actor.sheet=appearance.sheet(id) if actor.animated_idle else load(path)
 	actor.body_height=appearance.height(id)
 	actor.npc_color=color
 	actor.position=p
@@ -731,15 +734,15 @@ func _nearest() -> String:
 		if d<distance: distance=d;result=spot.id
 	return result
 func can_interact(id: String) -> bool:
-	if id=="event_preparation": return state.flag("event_campaign") and events_controller.phase=="action"
 	if state.flag("event_campaign") and is_instance_valid(event_window) and event_window.active: return false
 	if state.flag("event_campaign") and (id.begins_with("collect_") or id in ["rift_next","hotspot_lamp"]): return false
 	if id in ["hotspot_window","hotspot_furniture"] and state.flag("examined_"+state.zone+"_"+id): return false
 	if not state.flag("rift_mode"): return true
 	return id not in ["photo","poster","ledger","clock","diagram","testimony","signature","medical","relay","mirror","catalog","library_light","ribbon","trace","shelter","home_memory"]
 func _object_name(id: String) -> String:
+	if state.flag("event_campaign") and events_controller.owns(id):
+		return events_controller.pair(events_controller.events[events_controller.index].title)
 	if actors.has(id): return named(id)
-	if id=="event_preparation": return events_controller.pair(events_controller.events[events_controller.index].world_action)
 	if id=="village_hints": return adventure.label(id)
 	if id.begins_with("hamlet_house_"): return adventure.label(id)
 	if id in ["visit_shop","leave_shop","shop_counter","riverside_rest"]: return adventure.label(id)
@@ -832,7 +835,6 @@ func _quest_help():
 	if state.flag("event_campaign"): journey.open();return
 	_dialog("",t("Куда идти?","Where to go?"),shop.hint()+"\n"+t("Золотая отметка на карте — следующее событие. E — действие.","The gold map marker is the next event. E: interact."),[choice("map","Показать карту","Show map",func():_close();adventure.expanded=true),choice("close","Понятно","Got it",_close)],false)
 func interact(id: String):
-	if id=="event_preparation": events_controller.complete_preparation();return
 	if state.flag("event_campaign"):
 		var destinations={"to_library":"library","to_forest":"forest","home_lev":"home_lev","home_sonya":"home_sonya"}
 		if destinations.has(id) and not journey.zone_allowed(destinations[id]):

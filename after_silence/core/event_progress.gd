@@ -32,6 +32,7 @@ static func upgrade(data: Dictionary, event: Dictionary) -> Dictionary:
 	var saved=data.duplicate(true)
 	var stage=saved.get("phase","")
 	if stage=="failure": saved.phase="suspended"
+	if stage in ["observe","action"]: saved.phase="travel"
 	if stage in ["failure","running","suspended"] and saved.get("activity",{}).get("mode","")!=event.mode:
 		if event.mode=="reality":
 			saved.activity={"mode":"reality","reality":Reality.new(event.id).capture()}

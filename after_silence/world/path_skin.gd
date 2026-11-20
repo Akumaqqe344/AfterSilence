@@ -5,7 +5,7 @@ var world
 func _draw():
 	_meadow()
 	# Paint each layer across all segments so intersections merge into one road.
-	var colors=[Color("989067"),Color("a8976f"),Color("b5a077")]
+	var colors=[Color("968761"),Color("ae966c"),Color("baa277")]
 	for layer in range(colors.size()):
 		for path in world.paths:
 			var radius: float=path[2]+5-layer*4
@@ -20,6 +20,7 @@ func _draw():
 			if world.on_path(p,-7):
 				var tint=Color("9e906b") if seed_value<13 else Color("c6b38a")
 				draw_rect(Rect2(p,Vector2(1+seed_value%3,1)),tint)
+				if seed_value<5: draw_rect(Rect2(p+Vector2(1,-1),Vector2(2,1)),Color("d4bc91"))
 
 func _meadow():
 	var palettes={
@@ -51,6 +52,13 @@ func _meadow():
 				var green=Color("697b50") if world.zone!="forest" else Color("50694c")
 				draw_line(at,at+Vector2(-2,-4),green,1)
 				draw_line(at,at+Vector2(1,-6),green,1)
-				if (seed_value+i)%9==0:
-					var flower=Color("e0c799") if i%2 else Color("cab1ac")
-					draw_rect(Rect2(at+Vector2(0,-7),Vector2(3,2)),flower)
+				if (seed_value+i)%11<2: _wildflowers(at,seed_value+i)
+
+func _wildflowers(at: Vector2, seed_value: int):
+	var flower=[Color("d2a099"),Color("e8cf97"),Color("a9acc3")][seed_value%3]
+	for offset in [Vector2(-3,-2),Vector2(1,0),Vector2(4,1)]:
+		var bloom=at+offset+Vector2(0,-6)
+		draw_line(bloom+Vector2(0,1),at+offset+Vector2(1,0),Color("5c744a"),1)
+		draw_rect(Rect2(bloom-Vector2(1,0),Vector2(3,1)),flower)
+		draw_rect(Rect2(bloom-Vector2(0,1),Vector2(1,3)),flower)
+		draw_rect(Rect2(bloom,Vector2(1,1)),Color("ebd4a0"))

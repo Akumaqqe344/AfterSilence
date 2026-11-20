@@ -62,6 +62,18 @@ func run():
 			for id in identities: check(game.actors[id].get_instance_id()==identities[id],"persistent resident "+zone+id)
 	game.state.echo=false
 	game._build_world("town",Vector2(600,645))
+	var lev=game.actors.lev
+	var prior_motion: bool=game.comfort.reduce_motion
+	game.comfort.reduce_motion=false
+	lev.idle_clock=3.91
+	check(lev.idle_frame()==5,"resident uses a dedicated blink frame")
+	game.comfort.reduce_motion=true
+	check(lev.idle_frame()==4,"resident rests with reduced motion")
+	game.comfort.reduce_motion=prior_motion
+	var sheet: Image=lev.sheet.get_image()
+	var rest=sheet.get_region(Rect2i(256,0,64,96))
+	var blink=sheet.get_region(Rect2i(320,0,64,96))
+	check(rest.get_data()!=blink.get_data(),"rest and blink have distinct artwork")
 	for id in game.actors: game.state.residents[id].zone="library";game.npcs.attach(game,id)
 	for pair in [["lev",Vector2(560,640)],["nadia",Vector2(600,640)]]:
 		game.state.residents[pair[0]].zone="town";game.actors[pair[0]].position=pair[1];game.npcs.attach(game,pair[0])

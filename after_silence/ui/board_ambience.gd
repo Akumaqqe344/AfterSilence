@@ -25,18 +25,18 @@ func _process(dt):
 
 func _draw():
 	draw_rect(Rect2(15,61,577,1),Color(tint.r,tint.g,tint.b,.49))
-	draw_rect(Rect2(15,61,81,2),tint)
-	draw_rect(Rect2(545,5,45,41),Color("192a34"))
+	draw_rect(Rect2(15,61,25,2),tint)
+	draw_rect(Rect2(545,5,45,41),Color("17241e"))
 	draw_rect(Rect2(545,5,45,41),tint.darkened(.21),false)
 	for x in [12,588]:
 		for y in [61,282]:
 			draw_rect(Rect2(x,y,7,1),tint)
 			draw_rect(Rect2(x,y,1,4),tint)
 	if game.comfort.reduce_motion: return
-	for i in range(8):
+	for i in range(5):
 		var x=27+fposmod(i*83+time*(7+i%2*3),536)
 		var y=69+sin(time*.85+i*1.9)*2
-		var light=Color(tint.r,tint.g,tint.b,.28+i%3*.13)
+		var light=Color(tint.r,tint.g,tint.b,.16+i%3*.09)
 		draw_rect(Rect2(roundf(x),roundf(y),2,1+i%2),light)
 	var sheen=16+fposmod(time*57,568)
-	draw_rect(Rect2(roundf(sheen),61,12,1),Color("fff0cf88"))
+	draw_rect(Rect2(roundf(sheen),61,9,1),Color("fff0cf55"))

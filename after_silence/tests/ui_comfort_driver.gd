@@ -64,7 +64,7 @@ func run():
 	await settle()
 	check(game.modal_backdrop.sky_time>.05,"menu animates with default motion settings")
 	check(game.ComfortTheme.FONT.has_char("Я".unicode_at(0)),"font has Cyrillic")
-	check(game.ComfortTheme.HEADING.base_font==game.ComfortTheme.FONT.base_font,"headings share the interface font family")
+	check(game.ComfortTheme.FONT.get_font_name().contains("Pixelify"),"pixel typeface used throughout the interface")
 	check(game.buttons.events_load.disabled,"continue disabled without save")
 	check(get_viewport().gui_get_focus_owner()==game.buttons.events_new,"new journey focused")
 	dialog_bounds("menu",true)

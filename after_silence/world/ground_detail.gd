@@ -12,14 +12,18 @@ func draw_shore():
 			var depth=Water.depth(zone,p)
 			if depth< -16: continue
 			var rect=Rect2(x,y,4,4)
-			if depth< -8: draw_rect(rect,Color("83936c"))
-			elif depth<0: draw_rect(rect,Color("baa77d"))
+			if depth< -8: draw_rect(rect,Color("83916a") if depth< -12 else Color("919971"))
+			elif depth<0:
+				draw_rect(rect,Color("c9b184") if depth< -3 else Color("a89170"))
+				if posmod(x*117+y*77,19)==0: draw_rect(Rect2(p,Vector2(2,1)),Color("e1c796"))
 			else:
 				draw_texture_rect_region(water,rect,Rect2(posmod(x,80),posmod(y,80),4,4))
-				if depth<3: draw_rect(Rect2(x,y,4,1),Color("8fb19d"))
+				if depth<3: draw_rect(Rect2(x,y,4,1),Color("9fbca5"))
+				elif depth>13 and posmod(x*39+y*81,59)==0: draw_rect(Rect2(x,y,4,1),Color("a7b49a55"))
 			if depth< -6 and posmod(x*13+y*7,41)==0:
 				draw_line(p,p+Vector2(-2,-9),Color("526e3c"),2)
-				draw_line(p+Vector2(3,0),p+Vector2(4,-12),Color("8fa65b"),2)
+				draw_line(p+Vector2(3,0),p+Vector2(4,-12),Color("7e9858"),1)
+				draw_rect(Rect2(p+Vector2(3,-13),Vector2(2,5)),Color("a57d56"))
 func _draw():
 	if zone in ["town","harbor"]: draw_shore()
 	if zone.begins_with("home_") or zone=="shop":

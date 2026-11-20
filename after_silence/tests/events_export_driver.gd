@@ -24,13 +24,13 @@ func run():
 		check(event.mode in preload("res://after_silence/core/event_progress.gd").MODES,"packed activity "+event.mode)
 		check(not modes.has(event.mode),"unique mechanic "+event.mode)
 		modes[event.mode]=true
-	check(game.world.interactables.all(func(s):return s.id not in ["rift_next","hotspot_lamp"] and not str(s.id).begins_with("collect_")),"packed world has no quest lamps or collections")
+	check(game.world.interactables.all(func(s):return s.id not in ["rift_next","hotspot_lamp"] and s.id!="event_preparation" and not str(s.id).begins_with("collect_")),"packed world has no quest lamps or collections")
 	game.player.position=director.npc.position+Vector2(0,60)
 	director._physics_process(3.2)
-	check(director.phase=="ready","packed observation")
-	director.talk("lev");check(game.buttons.has("help"),"packed NPC dialogue")
-	director.begin_preparation();game.player.position=director.preparation_point()
-	check(director.complete_preparation(),"packed required world action")
+	check(director.phase=="ready","packed meeting")
+	var old_action={"version":3,"index":0,"phase":"action","activity":{}}
+	check(preload("res://after_silence/core/event_progress.gd").upgrade(old_action,director.events[0]).phase=="travel","old pending object action returns to the meeting")
+	check(director.talk("lev") and game.event_window.active and not game.modal,"packed NPC starts the board immediately")
 	game.event_window.leave()
 	var position=game.state.position
 	game.state.event_state={"version":3,"index":0,"phase":"running","activity":{"mode":"escort","elapsed":15,"progress":2,"hp":3}}

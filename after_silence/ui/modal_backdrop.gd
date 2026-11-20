@@ -1,4 +1,5 @@
 extends Control
+const WALK=preload("res://after_silence/assets/pechatai/player/walk.png")
 const PORTRAIT=preload("res://after_silence/assets/pechatai/player/idle.png")
 const DESIGN=preload("res://after_silence/ui/comfort_theme.gd")
 const HOME=preload("res://after_silence/assets/art100/house-1.png")
@@ -47,7 +48,9 @@ func _panorama():
 	var sun=Vector2(496,104)
 	for radius in [48,39,31]:
 		draw_circle(sun,radius,Color("f3c18c18"))
-	draw_circle(sun,26,Color("f5cf96"))
+	draw_circle(sun,26,Color("f0c991"))
+	for i in range(3):
+		draw_rect(Rect2(479+i*5,112+i*5,24-i*5,1),Color("f7deb1"))
 	for i in range(7):
 		var p=Vector2(279+posmod(i*89+int(sky_time*(2+i%3)),390),53+posmod(i*47,106))
 		draw_rect(Rect2(p,Vector2(35+i*5,2)),Color("f5d1a433"))
@@ -72,9 +75,10 @@ func _panorama():
 	draw_texture_rect(SHOP,Rect2(542,194,102,82),false,Color("c6ad8e"))
 	draw_texture_rect(LAMP,Rect2(389,215,35,76),false,Color("ecd1aa"))
 	for radius in [22,15,9]:
-		draw_circle(Vector2(406,241),radius,Color("f2bf7825"))
-	var bob=roundf(sin(sky_time*2)) if animation_enabled else 0
-	draw_texture_rect_region(PORTRAIT,Rect2(492,246+bob,43,66),Rect2(5,8,56,86))
+		var glow=Color("f2bf782a")
+		glow.a*=.92+.08*cos(sky_time*2.5)
+		draw_circle(Vector2(406,241),radius,glow)
+	_draw_menu_actor()
 	for i in range(12):
 		var at=Vector2(332+i*26+roundf(cos(sky_time*.71+i)*7),291+(i*13)%43+roundf(sin(sky_time*.57+i)*6))
 		draw_rect(Rect2(at,Vector2(2,2)),Color("edc685"))
@@ -87,6 +91,28 @@ func _panorama():
 		draw_rect(Rect2(x,0,4,360),Color(.075,.106,.091,alpha*.97))
 	draw_rect(Rect2(32,34,23,2),DESIGN.BRASS)
 
+func menu_actor_pose(at: float) -> Vector3i:
+	if not animation_enabled: return Vector3i(513,0,0)
+	var beat=fposmod(at,12.0)
+	if beat<3.2:
+		return Vector3i(roundi(457+beat*17.5),3,floori(beat*7)%4)
+	if beat<6.0: return Vector3i(513,0,0)
+	if beat<9.2:
+		var stride=beat-6.0
+		return Vector3i(roundi(513-stride*17.5),2,floori(stride*7)%4)
+	return Vector3i(457,0,0)
+
+func _draw_menu_actor():
+	var pose=menu_actor_pose(sky_time)
+	var feet=Vector2(pose.x,roundf(312.0-(pose.x-457)*.021))
+	var moving=pose.y!=0
+	draw_set_transform(feet,0,Vector2(1,.28))
+	draw_circle(Vector2.ZERO,11,Color("141b15a0"))
+	draw_set_transform(Vector2.ZERO)
+	var lift=0 if not moving else pose.z%2
+	var region=Rect2(Vector2(pose.z,pose.y)*Vector2(64,96),Vector2(64,96))
+	draw_texture_rect_region(WALK if moving else PORTRAIT,Rect2(feet-Vector2(22,63+lift),Vector2(44,66)),region)
+
 func _hills(height: float, amplitude: float, frequency: float, color: Color):
 	for x in range(0,640,4):
 		var y=roundf(height+sin(x*frequency)*amplitude*.35+sin(x*frequency*.31)*amplitude)
@@ -94,7 +120,7 @@ func _hills(height: float, amplitude: float, frequency: float, color: Color):
 
 func _quiet_victory():
 	var t=sky_time/.9
-	for i in range(10):
+	for i in range(12):
 		var x=320+(-1 if i%2 else 1)*(245+sin(i*2.4+t*2.0)*32)
 		var y=136+i*13-t*35
 		var gold=Color("e4bf8d")
