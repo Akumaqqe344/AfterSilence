@@ -170,7 +170,7 @@ func _ready():
 func _setup_services():
 	if is_instance_valid(event_window): event_window.close()
 	if is_instance_valid(events_controller):
-		events_controller.dispose_activity(true)
+		events_controller.dispose_activity()
 		events_controller.npc=null
 	objectives=preload("res://after_silence/core/objective_tracker.gd").new(state)
 	objectives.quest_completed.connect(func(id):
@@ -182,6 +182,7 @@ func _setup_services():
 	dialogues=Dialogues.new(state)
 	if npcs!=null: npcs.dispose(self)
 	npcs=NPCs.new(state)
+	npcs.restore_retired_assignments()
 	if not state.changed.is_connected(_mark_dirty): state.changed.connect(_mark_dirty)
 	if not is_instance_valid(audio):
 		audio=Audio.new()
@@ -524,8 +525,6 @@ func _save(notify: bool=true):
 	state.minigame=preload("res://after_silence/core/minigame_checkpoint.gd").capture(rift) if rift.active else {}
 	if not state.flag("event_campaign"): objectives.refresh()
 	state.position=player.position
-	if state.flag("event_campaign") and is_instance_valid(events_controller.activity) and events_controller.activity.mode=="epochs" and is_instance_valid(events_controller.activity.maze) and events_controller.activity.maze.in_view:
-		state.position=events_controller.activity.maze.source_player_position
 	if saves.save(state):
 		dirty=false
 		if notify: _notify(t("История сохранена","Story saved"))
@@ -597,7 +596,6 @@ func _build_world(id: String,p: Vector2):
 	if is_instance_valid(adventure): adventure.populate()
 	if id=="town" and rift.phase=="travel" and state.flag("rift_mode") and not state.flag("rift_finished") and rift.index<rift.STOPS.size():
 		world.spot("rift_next",rift.STOPS[rift.index],"trace")
-	if is_instance_valid(events_controller): events_controller.attach_activity(id)
 	if is_instance_valid(events_controller): events_controller.populate_preparation()
 	if is_instance_valid(events_controller): events_controller.refresh_mementos()
 func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
@@ -623,34 +621,26 @@ func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	actor.add_child(caption)
 	actor.set_meta("caption",caption)
 func _physics_process(dt):
-	if is_instance_valid(help_button): help_button.visible=not modal and not in_menu and not rift.active and not battle.active
-	if is_instance_valid(zoom_button): zoom_button.visible=not modal and not in_menu and not rift.active
-	if is_instance_valid(objective): objective.visible=not modal and not in_menu and not rift.active
+	var board_open=is_instance_valid(event_window) and event_window.active
+	if is_instance_valid(help_button): help_button.visible=not modal and not in_menu and not rift.active and not battle.active and not board_open
+	if is_instance_valid(zoom_button): zoom_button.visible=not modal and not in_menu and not rift.active and not board_open
+	if is_instance_valid(objective): objective.visible=not modal and not in_menu and not rift.active and not board_open
 	shift_cooldown=maxf(0,shift_cooldown-dt)
 	if modal and is_instance_valid(body) and body.visible_characters>=0:
 		type_progress+=dt*42
 		body.visible_characters=int(type_progress)
 		if body.visible_characters>=body.get_total_character_count(): body.visible_characters=-1
 	if not is_instance_valid(player): return
-	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active and not rift.active and not adventure.expanded
-	var npc_enabled=enabled
-	if state.flag("event_campaign") and event_window.active and is_instance_valid(events_controller.activity):
-		var activity=events_controller.activity
-		if activity.mode=="tactics" or activity.board_mode(): enabled=false
-		if activity.board_mode(): npc_enabled=false
+	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active and not rift.active and not adventure.expanded and not board_open
 	player.enabled=enabled
 	if is_instance_valid(enemy):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
 		enemy.visible=state.flag("sonya_met") and not state.flag("returned")
 		enemy.pressure=state.pressure
-	npcs.update(self,dt,npc_enabled)
+	npcs.update(self,dt,enabled)
 	if not enabled: return
-	var combat_pending=false
-	for resident in state.residents.values():
-		if resident.get("control","")=="combat": combat_pending=true;break
-	if not combat_pending:
-		state.clock=fposmod(state.clock+dt/60,24)
-		state.play_seconds+=dt
+	state.clock=fposmod(state.clock+dt/60,24)
+	state.play_seconds+=dt
 	autosave_age+=dt
 	if autosave_age>20:
 		autosave_age=0
@@ -706,7 +696,7 @@ func _nearest() -> String:
 	for spot in world.interactables:
 		if spot.position.distance_to(player.position)<28 and (spot.id in Homes.IDS or spot.id in ["to_library","to_forest","to_town","leave_home","leave_shop","visit_shop","visit_orchard","visit_harbor","district_return"]):
 			return spot.id
-	if state.flag("event_campaign") and is_instance_valid(events_controller) and events_controller.phase in ["observe","ready","suspended","decision","failure"]:
+	if state.flag("event_campaign") and is_instance_valid(events_controller) and events_controller.phase in ["observe","ready","suspended","decision"]:
 		var actor=events_controller.npc
 		if is_instance_valid(actor) and actor.is_visible_in_tree() and actor.position.distance_to(player.position)<55:
 			return events_controller.events[events_controller.index].npc
@@ -755,9 +745,6 @@ func _unhandled_key_input(event):
 	if transitions.busy: return
 	if rift.active: return
 	if state.flag("event_campaign") and event_window.active:
-		if is_instance_valid(event_window.puzzle_panel): return
-		if event.physical_keycode==KEY_SPACE: player.jump(Input.is_physical_key_pressed(KEY_SHIFT))
-		elif event.physical_keycode in [KEY_T,KEY_J,KEY_H,KEY_I]: event_window.toggle_pause()
 		return
 
 	if battle.active:
@@ -777,9 +764,6 @@ func _unhandled_key_input(event):
 				return
 			if in_menu: return
 			_close()
-			if state.flag("event_campaign") and events_controller.phase=="failure":
-				events_controller.phase="ready"
-				if is_instance_valid(events_controller.npc): events_controller.npc.managed_motion=true
 		return
 	match event.physical_keycode:
 		KEY_T: if state.flag("event_campaign"): journey.open()
@@ -1166,12 +1150,11 @@ func _toggle_comfort(key: String):
 	ui.theme=ComfortTheme.create(comfort.large_text)
 	objective.add_theme_font_size_override("font_size",10 if comfort.large_text else 8)
 	hint.add_theme_font_size_override("font_size",10 if comfort.large_text else 8)
-	event_window.goal.add_theme_font_size_override("font_size",8 if comfort.large_text else 8)
 	_settings()
 	buttons[key].grab_focus()
 
 func _controls_help():
-	_dialog("",t("Путешествуй в своём темпе","Explore at your own pace"),t("WASD или стрелки — идти\nE — поговорить или действовать\nПробел — прыжок · Shift — бег\nT — места и дорога · J — журнал · I — предметы\nEsc — пауза или вернуться назад\n\nВ меню: Tab / Shift+Tab — выбор, Enter — открыть.\nВ бою: стрелки — цель, E — подтвердить, Tab — действия.","WASD or arrows — move\nE — talk or interact\nSpace — jump · Shift — run\nT — places & directions · J — journal · I — items\nEsc — pause or go back\n\nMenus: Tab / Shift+Tab to choose, Enter to open.\nCombat: arrows to aim, E to confirm, Tab for actions."),[choice("back","К настройкам","Back to settings",_settings)],false)
+	_dialog("",t("Путешествуй в своём темпе","Explore at your own pace"),t("WASD или стрелки — идти\nE — поговорить или действовать\nПробел — прыжок · Shift — бег\nT — места и дорога · J — журнал · I — предметы\nEsc — пауза или возврат\n\nВ лабиринте: WASD, стрелки или мышь.\nВ головоломке: мышь или Tab и Enter.","WASD or arrows — move\nE — talk or interact\nSpace — jump · Shift — run\nT — places & directions · J — journal · I — items\nEsc — pause or go back\n\nMaze: WASD, arrows, or mouse.\nPuzzles: mouse, or Tab and Enter."),[choice("back","К настройкам","Back to settings",_settings)],false)
 
 func _notification(what):
 	if what==NOTIFICATION_WM_CLOSE_REQUEST:

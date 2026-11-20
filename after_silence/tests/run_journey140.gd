@@ -32,20 +32,6 @@ func fulfill_action():
 	director.begin_preparation()
 	game.player.position=director.preparation_point()
 	director.complete_preparation()
-func play_tactics(activity):
-	game.player.set_physics_process(true)
-	activity.npc.set_physics_process(true)
-	var controller=activity.tactics
-	for frame in range(10000):
-		if not activity.active: break
-		if controller.stage=="battle" and controller.board.phase=="active" and controller.board.active_id()=="vera":
-			for kind in ["help","attack","move","defend","end"]:
-				var command=controller.board.plan("vera",kind)
-				if not command.is_empty():
-					controller.perform(command.kind,command.get("target"));break
-		game.npcs.update(game,1.0/60,true)
-		activity.tick(1.0/60)
-		await physics_frame
 func run():
 	Engine.time_scale=8;Engine.physics_ticks_per_second=480;Engine.max_physics_steps_per_frame=64;Engine.max_fps=240
 	create_timer(1200).timeout.connect(func():push_error("Journey QA watchdog");quit(2))
@@ -95,19 +81,13 @@ func run():
 			director.talk(event.npc);check(game.buttons.has("help"),"NPC conversation "+event.id)
 			if ending==0 and index==0: await shot("conversation")
 			fulfill_action();var activity=director.activity
-			activity.set_physics_process(false);activity.npc.set_physics_process(false);game.player.set_physics_process(false)
-			if activity.board_mode():
-				check(game.event_window.active and is_instance_valid(game.event_window.puzzle_panel),"puzzle panel "+event.id)
-			elif activity.mode=="epochs":
-				check(game.event_window.active and activity.maze.in_view,"isolated maze "+event.id)
-			else:
-				check(game.event_window.active and game.world.get_parent()==game.event_window.viewport,"custom viewport "+event.id)
+			check(game.event_window.active and is_instance_valid(game.event_window.puzzle_panel),"board opens "+event.id)
 			game.event_window.toggle_pause();check(game.modal,"window pause")
 			game.event_window.resume();check(not game.modal,"window resume")
 			if activity.puzzle!=null:
 				var panel=game.event_window.puzzle_panel
 				for attempt in range(80):
-					if not activity.active: break
+					if director.phase!="running": break
 					var move: Array=activity.puzzle.hint()
 					if move.is_empty(): break
 					for tile in move: panel.tiles[tile].pressed.emit()
@@ -115,18 +95,11 @@ func run():
 			elif activity.reality!=null:
 				var panel=game.event_window.puzzle_panel
 				var maze=activity.reality
-				while activity.active:
+				while director.phase=="running":
 					var route: Array=maze.route(maze.destination())
 					if route.is_empty(): break
 					for cell in route: panel._step(cell,false)
 				check(maze.won() and director.phase=="decision","reality maze victory "+event.id)
-			if activity.mode=="epochs":
-				var exit=activity.maze.model.point(activity.maze.Layout.EXIT)
-				game.player.position=exit;activity.npc.position=exit
-				activity.tick(.01)
-				check(director.phase=="decision","maze exit restores world")
-			if not activity.board_mode() and activity.mode!="epochs":
-				await exercise_action(index,ending)
 			if ending==0 and index==11: await shot("final-choice")
 			var option=event.choices[ending if index==11 else 0]
 			var relation=game.state.relations[option[3]]
@@ -140,51 +113,18 @@ func run():
 		if ending==0: await shot("final")
 		game._close()
 	await verify_checkpoint()
-func exercise_action(index: int,ending: int):
-	var director=game.events_controller
-	var event=director.events[index]
-	var activity=director.activity
-	for hit in range(5): activity.invulnerable=0;activity.hit()
-	if activity.mode=="tactics": activity.tactics.board.units.vera.hp=0;activity.tactics.board.outcome()
-	activity.tick(.01)
-	check(director.phase=="failure" and not game.event_window.active,"defeat exits viewport "+event.id)
-	game.body.visible_characters=-1
-	game.buttons.retry.pressed.emit();activity=director.activity;activity.set_physics_process(false);activity.npc.set_physics_process(false)
-	check(activity.hp==5,"retry "+event.id)
-	if activity.mode=="tactics": await play_tactics(activity)
-	else: activity.invulnerable=10000
-	for frame in range(2200):
-		if not activity.active: break
-		if ending==0 and frame==200: await shot(event.id)
-		var t=activity.elapsed
-		match activity.mode:
-			"rhythm":
-				if absf(fmod(t,1.0)-.5)<.025: activity.interact()
-			"defense": game.player.position=activity.center+Vector2((int(t/2.2)%3-1)*90,0);activity.interact()
-			"dodge": game.player.position=activity.npc.position;activity.interact()
-			"stealth": game.player.position=activity.npc.position-activity.look_dir*70
-			"escort": game.player.position=activity.route_point(activity.step);activity.npc.position=game.player.position+Vector2(-20,0)
-			"switches","epochs","route":
-				game.player.position=activity.route_point(activity.step)
-				if activity.mode!="route" and int(t*10)%10==0: activity.interact()
-			"evacuation":
-				for i in range(activity.followers.size()):
-					if activity.followers[i].get_meta("rescued",false): continue
-					game.player.position=activity.followers[i].position;activity.interact();activity.followers[i].position=activity.route_point(1)
-			"repair": game.player.position=activity.npc.position+Vector2(0,35);activity.repair_hold=activity.heat<1.0
-		activity.tick(.05)
-	check(director.phase=="decision","victory "+event.id)
-	check(activity.tactics.board.phase=="victory" if activity.mode=="tactics" else activity.elapsed>=30 and activity.elapsed<=110,"completed mechanics "+event.id)
 func verify_checkpoint():
 	game._new_event_game();game.set_physics_process(false);game.events_controller.set_physics_process(false)
 	fixture_at(0)
 	var director=game.events_controller
-	director.events[0].mode="escort"
-	fulfill_action();director.activity.set_physics_process(false);director.activity.elapsed=17;director.activity.progress=2
+	fulfill_action()
+	var model=director.activity.reality
+	for tile in model.route(model.destination()): model.move(tile)
+	var checkpoint=model.capture()
 	game.event_window.leave()
 	check(director.phase=="suspended" and game.world.get_parent()==game,"safe window exit")
 	await game._load_game()
-	check(director.phase=="suspended" and director.activity.elapsed==17,"suspended save resume")
+	check(director.phase=="suspended" and director.activity.reality.capture()==checkpoint,"suspended save resume")
 	director.resume_activity();check(game.event_window.active,"reopen preserved activity")
 	game.event_window.leave()
 	var retained=director.activity
@@ -196,10 +136,10 @@ func verify_checkpoint():
 	await game._travel("town",Vector2(600,645))
 	director._physics_process(0)
 	retained=director.activity
-	check(is_instance_valid(retained) and retained.get_parent()==game.world,"suspended activity reattaches to event world")
+	check(is_instance_valid(retained) and director.phase=="suspended","suspended board returns in the event world")
 	director.resume_activity()
-	check(game.event_window.active and retained.elapsed==17,"suspended activity resumes after house visit")
-	game.event_window.close();director.activity.active=false
+	check(game.event_window.active and retained.reality.capture()==checkpoint,"suspended activity resumes after house visit")
+	game.event_window.leave()
 	var old=game.state.to_data();old.event_state={"index":2,"phase":"observe","activity":{}}
 	old.flags["event_done_letter"]=true;old.flags["event_done_song"]=true
 	check(game.state.restore(old),"v0.13 save accepted")

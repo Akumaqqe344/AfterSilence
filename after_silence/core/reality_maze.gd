@@ -1,6 +1,5 @@
 extends RefCounted
 ## A portal changes the room's topology and remaps its doors. Movement is grid based.
-const LEGACY={"letter":"escort","guest":"stealth","epochs":"epochs","bridge":"tactics","crowd":"tactics","train":"evacuation","alina":"dodge"}
 const STOPS={0:"letter",1:"guest",2:"epochs",4:"bridge",7:"crowd",8:"train",10:"alina"}
 const SIGILS=["◆","●","+"]
 const ORDERS={
@@ -32,7 +31,7 @@ var scene_number: int
 func _init(id: String):
 	scene_id=id
 	order=ORDERS[id]
-	scene_number=LEGACY.keys().find(id)
+	scene_number=ORDERS.keys().find(id)
 
 func walkable(point: Vector2i) -> bool:
 	if not Rect2i(0,0,9,7).has_point(point): return false

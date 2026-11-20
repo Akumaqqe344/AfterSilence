@@ -49,3 +49,15 @@ func test_only_new_maze_stops_accept_maze_checkpoints():
 	checkpoint.mode="escort"
 	checkpoint.erase("reality")
 	assert_true(EventProgress.valid(save),"pre-0.20 saves remain readable")
+	var migrated=EventProgress.upgrade(save,{"id":"letter","mode":"reality"})
+	assert_eq(migrated.activity,{"mode":"reality","reality":Maze.new("letter").capture()})
+	assert_eq(migrated.index,save.index)
+	assert_eq(migrated.phase,"suspended")
+
+func test_failed_legacy_scene_restarts_on_its_replacement():
+	var save={"version":3,"index":1,"phase":"failure","activity":{"mode":"stealth","elapsed":16}}
+	var migrated=EventProgress.upgrade(save,{"id":"guest","mode":"reality"})
+	assert_eq(migrated.phase,"suspended")
+	assert_eq(migrated.activity.mode,"reality")
+	assert_true(EventProgress.valid(migrated))
+	assert_eq(EventProgress.upgrade({"phase":"decision"},{"id":"guest","mode":"reality"}),{"phase":"decision"})

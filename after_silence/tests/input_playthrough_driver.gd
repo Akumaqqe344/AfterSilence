@@ -32,11 +32,6 @@ func motion(direction: Vector2):
 		else: Input.action_release(item[0])
 func dt() -> float: return get_physics_process_delta_time()
 func steer(point: Vector2):
-	var activity=game.events_controller.activity if is_instance_valid(game.events_controller) else null
-	if is_instance_valid(activity) and activity.mode=="epochs" and is_instance_valid(activity.maze) and activity.maze.in_view:
-		var delta=point-game.player.position
-		motion(delta.normalized() if delta.length()>4 else Vector2.ZERO)
-		return
 	nav_age-=dt()
 	if nav_zone!=game.state.zone or nav_target.distance_to(point)>20 or nav_age<=0:
 		nav_path=game.world.path_between(game.player.position,point)
@@ -99,16 +94,6 @@ func main_menu():
 	await tap(KEY_ESCAPE)
 	if game.modal and game.buttons.has("menu"): await choose("menu")
 	if not game.in_menu and game.buttons.has("menu"): await choose("menu")
-func tactical_input(tactics,command: Dictionary):
-	if command.is_empty(): return
-	await button(tactics.controls[command.kind])
-	if command.kind not in ["move","attack","help"]: return
-	var target: Vector2i=command.target if command.kind=="move" else tactics.board.location(command.target)
-	for i in range(20):
-		if not is_instance_valid(tactics) or tactics.cursor==target: break
-		var delta=target-tactics.cursor
-		await tap(KEY_RIGHT if delta.x>0 else KEY_LEFT if delta.x<0 else KEY_DOWN if delta.y>0 else KEY_UP)
-	await tap(KEY_E)
 func mouse_click(control: Button):
 	await get_tree().process_frame;await get_tree().process_frame
 	var position=control.get_global_transform_with_canvas()*(control.size*.5)
@@ -120,22 +105,6 @@ func mouse_at(position: Vector2):
 		var event=InputEventMouseButton.new();event.button_index=MOUSE_BUTTON_LEFT;event.position=position;event.global_position=position;event.pressed=pressed
 		game.get_viewport().push_input(event,true)
 	await get_tree().process_frame
-func tactical_load():
-	var director=game.events_controller
-	var before=director.activity.tactics.board.capture()
-	await tap(KEY_ESCAPE)
-	check(game.modal and game.event_window.pause_panel.visible,"tactical pause")
-	await button(game.event_window.pause_panel.get_child(2))
-	check(director.phase=="suspended","tactical save and return")
-	await tap(KEY_ESCAPE);await choose("load")
-	while game.transitions.busy: await get_tree().physics_frame
-	await get_tree().process_frame
-	check(director.phase=="suspended" and director.activity.mode=="tactics","tactical load suspended")
-	check(director.activity.tactics.board.capture()==before,"tactical AP and pending movement restored")
-	if not await walk(director.npc.position+Vector2(0,30),12): return false
-	await tap(KEY_E);await choose("resume")
-	check(game.event_window.active,"tactical resume through dialogue")
-	return game.event_window.active
 func maze_key_path(model, target: Vector2i):
 	var path: Array=model.route(target)
 	for tile in path:
@@ -208,11 +177,6 @@ func play_event(index: int) -> bool:
 	check(game.event_window.active,"viewport "+event.id)
 	if not game.event_window.active: return false
 	var activity=director.activity
-	var age_play=0.0
-	var last_press=-1
-	var sampled=false
-	var tactical_saved=false
-	var tactical_mouse=false
 	if activity.reality!=null:
 		if not await play_reality(index,event.id): return false
 		activity=director.activity
@@ -235,82 +199,7 @@ func play_event(index: int) -> bool:
 				else: await button(panel.tiles[tile])
 		check(game.player.position==at,"puzzle does not move player "+event.id)
 		check(activity.puzzle.won(),"puzzle solved by input "+event.id)
-	while director.phase=="running" and age_play<112:
-		activity=director.activity
-		if activity.board_mode(): break
-		var t=activity.tactics.age if activity.mode=="tactics" else activity.elapsed
-		if t>8 and not sampled:
-			sampled=true
-			await shot("playing-"+event.id)
-		var aim=game.player.position
-		var interact=false
-		if activity.mode=="tactics":
-			var tactics=activity.tactics
-			if tag=="together" and index==4 and not tactical_saved and tactics.stage=="battle" and tactics.board.phase=="moving":
-				tactical_saved=true
-				if not await tactical_load(): return false
-				continue
-			if tactics.stage=="battle" and tactics.resume_goal==Vector2.INF and tactics.board.phase=="active" and tactics.board.active_id()=="vera":
-				if not tactical_mouse:
-					tactical_mouse=true
-					var ap=tactics.board.units.vera.ap
-					await mouse_click(tactics.controls.attack)
-					if tactics.action!="attack" or tactics.board.units.vera.ap!=ap:
-						print("TACTICAL MOUSE DETAIL: action=",tactics.action," ap=",tactics.board.units.vera.ap," expected=",ap," button=",tactics.controls.attack.get_global_rect()," canvas=",tactics.controls.attack.get_global_transform_with_canvas()," mouse=",game.event_window.get_global_mouse_position())
-					check(tactics.action=="attack" and tactics.board.units.vera.ap==ap,"mouse selects tactical action without spending AP")
-					var target=tactics.board.location(tactics.definition.enemies[0][0])
-					var viewport_point=game.event_window.viewport.get_canvas_transform()*tactics.world_point(target)
-					var root_point=game.event_window.container.get_global_transform_with_canvas()*viewport_point
-					await mouse_at(root_point)
-					check(tactics.cursor==target and tactics.board.units.vera.ap==ap,"mouse targets unit in viewport without an illegal attack")
-				var command={}
-				for kind in ["help","attack","move","defend","end"]:
-					command=tactics.board.plan("vera",kind)
-					if not command.is_empty(): break
-				await tactical_input(tactics,command)
-			await get_tree().physics_frame;age_play+=dt()
-			continue
-		match activity.mode:
-			"epochs":
-				aim=activity.maze.guidance()
-				for i in range(activity.maze.closed.size()):
-					if activity.maze.closed[i] and game.player.position.distance_to(activity.maze.model.point(activity.maze.Layout.DOORS[i]))<70: interact=true
-			"escort","route","switches":
-				aim=activity.route_point(activity.step)
-				interact=activity.mode in ["switches","epochs"] and game.player.position.distance_to(aim)<48
-				if activity.mode=="escort" and game.player.position.distance_to(activity.npc.position)>100: aim=activity.npc.position+Vector2(12,12)
-			"rhythm":
-				aim=activity.npc.position+Vector2(0,45)
-				interact=absf(fmod(t,1.0)-.5)<.06 and last_press!=int(t)
-			"stealth":
-				aim=activity.npc.position-activity.look_dir*85
-			"repair":
-				aim=activity.npc.position+Vector2(0,35)
-				key(KEY_E,activity.heat<.95)
-			"defense":
-				aim=activity.center+Vector2((int(t/2.2)%3-1)*90,35)
-				interact=fmod(t,2.2)>1.0
-			"dodge":
-				aim=activity.npc.position+Vector2(0,60)
-				interact=int(t/2.2)%3==2 and fmod(t,2.2)>1.5
-			"evacuation":
-				aim=activity.route_point(1)
-				for i in range(activity.followers.size()):
-					if activity.followers[i].get_meta("rescued",false): continue
-					if i not in activity.recruited: aim=activity.followers[i].position;interact=game.player.position.distance_to(aim)<60;break
-		steer(aim)
-		if interact:
-			key(KEY_E);key(KEY_E,false)
-			if activity.mode=="rhythm": last_press=int(t)
-		# Jumping is a normal player action; no damage protection is injected.
-		if activity.mode in ["escort","route","switches","evacuation","dodge"] and game.player.jump_age>=game.player.jump_duration: key(KEY_SPACE);key(KEY_SPACE,false)
-		await get_tree().physics_frame;age_play+=dt()
-	motion(Vector2.ZERO);key(KEY_E,false)
-	check(director.phase=="decision","victory "+event.id+" hp="+str(activity.hp)+" progress="+str(activity.progress)+" elapsed="+str(activity.elapsed)+" player="+str(game.player.position)+" npc="+str(activity.npc.position)+" target="+str(activity.npc.target))
-	if director.phase!="decision" and activity.mode=="tactics":
-		var controller=activity.tactics
-		print("TACTICAL CASE: stage=",controller.stage," phase=",controller.board.phase," round=",controller.board.round_number," note=",controller.note," pending=",controller.board.pending," return=",controller.resume_goal)
-		for id in game.actors: print("TACTICAL RESIDENT: ",id," at=",game.actors[id].position," control=",game.state.residents[id].get("control","routine")," route=",game.state.residents[id].get("route_status",""))
+	check(director.phase=="decision","victory "+event.id)
 	if director.phase!="decision": return false
 	await shot(event.id)
 	for control in game.buttons.values():

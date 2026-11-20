@@ -26,22 +26,36 @@ func run():
 	director._physics_process(3.2)
 	check(director.phase=="ready","packed observation")
 	director.talk("lev");check(game.buttons.has("help"),"packed NPC dialogue")
-	director.events[0].mode="escort" # Exercise the legacy checkpoint reader.
 	director.begin_preparation();game.player.position=director.preparation_point()
 	check(director.complete_preparation(),"packed required world action")
-	director.activity.set_physics_process(false)
-	director.activity.elapsed=15;director.activity.progress=2
-	game._save(false)
+	game.event_window.leave()
+	var position=game.state.position
+	game.state.event_state={"version":3,"index":0,"phase":"running","activity":{"mode":"escort","elapsed":15,"progress":2,"hp":3}}
+	check(game.saves.save(game.state),"write old checkpoint to isolated QA slot")
 	await game._load_game()
-	check(director.phase=="running" and director.activity.elapsed==15 and director.activity.progress==2,"packed save resume")
-	director.activity.set_physics_process(false)
-	director.activity.hp=0;director.activity.tick(.01)
-	check(director.phase=="failure","packed defeat")
-	game.body.visible_characters=-1
-	game.buttons.retry.pressed.emit()
-	check(director.activity.hp==5,"packed retry")
-	director.activity.active=false
-	game.event_window.close()
+	check(director.phase=="running" and director.activity.mode=="reality","old escort opens replacement labyrinth")
+	check(director.activity.reality.stage==0 and game.state.position==position,"migration starts new board at same world position")
+	check(game.state.flag("event_action_letter"),"completed world preparation retained")
+	game.event_window.toggle_pause()
+	game.event_window.retry()
+	check(game.event_window.active and director.activity.mode=="reality","retry opens only the replacement")
+	game.event_window.leave()
+	var guest=director.events[1]
+	var place=game.journey.places[guest.location]
+	var site=Vector2(place.point[0],place.point[1])
+	game.state.set_flag("event_done_letter")
+	game._build_world(place.zone,site+Vector2(0,45))
+	game.state.position=game.player.position
+	var resident=game.state.residents[guest.npc]
+	resident.zone=place.zone;resident.x=site.x;resident.y=site.y
+	game.state.event_state={"version":3,"index":1,"phase":"suspended","activity":{"mode":"stealth","alert":2}}
+	check(game.saves.save(game.state),"write old observation checkpoint")
+	await game._load_game()
+	check(director.index==1 and director.phase=="suspended" and director.activity.mode=="reality","old observation resumes as replacement labyrinth")
+	check(game.state.flag("event_done_letter") and game.state.flag("event_action_guest"),"previous event and preparation retained")
+	director.resume_activity()
+	check(game.event_window.active and director.activity.reality.stage==0,"resume cannot reopen observation")
+	game.event_window.leave()
 	game.audio.shutdown();game.queue_free()
 	await get_tree().process_frame;await get_tree().create_timer(.3).timeout
 	print("NPC EVENTS EXPORT QA: %d checks, %d failures"%[checks,failures])
