@@ -36,10 +36,14 @@ var in_view=false
 var view_checkpoint: Dictionary={}
 var maze
 var puzzle
+var reality
 var vision_points=PackedVector2Array()
 func start(owner,kind: String,actor,origin: Vector2):
 	game=owner;mode=kind;center=origin;zone=game.state.zone;initiator=actor;npc=actor
 	original_tint=game.world.modulate
+	if mode=="reality":
+		reality=preload("res://after_silence/core/reality_maze.gd").new(game.events_controller.events[game.events_controller.index].id)
+		return
 	var puzzles=preload("res://after_silence/core/quiet_puzzle.gd")
 	if puzzles.SIZES.has(mode):
 		puzzle=puzzles.new(mode)
@@ -79,7 +83,7 @@ func take_participant(person):
 	person.set_appearance(preload("res://after_silence/core/npc_appearance.gd").sheet(id,event),preload("res://after_silence/core/npc_appearance.gd").height(id))
 
 func begin_view():
-	if mode=="tactics" or puzzle!=null: return
+	if mode=="tactics" or board_mode(): return
 	if not in_view:
 		var saved=view_checkpoint.duplicate(true);view_checkpoint.clear()
 		for person in participants:
@@ -123,9 +127,13 @@ func checkpoint() -> Dictionary:
 	var data={"epoch":epoch,"mode":mode,"elapsed":elapsed,"progress":progress,"hp":hp,"step":step,"alert":alert,"heat":heat,"recruited":recruited.duplicate(),"followers":people,"npc":[npc.position.x,npc.position.y]}
 	if mode=="tactics": data.tactics=tactics.checkpoint()
 	if puzzle!=null: data.moves=puzzle.checkpoint()
+	if reality!=null: data.reality=reality.capture()
 	if mode=="epochs" and is_instance_valid(maze): data.maze=maze.capture()
 	return data
 func restore(data: Dictionary):
+	if reality!=null:
+		reality.restore(data.get("reality"))
+		return
 	if puzzle!=null:
 		puzzle.restore(data.get("moves",[]))
 		return
@@ -190,7 +198,7 @@ func _physics_process(dt):
 		game._notify(game.t("Встреча восстановлена. Поговори с другом.","The meeting was restored. Talk to your friend."));return
 	tick(minf(dt,.05))
 func tick(dt: float):
-	if not active or puzzle!=null: return
+	if not active or board_mode(): return
 	if mode=="tactics":
 		tactics.tick(dt);return
 	elapsed+=dt;guard=maxf(0,guard-dt);invulnerable=maxf(0,invulnerable-dt)
@@ -250,13 +258,17 @@ func tick(dt: float):
 	if elapsed>=30 and progress>=goal(): win();return
 	if elapsed>=110: lose()
 	queue_redraw()
+func board_mode() -> bool:
+	return puzzle!=null or reality!=null
+
 func goal() -> float:
+	if reality!=null: return reality.order.size()
 	if puzzle!=null: return puzzle.goal()
 	if mode=="epochs" and is_instance_valid(maze): return 1
 	if mode=="tactics": return 2
 	return {"escort":4,"rhythm":30,"stealth":30,"switches":8,"epochs":8,"route":8,"defense":14,"evacuation":3,"dodge":5,"repair":24}.get(mode,1)
 func interact():
-	if not active or game.modal or puzzle!=null: return
+	if not active or game.modal or board_mode(): return
 	if mode=="tactics": tactics.confirm();return
 	var p=game.player.position
 	match mode:
@@ -302,7 +314,7 @@ func _exit_tree():
 	if is_instance_valid(npc): npc.scripted=false;npc.modulate=Color.WHITE
 func _draw():
 	if not active: return
-	if mode=="tactics" or puzzle!=null: return
+	if mode=="tactics" or board_mode(): return
 	if mode=="epochs": return
 	var font=game.ui.theme.default_font
 	var tint=Color("89d8ca")

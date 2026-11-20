@@ -17,6 +17,7 @@ func run():
 		var d=game.events_controller
 		for i in range(index): game.state.set_flag("event_done_"+d.events[i].id)
 		d.index=index
+		d.events[index].mode="tactics"
 		var place=game.journey.places[d.events[index].location]
 		game._build_world(place.zone,Vector2(place.point[0],place.point[1])+Vector2(0,60))
 		d.prepare(false)

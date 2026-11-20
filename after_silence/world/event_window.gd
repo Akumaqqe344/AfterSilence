@@ -20,6 +20,8 @@ var portrait_index=-1
 var puzzle_panel: Control
 const NAMES={"escort":["Сопровождение","Escort"],"rhythm":["Ритм воспоминаний","Memory rhythm"],"stealth":["Наблюдение","Observation"],"switches":["Механизм","Mechanism"],"epochs":["Две эпохи","Two eras"],"defense":["Защита","Defense"],"route":["Безопасный путь","Safe route"],"evacuation":["Эвакуация","Evacuation"],"dodge":["Наблюдатель","The Watcher"],"repair":["Восстановление","Restoration"]}
 const LEGACY_RULES={
+	"stealth":["Держись за спиной. Не входи в красный сектор.","Stay behind. Avoid the red vision cone."],
+	"epochs":["Проведи Соню к выходу. E рядом с дверью переключает её.","Guide Sonya to the exit. E near a door switches it."],
 	"repair":["Держи E рядом со Львом. Отпускай, когда шкала красная.","Hold E near Lev. Release when the gauge turns red."],
 	"rhythm":["Нажми E, когда кольцо становится бирюзовым.","Press E when the ring turns teal."],
 	"escort":["Иди рядом с другом и обходи вспышки.","Stay with your friend and avoid the flashes."],
@@ -61,16 +63,21 @@ func open():
 	active=true;pause_panel.hide();pause_shade.hide();show()
 	previous_zoom=game.camera.zoom;previous_offset=game.camera.offset;previous_position=game.camera.position
 	var activity=game.events_controller.activity
-	if is_instance_valid(activity) and activity.puzzle!=null:
+	if is_instance_valid(activity) and activity.board_mode():
 		modulate.a=1
 		container.hide()
-		puzzle_panel=preload("res://after_silence/ui/quiet_puzzle_panel.gd").new()
-		puzzle_panel.game=game;puzzle_panel.model=activity.puzzle
+		if activity.reality!=null:
+			puzzle_panel=preload("res://after_silence/ui/reality_maze_panel.gd").new()
+			puzzle_panel.model=activity.reality;puzzle_panel.resident=activity.npc
+		else:
+			puzzle_panel=preload("res://after_silence/ui/quiet_puzzle_panel.gd").new()
+			puzzle_panel.model=activity.puzzle
+		puzzle_panel.game=game
 		puzzle_panel.position=container.position;puzzle_panel.size=Vector2(576,216)
 		puzzle_panel.solved.connect(activity.win)
 		puzzle_panel.changed.connect(func(): game._save(false))
 		frame.add_child(puzzle_panel)
-		controls_hint.text=game.t("Мышь или Tab / стрелки, Enter · Esc: пауза","Mouse or Tab / arrows, Enter · Esc: pause")
+		controls_hint.text=game.t("Мышь / WASD / стрелки · Esc: пауза","Mouse / WASD / arrows · Esc: pause") if activity.reality!=null else game.t("Мышь или Tab / стрелки, Enter · Esc: пауза","Mouse or Tab / arrows, Enter · Esc: pause")
 		return
 	container.show()
 	if is_instance_valid(game.living.camera_tween): game.living.camera_tween.kill()
@@ -154,6 +161,13 @@ func _process(_dt):
 	var event=director.events[director.index]
 	if portrait_index!=director.index:
 		portrait_index=director.index;event_portrait.texture=preload("res://after_silence/core/npc_appearance.gd").portrait(portrait_index)
+	if activity.reality!=null:
+		title.text=director.pair(event.title)
+		goal.text=game.named(event.npc)+" · "+director.pair(event.context)
+		progress.max_value=activity.goal();progress.value=activity.reality.stage
+		health.text=game.t("Проходы ","Passages ")+"%d/%d"%[activity.reality.stage,activity.goal()]
+		game.objective.hide();game.hint.hide();game.toast.hide()
+		return
 	if activity.puzzle!=null:
 		title.text=director.pair(event.title)
 		goal.text=game.named(event.npc)+" · "+director.pair(event.context)

@@ -99,42 +99,6 @@ func main_menu():
 	await tap(KEY_ESCAPE)
 	if game.modal and game.buttons.has("menu"): await choose("menu")
 	if not game.in_menu and game.buttons.has("menu"): await choose("menu")
-func exercise_recovery() -> bool:
-	var director=game.events_controller
-	await get_tree().create_timer(2).timeout
-	await tap(KEY_ESCAPE)
-	check(game.modal and game.event_window.pause_panel.visible,"Esc pauses activity")
-	await tap(KEY_ESCAPE)
-	check(not game.modal and game.event_window.active,"Esc resumes activity")
-	await tap(KEY_ESCAPE)
-	await button(game.event_window.pause_panel.get_child(2))
-	check(director.phase=="suspended" and not game.event_window.active,"save and return to world")
-	var identity=director.npc.get_instance_id()
-	var checkpoint=director.activity.elapsed
-	check(await travel("home_nadia"),"enter house with suspended activity")
-	check(is_instance_valid(director.activity) and director.npc.get_instance_id()==identity,"activity and NPC persist outside event zone")
-	await tap(KEY_ESCAPE);await choose("load")
-	while game.transitions.busy: await get_tree().physics_frame
-	await get_tree().process_frame
-	check(director.phase=="travel" and not director.pending.is_empty(),"load outside event zone preserves checkpoint")
-	check(await travel("town"),"return from house")
-	check(await walk(director.npc.position+Vector2(0,30),12),"return to event NPC")
-	check(director.phase=="suspended" and is_instance_valid(director.activity) and absf(director.activity.elapsed-checkpoint)<.1,"restore event after returning from another room")
-	if director.phase!="suspended" or not is_instance_valid(director.activity): return false
-	await tap(KEY_E);await choose("resume")
-	check(game.event_window.active,"resume after load")
-	motion(Vector2.ZERO)
-	var age=0.0
-	while director.phase=="running" and age<115:
-		await get_tree().physics_frame
-		age+=dt()
-	check(director.phase=="failure" and not game.event_window.active,"real defeat")
-	if director.phase!="failure": return false
-	check(game.buttons.retry.has_focus(),"retry receives focus")
-	await shot("defeat")
-	await choose("retry")
-	check(game.event_window.active and director.activity.hp==5,"retry through UI")
-	return game.event_window.active
 func tactical_input(tactics,command: Dictionary):
 	if command.is_empty(): return
 	await button(tactics.controls[command.kind])
@@ -172,6 +136,54 @@ func tactical_load():
 	await tap(KEY_E);await choose("resume")
 	check(game.event_window.active,"tactical resume through dialogue")
 	return game.event_window.active
+func maze_key_path(model, target: Vector2i):
+	var path: Array=model.route(target)
+	for tile in path:
+		var delta: Vector2i=tile-model.tile
+		var keycode=KEY_RIGHT if delta.x>0 else KEY_LEFT if delta.x<0 else KEY_DOWN if delta.y>0 else KEY_UP
+		await tap(keycode)
+
+func play_reality(index: int,id: String) -> bool:
+	var director=game.events_controller
+	var model=director.activity.reality
+	var panel=game.event_window.puzzle_panel
+	var origin: Vector2=game.player.position
+	if index==0 and tag=="together":
+		await shot("maze-original")
+		var wrong: Vector2i=model.PORTALS[0] if model.PORTALS[0]!=model.destination() else model.PORTALS[1]
+		await maze_key_path(model,wrong)
+		check(model.reflected and model.stage==0,"wrong door changes topology without losing progress")
+		await shot("maze-reflected")
+		await tap(KEY_ESCAPE)
+		check(game.modal and game.event_window.pause_panel.visible,"maze pauses")
+		await button(game.event_window.pause_panel.get_child(2))
+		check(director.phase=="suspended" and game.player.position==origin,"maze suspended safely")
+		await tap(KEY_ESCAPE);await choose("load")
+		while game.transitions.busy: await get_tree().physics_frame
+		check(director.phase=="suspended" and director.activity.reality.reflected,"reflected room restored")
+		if director.phase!="suspended": return false
+		if not await walk(director.npc.position+Vector2(0,30),12): return false
+		await tap(KEY_E);await choose("resume")
+		if not game.event_window.active: return false
+		model=director.activity.reality
+		panel=game.event_window.puzzle_panel
+		origin=game.player.position
+	for passage in range(model.order.size()):
+		if model.won(): break
+		if tag=="home":
+			var target: Vector2i=model.destination()
+			var at: Vector2=panel.ORIGIN+(Vector2(target)+Vector2(.5,.5))*panel.CELL
+			var previous: int=model.stage
+			await mouse_at(panel.get_global_transform_with_canvas()*at)
+			var elapsed=0.0
+			while model.stage==previous and elapsed<8:
+				await get_tree().physics_frame;elapsed+=dt()
+		else:
+			await maze_key_path(model,model.destination())
+	check(model.won() and director.phase=="decision","maze exits via real input "+id)
+	check(game.player.position==origin,"maze leaves world coordinates intact "+id)
+	return model.won() and director.phase=="decision"
+
 func play_event(index: int) -> bool:
 	var director=game.events_controller
 	var event=director.events[index]
@@ -195,14 +207,15 @@ func play_event(index: int) -> bool:
 	check(game.state.flag("event_action_"+event.id),"world action persisted "+event.id)
 	check(game.event_window.active,"viewport "+event.id)
 	if not game.event_window.active: return false
-	if tag=="together" and index==0:
-		if not await exercise_recovery(): return false
 	var activity=director.activity
 	var age_play=0.0
 	var last_press=-1
 	var sampled=false
 	var tactical_saved=false
 	var tactical_mouse=false
+	if activity.reality!=null:
+		if not await play_reality(index,event.id): return false
+		activity=director.activity
 	if activity.puzzle!=null:
 		var panel=game.event_window.puzzle_panel
 		var at=game.player.position
@@ -224,7 +237,7 @@ func play_event(index: int) -> bool:
 		check(activity.puzzle.won(),"puzzle solved by input "+event.id)
 	while director.phase=="running" and age_play<112:
 		activity=director.activity
-		if activity.puzzle!=null: break
+		if activity.board_mode(): break
 		var t=activity.tactics.age if activity.mode=="tactics" else activity.elapsed
 		if t>8 and not sampled:
 			sampled=true

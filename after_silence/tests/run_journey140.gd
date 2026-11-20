@@ -96,7 +96,7 @@ func run():
 			if ending==0 and index==0: await shot("conversation")
 			fulfill_action();var activity=director.activity
 			activity.set_physics_process(false);activity.npc.set_physics_process(false);game.player.set_physics_process(false)
-			if activity.puzzle!=null:
+			if activity.board_mode():
 				check(game.event_window.active and is_instance_valid(game.event_window.puzzle_panel),"puzzle panel "+event.id)
 			elif activity.mode=="epochs":
 				check(game.event_window.active and activity.maze.in_view,"isolated maze "+event.id)
@@ -112,12 +112,20 @@ func run():
 					if move.is_empty(): break
 					for tile in move: panel.tiles[tile].pressed.emit()
 				check(activity.puzzle.won() and director.phase=="decision","puzzle victory "+event.id)
+			elif activity.reality!=null:
+				var panel=game.event_window.puzzle_panel
+				var maze=activity.reality
+				while activity.active:
+					var route: Array=maze.route(maze.destination())
+					if route.is_empty(): break
+					for cell in route: panel._step(cell,false)
+				check(maze.won() and director.phase=="decision","reality maze victory "+event.id)
 			if activity.mode=="epochs":
 				var exit=activity.maze.model.point(activity.maze.Layout.EXIT)
 				game.player.position=exit;activity.npc.position=exit
 				activity.tick(.01)
 				check(director.phase=="decision","maze exit restores world")
-			if activity.puzzle==null and activity.mode!="epochs":
+			if not activity.board_mode() and activity.mode!="epochs":
 				await exercise_action(index,ending)
 			if ending==0 and index==11: await shot("final-choice")
 			var option=event.choices[ending if index==11 else 0]
@@ -171,6 +179,7 @@ func verify_checkpoint():
 	game._new_event_game();game.set_physics_process(false);game.events_controller.set_physics_process(false)
 	fixture_at(0)
 	var director=game.events_controller
+	director.events[0].mode="escort"
 	fulfill_action();director.activity.set_physics_process(false);director.activity.elapsed=17;director.activity.progress=2
 	game.event_window.leave()
 	check(director.phase=="suspended" and game.world.get_parent()==game,"safe window exit")

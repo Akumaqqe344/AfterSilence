@@ -19,6 +19,7 @@ func fixture(index: int):
 	game._new_event_game();game._close()
 	game.set_physics_process(false);game.events_controller.set_physics_process(false);game.living.set_physics_process(false)
 	var d=game.events_controller;d.index=index
+	d.events[index].mode=preload("res://after_silence/core/reality_maze.gd").LEGACY[d.events[index].id]
 	for i in range(index): game.state.set_flag("event_done_"+d.events[i].id)
 	var event=d.events[index];var place=game.journey.places[event.location]
 	d.center=Vector2(place.point[0],place.point[1]);game._build_world(place.zone,d.center+Vector2(0,60))

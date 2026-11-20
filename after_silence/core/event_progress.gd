@@ -1,6 +1,7 @@
 extends RefCounted
 const Puzzle=preload("res://after_silence/core/quiet_puzzle.gd")
-const MODES=["escort","rhythm","stealth","switches","epochs","route","defense","evacuation","dodge","repair","tactics","tubes","pairs","seeds","lights","shelves"]
+const Reality=preload("res://after_silence/core/reality_maze.gd")
+const MODES=["escort","rhythm","stealth","switches","epochs","route","defense","evacuation","dodge","repair","tactics","tubes","pairs","seeds","lights","shelves","reality"]
 const PUZZLE_STOPS={3:"tubes",5:"pairs",6:"seeds",9:"lights",11:"shelves"}
 static func valid(data: Dictionary) -> bool:
 	if data.is_empty(): return true
@@ -13,6 +14,9 @@ static func valid(data: Dictionary) -> bool:
 	if not activity is Dictionary: return false
 	if not activity.is_empty():
 		if activity.get("mode","") not in MODES: return false
+		if activity.mode=="reality":
+			var id: String=Reality.STOPS.get(int(index),"")
+			if id=="" or not Reality.new(id).restore(activity.get("reality")): return false
 		if Puzzle.SIZES.has(activity.mode):
 			if PUZZLE_STOPS.get(int(index))!=activity.mode or not activity.has("moves"): return false
 			if not Puzzle.new(activity.mode).restore(activity.moves): return false

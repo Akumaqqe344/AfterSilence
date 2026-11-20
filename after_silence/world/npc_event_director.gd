@@ -1,6 +1,7 @@
 extends Control
 const Activity=preload("res://after_silence/world/npc_event_activity.gd")
 const Puzzle=preload("res://after_silence/core/quiet_puzzle.gd")
+const Reality=preload("res://after_silence/core/reality_maze.gd")
 const CHARACTERS={"child":["Ребёнок Нади","Nadia's child","ella"],"alina":["Алина","Alina","lora"],"guest":["Гость","Guest","scientist"]}
 const PUZZLE_MEMORIES={
 	"machine":["В мастерской снова прохладно. Теперь слышно, как тикают часы.","The workshop is cool again. I can hear the clock now."],
@@ -204,11 +205,12 @@ func make_activity(checkpoint: Dictionary={}):
 	activity=Activity.new();game.world.add_child(activity)
 	var kind=events[index].mode
 	var legacy=Puzzle.LEGACY.get(events[index].id,"")
+	if kind=="reality": legacy=Reality.LEGACY.get(events[index].id,"")
 	if legacy!="" and checkpoint.get("mode","")==legacy: kind=legacy
 	# Preserve an already active 0.15 defense scene; new attempts use tactics.
-	if kind=="tactics" and checkpoint.get("mode","")=="defense": kind="defense"
+	if (kind=="tactics" or (kind=="reality" and legacy=="tactics")) and checkpoint.get("mode","")=="defense": kind="defense"
 	activity.start(game,kind,npc,center)
-	if kind=="defense" and events[index].mode=="tactics": activity.rule=game.t("E — прикрыть опасную полосу рядом с другом.","E: guard the threatened lane beside your friend.")
+	if kind=="defense": activity.rule=game.t("E — прикрыть опасную полосу рядом с другом.","E: guard the threatened lane beside your friend.")
 	if not checkpoint.is_empty(): activity.restore(checkpoint)
 	activity.completed.connect(success);activity.defeated.connect(failure)
 	npc.get_meta("caption").hide()
@@ -253,11 +255,15 @@ func suspend():
 		for person in activity.followers:
 			if is_instance_valid(person): person.scripted=false
 	phase="suspended"
-	if not is_instance_valid(activity) or (activity.puzzle==null and activity.mode not in ["tactics","epochs"]):
+	if not is_instance_valid(activity) or (not activity.board_mode() and activity.mode not in ["tactics","epochs"]):
 		game.player.position=game.world.recover(npc.position+Vector2(0,65))
 	game._save(false)
 func success():
 	game.event_window.close();phase="decision"
+	if is_instance_valid(activity) and activity.reality!=null:
+		match events[index].id:
+			"bridge": game.state.set_flag("safe_patrol")
+			"crowd": game.state.set_flag("calm_nadia")
 	if not game.comfort.reduce_motion:
 		npc.modulate=Color("a1e0ca");game.create_tween().tween_property(npc,"modulate",Color.WHITE,.7)
 	game._save(false)

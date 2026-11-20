@@ -636,8 +636,8 @@ func _physics_process(dt):
 	var npc_enabled=enabled
 	if state.flag("event_campaign") and event_window.active and is_instance_valid(events_controller.activity):
 		var activity=events_controller.activity
-		if activity.mode=="tactics" or activity.puzzle!=null: enabled=false
-		if activity.puzzle!=null: npc_enabled=false
+		if activity.mode=="tactics" or activity.board_mode(): enabled=false
+		if activity.board_mode(): npc_enabled=false
 	player.enabled=enabled
 	if is_instance_valid(enemy):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")

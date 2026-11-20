@@ -5,18 +5,18 @@
       "id": "letter",
       "npc": "lev",
       "zone": "town",
-      "mode": "escort",
+      "mode": "reality",
       "title": [
         "Письмо Льва",
         "Lev's letter"
       ],
       "context": [
-        "Проведи Льва через меняющиеся улицы.",
-        "Escort Lev through the shifting streets."
+        "Найди дорогу по знакам на письме.",
+        "Follow the signs on the letter."
       ],
       "rule": [
-        "Иди рядом с Львом. Обходи красные вспышки.",
-        "Stay near Lev. Avoid red flashes."
+        "Запомни знаки и пройди через двери в нужном порядке.",
+        "Remember the signs and take the doors in order."
       ],
       "next": [
         "Теперь гость праздника. Открой «Путешествие»: там есть путь.",
@@ -49,18 +49,18 @@
       "id": "guest",
       "npc": "mara",
       "zone": "library",
-      "mode": "stealth",
+      "mode": "reality",
       "title": [
         "Гость праздника",
         "Festival guest"
       ],
       "context": [
-        "Мара заметила гостя. Проследи за ним незаметно.",
-        "Mara spotted a guest. Follow without being seen."
+        "Разгадай след гостя по оставленным знакам.",
+        "Decode the guest's trail of signs."
       ],
       "rule": [
-        "Держись за спиной. Не входи в красный сектор.",
-        "Stay behind. Avoid the red vision cone."
+        "Запомни знаки и пройди через двери в нужном порядке.",
+        "Remember the signs and take the doors in order."
       ],
       "next": [
         "Теперь комнаты двух времён. Открой «Путешествие»: там есть путь.",
@@ -93,18 +93,18 @@
       "id": "epochs",
       "npc": "sonya",
       "zone": "town",
-      "mode": "epochs",
+      "mode": "reality",
       "title": [
         "Комнаты двух времён",
         "Rooms of two eras"
       ],
       "context": [
-        "Дом Сони меняется. Помоги найти безопасную эпоху.",
-        "Sonya's house shifts. Find a safe era."
+        "Выведи Соню из дома с комнатами двух времён.",
+        "Guide Sonya out of the house of two eras."
       ],
       "rule": [
-        "E меняет эпоху. Пройди подсвеченные комнаты.",
-        "E changes the era. Visit the highlighted rooms."
+        "Запомни знаки и пройди через двери в нужном порядке.",
+        "Remember the signs and take the doors in order."
       ],
       "next": [
         "Теперь сердце мастерской. Открой «Путешествие»: там есть путь.",
@@ -181,22 +181,22 @@
       "id": "bridge",
       "npc": "pavel",
       "zone": "town",
-      "mode": "tactics",
+      "mode": "reality",
       "title": [
         "Защитники моста",
         "Bridge defenders"
       ],
       "context": [
-        "Павел готовит учение по эвакуации с Марой и гостем. Никто не должен пострадать.",
-        "Pavel prepares an evacuation exercise with Mara and the guest. Nobody should be harmed."
+        "Найди с Павлом проход через отражение моста.",
+        "Find a passage through the bridge reflection with Pavel."
       ],
       "rule": [
-        "Тактическое учение: идти, атаковать, защищаться и помогать. Действия тратятся по очереди.",
-        "Tactical exercise: move, attack, defend and help. Spend actions in turn."
+        "Запомни знаки и пройди через двери в нужном порядке.",
+        "Remember the signs and take the doors in order."
       ],
       "next": [
-        "Теперь ритм доверия. Открой «Путешествие»: там есть путь.",
-        "Next: Rhythm of trust. Travel shows the route."
+        "Теперь открытки доверия. Открой «Путешествие»: там есть путь.",
+        "Next: Cards of trust. Travel shows the route."
       ],
       "choices": [
         [
@@ -217,8 +217,8 @@
       "location": "bridge",
       "requires": "machine",
       "world_action": [
-        "Проверь знак перед учением на мосту.",
-        "Check the sign before the bridge exercise."
+        "Сверь метки на знаке у моста.",
+        "Check the marks on the sign by the bridge."
       ]
     },
     {
@@ -313,18 +313,18 @@
       "id": "crowd",
       "npc": "nadia",
       "zone": "town",
-      "mode": "tactics",
+      "mode": "reality",
       "title": [
         "Не одна против толпы",
         "Not alone"
       ],
       "context": [
-        "Надя, Лев и гость отрабатывают защиту толпы. Сначала осмотри план.",
-        "Nadia, Lev and the guest rehearse crowd protection. Inspect the plan first."
+        "Покажи Наде безопасный путь через копии площади.",
+        "Show Nadia the safe way through the copies of the square."
       ],
       "rule": [
-        "Тактическое учение: идти, атаковать, защищаться и помогать. Действия тратятся по очереди.",
-        "Tactical exercise: move, attack, defend and help. Spend actions in turn."
+        "Запомни знаки и пройди через двери в нужном порядке.",
+        "Remember the signs and take the doors in order."
       ],
       "next": [
         "Теперь поезд без рельсов. Открой «Путешествие»: там есть путь.",
@@ -357,18 +357,18 @@
       "id": "train",
       "npc": "pavel",
       "zone": "town",
-      "mode": "evacuation",
+      "mode": "reality",
       "title": [
         "Поезд без рельсов",
         "Train without tracks"
       ],
       "context": [
-        "Пассажиры ждут у пристани. Помоги им выйти.",
-        "Passengers wait by the pier. Help them leave."
+        "Найди с Павлом выход из повторяющихся вагонов.",
+        "Find the exit from the repeating carriages with Pavel."
       ],
       "rule": [
-        "E рядом с жителем. Проведи троих к безопасной зоне.",
-        "E near a resident. Escort three to the safe area."
+        "Запомни знаки и пройди через двери в нужном порядке.",
+        "Remember the signs and take the doors in order."
       ],
       "next": [
         "Теперь столкновение городов. Открой «Путешествие»: там есть путь.",
@@ -445,18 +445,18 @@
       "id": "alina",
       "npc": "alina",
       "zone": "forest",
-      "mode": "dodge",
+      "mode": "reality",
       "title": [
         "Рука Алины",
         "Alina's hand"
       ],
       "context": [
-        "Алина видна в разломе. Не оставляй её одну.",
-        "Alina appears in the rift. Stay with her."
+        "Помоги Алине пройти сквозь отражения разлома.",
+        "Help Alina through the rift's reflections."
       ],
       "rule": [
-        "Уклоняйся от полос. E рядом с Алиной после трёх атак.",
-        "Dodge the lanes. E near Alina after three attacks."
+        "Запомни знаки и пройди через двери в нужном порядке.",
+        "Remember the signs and take the doors in order."
       ],
       "next": [
         "Теперь последний берег. Открой «Путешествие»: там есть путь.",

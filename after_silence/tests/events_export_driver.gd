@@ -26,6 +26,7 @@ func run():
 	director._physics_process(3.2)
 	check(director.phase=="ready","packed observation")
 	director.talk("lev");check(game.buttons.has("help"),"packed NPC dialogue")
+	director.events[0].mode="escort" # Exercise the legacy checkpoint reader.
 	director.begin_preparation();game.player.position=director.preparation_point()
 	check(director.complete_preparation(),"packed required world action")
 	director.activity.set_physics_process(false)
