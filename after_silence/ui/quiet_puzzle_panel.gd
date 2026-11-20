@@ -5,6 +5,8 @@ signal changed
 const Tile=preload("res://after_silence/ui/puzzle_tile.gd")
 const Puzzle=preload("res://after_silence/core/quiet_puzzle.gd")
 const ThemeArt=preload("res://after_silence/ui/comfort_theme.gd")
+const Stage=preload("res://after_silence/ui/trial_stage_art.gd")
+const Motion=preload("res://after_silence/ui/trial_motion.gd")
 const COLORS_RU=["Янтарь","Шалфей","Небо","Сирень","Солнце","Вода"]
 const COLORS_EN=["Amber","Sage","Sky","Lilac","Sun","Water"]
 const SIDES={
@@ -25,14 +27,11 @@ var undo_button: Button
 var reset_button: Button
 var hint_button: Button
 var focus_before_pause: Control
+var effects: Control
 
 func _ready() -> void:
 	mouse_filter=Control.MOUSE_FILTER_STOP
-	var background=Panel.new()
-	background.size=size
-	background.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	background.add_theme_stylebox_override("panel",ThemeArt.panel(Color("222637")))
-	add_child(background)
+	texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
 	var instructions=Label.new()
 	instructions.position=Vector2(411,12)
 	instructions.size=Vector2(149,70)
@@ -79,7 +78,11 @@ func _ready() -> void:
 		button.focus_next=button.get_path_to(tab_order[(i+1)%tab_order.size()])
 		button.focus_previous=button.get_path_to(tab_order[posmod(i-1,tab_order.size())])
 	_refresh()
+	effects=Motion.new();effects.game=game;add_child(effects)
 	focus_board()
+
+func _draw():
+	Stage.draw(self,model.mode,401)
 
 func _button(caption: String, y: int, action: Callable) -> Button:
 	var button=Button.new()
@@ -127,6 +130,13 @@ func _accept(next: Array) -> void:
 	if accepted:
 		game.audio.ping(game.state.volume)
 		feedback.text=game.t("Получилось.","That worked.")
+		if not game.comfort.reduce_motion:
+			var color=Stage.accent(model.mode).lightened(.28)
+			for i in next:
+				effects.burst(tiles[i].position+tiles[i].size*.5,color)
+				tiles[i].animate_change()
+			if model.mode=="tubes":
+				effects.transfer(tiles[next[0]].get_rect().get_center(),tiles[next[1]].get_rect().get_center(),color)
 	else:
 		feedback.text=game.t("Попробуй другой ход.","Try another move.")
 	_refresh()

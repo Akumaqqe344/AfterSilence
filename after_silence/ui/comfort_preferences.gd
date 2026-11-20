@@ -3,6 +3,7 @@ extends RefCounted
 var path="user://comfort.cfg"
 var large_text=false
 var reduce_motion=false
+var route_guide=true
 var instant_text=false
 var fullscreen=false
 var language="ru"
@@ -14,6 +15,8 @@ func load_preferences() -> void:
 	if config.load(path)!=OK: return
 	large_text=_read_bool(config,"large_text")
 	reduce_motion=_read_bool(config,"reduce_motion")
+	var guide=config.get_value("comfort","route_guide",true)
+	route_guide=guide if guide is bool else true
 	instant_text=_read_bool(config,"instant_text")
 	fullscreen=_read_bool(config,"fullscreen")
 	language=str(config.get_value("comfort","language","ru"))
@@ -29,7 +32,7 @@ func _read_bool(config: ConfigFile, key: String) -> bool:
 
 func save_preferences() -> Error:
 	var config=ConfigFile.new()
-	for key in ["large_text","reduce_motion","instant_text","fullscreen","language","volume"]:
+	for key in ["large_text","reduce_motion","route_guide","instant_text","fullscreen","language","volume"]:
 		config.set_value("comfort",key,get(key))
 	var error=config.save(path)
 	if error==OK: available=true

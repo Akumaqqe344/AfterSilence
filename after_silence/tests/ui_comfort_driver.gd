@@ -62,6 +62,7 @@ func run():
 	game.state.language="ru";game.ui.theme=game.ComfortTheme.create()
 	game._main_menu()
 	await settle()
+	check(game.modal_backdrop.sky_time>.05,"menu animates with default motion settings")
 	check(game.ComfortTheme.FONT.has_char("Я".unicode_at(0)),"font has Cyrillic")
 	check(game.ComfortTheme.FONT.antialiasing==TextServer.FONT_ANTIALIASING_NONE,"pixel font without smoothing")
 	check(game.buttons.events_load.disabled,"continue disabled without save")

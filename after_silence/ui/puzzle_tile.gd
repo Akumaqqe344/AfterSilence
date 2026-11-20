@@ -16,17 +16,32 @@ var stack: Array=[]
 var stage=0
 var picked=false
 var suggested=false
+var lift=0.0
+var bounce: Tween
+
+func animate_change():
+	if is_instance_valid(bounce): bounce.kill()
+	lift=5
+	bounce=create_tween()
+	bounce.tween_method(_raise_art,5.0,0.0,.27).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _raise_art(value: float):
+	lift=value
+	queue_redraw()
 
 func _draw() -> void:
-	var center=(size*.5).floor()
+	var center=(size*.5-Vector2(0,lift)).floor()
 	if kind=="tubes":
 		var bottle=Rect2(center-Vector2(13,26),Vector2(26,53))
 		draw_rect(bottle,Color("282b3c"))
 		draw_rect(bottle,Color("98a5aa"),false,2)
 		draw_rect(Rect2(center-Vector2(16,28),Vector2(32,4)),Color("d1b59a"))
+		draw_rect(Rect2(center-Vector2(10,22),Vector2(2,45)),Color("b9c5bd52"))
+		draw_rect(Rect2(center+Vector2(9,-17),Vector2(1,34)),Color("c9d4cc47"))
 		for i in range(stack.size()):
 			var liquid=Rect2(center+Vector2(-10,22-i*13-12),Vector2(20,11))
 			draw_rect(liquid,COLORS[stack[i]])
+			draw_rect(Rect2(liquid.position,Vector2(20,2)),COLORS[stack[i]].lightened(.24))
 			_symbol(liquid.get_center(),stack[i],1)
 	elif kind=="seeds":
 		if stage>=0:
@@ -34,6 +49,8 @@ func _draw() -> void:
 			draw_rect(Rect2(center-Vector2(16,-3),Vector2(32,2)),Color("aa8068"))
 		if stage>0:
 			draw_rect(Rect2(center-Vector2(1,10),Vector2(3,17)),Color("9ab092"))
+			draw_rect(Rect2(center-Vector2(7,3),Vector2(6,2)),Color("a7bc8e"))
+			draw_rect(Rect2(center+Vector2(2,-5),Vector2(7,2)),Color("7fa282"))
 		_symbol(center-Vector2(0,6),tone,3 if stage==2 else 2,stage==0)
 	elif tone>=0:
 		match kind:

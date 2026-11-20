@@ -33,6 +33,7 @@ var event_saves=Saves.new()
 var events_controller
 var journey=preload("res://after_silence/world/journey.gd").new(self)
 var event_window
+var route_guide: Control
 var evidence
 var inventory
 var quests
@@ -155,6 +156,10 @@ func _ready():
 		var puzzle_runner=load("res://after_silence/tests/quiet_puzzles_driver.gd").new()
 		puzzle_runner.game=self
 		get_tree().root.add_child.call_deferred(puzzle_runner)
+	if "--qa-wayfinding" in OS.get_cmdline_user_args() and "--qa" in OS.get_cmdline_user_args():
+		var guide_runner=load("res://after_silence/tests/wayfinding_driver.gd").new()
+		guide_runner.game=self
+		get_tree().root.add_child.call_deferred(guide_runner)
 	if "--qa-export" in OS.get_cmdline_user_args():
 		var runner=load("res://after_silence/tests/episode_driver.gd").new()
 		runner.game=self
@@ -210,6 +215,10 @@ func _setup_ui():
 	hud.game=self
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(hud)
+	route_guide=preload("res://after_silence/world/route_guide.gd").new()
+	route_guide.game=self
+	route_guide.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui.add_child(route_guide)
 	objective=Label.new()
 	objective.position=Vector2(20,26)
 	objective.size=Vector2(360,24)
@@ -305,7 +314,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	modal_backdrop.menu_mode=main_layout
 	modal_backdrop.english=state.language=="en"
 	modal_backdrop.journey_mode=state.flag("event_campaign") and not main_layout
-	modal_backdrop.queue_redraw()
+	modal_backdrop.configure_motion(not comfort.reduce_motion)
 	var target=Vector2(28,26) if main_layout else Vector2(30,24)
 	card.position=target
 	card.size=Vector2(330,280) if main_layout else Vector2(536,264)
@@ -324,7 +333,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	var header=Label.new()
 	header.text=title
 	header.add_theme_color_override("font_color",ComfortTheme.PEACH)
-	header.add_theme_font_size_override("font_size",13 if main_layout else 12)
+	header.add_theme_font_size_override("font_size",18 if main_layout else 12)
 	header.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var portrait_id=id.split("_")[0]
 	if id=="intro": portrait_id="vera"
@@ -580,7 +589,9 @@ func _build_world(id: String,p: Vector2):
 	atmosphere.zone=id
 	atmosphere.echo=state.echo
 	atmosphere.anchor=player
+	atmosphere.game=self
 	world.add_child(atmosphere)
+	player.footstep.connect(atmosphere.footstep)
 	world.modulate=ComfortTheme.world_light(id,state.clock>=20 or state.clock<7,state.echo)
 	npcs.populate(self)
 	enemy=null
@@ -767,6 +778,7 @@ func _unhandled_key_input(event):
 		return
 	match event.physical_keycode:
 		KEY_T: if state.flag("event_campaign"): journey.open()
+		KEY_G: if state.flag("event_campaign"): _toggle_route_guide()
 		KEY_H: _quest_help()
 		KEY_Z: _toggle_zoom()
 		KEY_E: interact(_nearest())
@@ -782,6 +794,10 @@ func _toggle_zoom():
 	camera.position=Vector2.ZERO
 	wide_camera=not wide_camera
 	camera.zoom=Vector2.ONE*(0.65 if wide_camera else 1.0)
+func _toggle_route_guide():
+	comfort.route_guide=not comfort.route_guide
+	_save_comfort()
+
 func _quest_help():
 	if state.flag("event_campaign"): journey.open();return
 	_dialog("",t("Куда идти?","Where to go?"),shop.hint()+"\n"+t("Золотая отметка на карте — следующее событие. E — действие.","The gold map marker is the next event. E: interact."),[choice("map","Показать карту","Show map",func():_close();adventure.expanded=true),choice("close","Понятно","Got it",_close)],false)

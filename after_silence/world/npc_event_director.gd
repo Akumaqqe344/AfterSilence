@@ -277,7 +277,8 @@ func _physics_process(dt):
 		game.event_window.close();phase="ready"
 		game._notify(game.t("Событие восстановлено. Можно начать снова.","The event was restored. You can retry."))
 	if phase=="travel":
-		game.objective.text=pair(game.journey.places[event.location].name)+" · "+pair(game.journey.places[event.location].route)
+		var place=game.journey.places[event.location]
+		game.objective.text=game.t("Иди: ","Go to: ")+pair(place.name) if game.comfort.route_guide else pair(place.name)+" · "+pair(place.route)
 		if not game.modal and game.journey.here(event.location): arrive()
 		return
 	if phase=="action":

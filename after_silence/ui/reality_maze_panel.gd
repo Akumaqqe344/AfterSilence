@@ -3,6 +3,7 @@ extends Control
 signal solved
 signal changed
 const Model=preload("res://after_silence/core/reality_maze.gd")
+const Stage=preload("res://after_silence/ui/trial_stage_art.gd")
 const CELL=28
 const ORIGIN=Vector2(29,10)
 const COLORS=[Color("ecb184"),Color("add4b0"),Color("bbabe1")]
@@ -21,6 +22,11 @@ var focus_before_pause: Control
 var route: Array[Vector2i]=[]
 var walk_delay=0.0
 var direction=1
+var display_tile=Vector2.ZERO
+var move_tween: Tween
+var room_tween: Tween
+var room_tint=0.0
+var guide_path: Array[Vector2i]=[]
 
 func _ready():
 	focus_mode=Control.FOCUS_ALL
@@ -42,6 +48,7 @@ func _ready():
 	feedback.position=Vector2(309,192);feedback.size=Vector2(250,16)
 	feedback.add_theme_font_size_override("font_size",8);add_child(feedback)
 	notes_visible=model.stage==0 and not model.reflected
+	display_tile=Vector2(model.tile)
 	_refresh();focus_board()
 
 func _add_button(id: String, caption: String, at: Vector2, action: Callable):
@@ -68,6 +75,8 @@ func _hint():
 func _reset():
 	if game.modal: return
 	model.reset();route.clear();hint_visible=false;notes_visible=true
+	if is_instance_valid(move_tween): move_tween.kill()
+	display_tile=Vector2(model.tile)
 	feedback.text=game.t("Ты снова у входа.","Back at the entrance.")
 	_refresh();changed.emit();grab_focus()
 
@@ -97,25 +106,42 @@ func _step(next: Vector2i, save_walk: bool):
 	if outcome.is_empty(): return
 	var delta=next-previous
 	direction=0 if delta.y>0 else 1 if delta.y<0 else 2 if delta.x<0 else 3
+	if is_instance_valid(move_tween): move_tween.kill()
+	if outcome=="walk" and not game.comfort.reduce_motion:
+		move_tween=create_tween()
+		move_tween.tween_method(_move_art,display_tile,Vector2(model.tile),.14).set_trans(Tween.TRANS_SINE)
+	else: display_tile=Vector2(model.tile)
 	if outcome!="walk":
 		route.clear();notes_visible=false;hint_visible=false
 		feedback.text=game.t("Комната отразилась.","The room mirrored.") if outcome=="reflect" else game.t("Проход открылся.","The passage opened.")
 		game.audio.ping(game.state.volume)
+		if not game.comfort.reduce_motion:
+			if is_instance_valid(room_tween): room_tween.kill()
+			room_tint=.38
+			room_tween=create_tween()
+			room_tween.tween_method(_shade_room,.38,0.0,.34)
 	_refresh()
 	if model.won(): solved.emit()
 	elif outcome!="walk" or save_walk: changed.emit()
 
 func _refresh():
+	guide_path.clear()
+	if hint_visible and not model.won(): guide_path=model.route(model.destination())
 	var signs=PackedStringArray()
 	for i in range(model.order.size()):
 		signs.append("✓" if i<model.stage else Model.SIGILS[model.order[i]] if notes_visible else "·")
 	clue.text="   ".join(signs)
 	queue_redraw()
 
+func _move_art(value: Vector2):
+	display_tile=value;queue_redraw()
+
+func _shade_room(value: float):
+	room_tint=value;queue_redraw()
+
 func _draw():
 	var walls=Color("40334f") if model.reflected else Color("33434f")
-	draw_rect(Rect2(Vector2.ZERO,size),Color("232333"))
-	draw_rect(Rect2(Vector2.ONE,size-Vector2(2,2)),Color("68717b"),false)
+	Stage.draw(self,"reality",294,204)
 	for y in range(7):
 		for x in range(9):
 			var at=Vector2i(x,y)
@@ -123,11 +149,13 @@ func _draw():
 			if model.walkable(at):
 				var floor_color=Color("675269") if model.reflected else Color("4a6267")
 				draw_rect(box,floor_color.lightened(.045 if (x+y)%2==0 else 0))
+				draw_rect(Rect2(box.position,Vector2(CELL,1)),floor_color.lightened(.13))
 				draw_rect(Rect2(box.position+Vector2(5,22),Vector2(8,1)),floor_color.darkened(.12))
 			else:
 				draw_rect(box,walls)
 				draw_rect(Rect2(box.position+Vector2(1,2),Vector2(CELL-2,3)),walls.lightened(.16))
 				draw_rect(Rect2(box.position+Vector2(0,24),Vector2(CELL,4)),walls.darkened(.27))
+				for i in range(2): draw_rect(Rect2(box.position+Vector2(4+(x+y+i*11)%17,10+i*7),Vector2(8,1)),walls.lightened(.12))
 	for i in range(Model.PORTALS.size()):
 		var center=ORIGIN+(Vector2(Model.PORTALS[i])+Vector2(.5,.5))*CELL
 		var tint=COLORS[model.sigil(i)]
@@ -137,11 +165,19 @@ func _draw():
 		draw_string(get_theme_default_font(),center+Vector2(-5,5),Model.SIGILS[model.sigil(i)],HORIZONTAL_ALIGNMENT_LEFT,-1,10,tint)
 		if hint_visible and Model.PORTALS[i]==model.destination():
 			draw_rect(Rect2(center-Vector2(13,13),Vector2(26,26)),Color("f3d598"),false,2)
-	var focus=ORIGIN+Vector2(model.tile)*CELL
+	var previous=Vector2(model.tile)
+	for cell in guide_path:
+		var ray=(Vector2(cell)-previous).normalized()
+		var at=ORIGIN+((Vector2(cell)+previous)*.5+Vector2(.5,.5))*CELL
+		draw_polyline(PackedVector2Array([at-ray*3+ray.orthogonal()*4,at+ray*3,at-ray*3-ray.orthogonal()*4]),Color("f4d895"),2)
+		previous=Vector2(cell)
+	var focus=(ORIGIN+display_tile*CELL).round()
 	draw_rect(Rect2(focus+Vector2(2,2),Vector2(CELL-4,CELL-4)),Color("a9d8bf"),false)
 	if is_instance_valid(resident):
 		_draw_person(resident,focus+Vector2(21,24),14,0,Color("ddd1f2"))
 	_draw_person(game.player,focus+Vector2(11,23),22,direction,Color.WHITE)
+	if room_tint>0.0:
+		draw_rect(Rect2(ORIGIN,Vector2(9,7)*CELL),Color(.40,.34,.55,room_tint))
 
 func _draw_person(actor,feet: Vector2,height: int,facing: int,tint: Color):
 	if actor.sheet==null: return

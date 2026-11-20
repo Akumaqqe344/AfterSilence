@@ -4,6 +4,8 @@ signal solved
 signal changed
 const Rules=preload("res://after_silence/core/journey_trials.gd")
 const ThemeArt=preload("res://after_silence/ui/comfort_theme.gd")
+const Stage=preload("res://after_silence/ui/trial_stage_art.gd")
+const Motion=preload("res://after_silence/ui/trial_motion.gd")
 const PAPER=Color("e2c698")
 const SKY=Color("a5bfdf")
 const MINT=Color("acd0b1")
@@ -42,9 +44,16 @@ var focus_before_pause: Control
 var paper_icons: Array[Texture2D]=[]
 var trace_icons: Array[Texture2D]=[]
 var highlighted=-1
+var effects: Control
+var displayed_echo=Vector2.ZERO
+var echo_tween: Tween
+var carriage: Tween
+var rail_u=0.0
+var dispatch_to=-1
 
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_STOP
+	texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
 	var heading=_label(Vector2(386,13),Vector2(181,16),_pair(TITLES[model.kind]))
 	heading.add_theme_color_override("font_color",ThemeArt.PEACH)
 	_label(Vector2(386,35),Vector2(181,68),_pair(HELP[model.kind]))
@@ -55,6 +64,8 @@ func _ready():
 	feedback=_label(Vector2(14,194),Vector2(354,19),"")
 	feedback.add_theme_color_override("font_color",ThemeArt.PEACH)
 	_build_board()
+	effects=Motion.new();effects.game=game;add_child(effects)
+	if model.kind=="echo_tuning": displayed_echo=Vector2(model.state[0],model.state[1])
 	_refresh()
 	focus_board()
 
@@ -130,15 +141,52 @@ func focus_board():
 func play(id: int):
 	if game.modal or model.won(): return
 	highlighted=-1
+	var at=action_buttons[id].get_rect().get_center()
 	if model.perform(id):
 		game.audio.ping(game.state.volume)
 		feedback.text=""
 		_refresh()
+		_animate_action(id,at)
 		if model.won(): solved.emit()
 		else: changed.emit()
 	else:
 		feedback.text=game.t("Попробуй другой вариант.","Try another option.")
 		_refresh()
+
+func _animate_action(id: int,at: Vector2):
+	if game.comfort.reduce_motion:
+		if model.kind=="echo_tuning": displayed_echo=Vector2(model.state[0],model.state[1])
+		return
+	var tint=Stage.accent(model.kind).lightened(.25)
+	match model.kind:
+		"letter_press": effects.turn(at,action_buttons[id].icon)
+		"balance": effects.transfer(at,action_buttons[id].get_rect().get_center(),tint)
+		"railway":
+			if id==3:
+				if is_instance_valid(carriage): carriage.kill()
+				dispatch_to=model.station()
+				rail_u=0
+				carriage=create_tween()
+				carriage.tween_method(_advance_train,0.0,1.0,.55).set_trans(Tween.TRANS_SINE)
+				carriage.tween_callback(func():dispatch_to=-1;queue_redraw())
+		"echo_tuning":
+			if is_instance_valid(echo_tween): echo_tween.kill()
+			var adjusted=Vector2(model.state[0],model.state[1])
+			echo_tween=create_tween()
+			echo_tween.tween_method(_ease_wave,displayed_echo,adjusted,.24).set_trans(Tween.TRANS_SINE)
+	effects.burst(action_buttons[id].get_rect().get_center(),tint)
+
+func _advance_train(fraction: float):
+	rail_u=fraction;queue_redraw()
+
+func _ease_wave(value: Vector2):
+	displayed_echo=value;queue_redraw()
+
+func _restore_motion():
+	if is_instance_valid(echo_tween): echo_tween.kill()
+	if is_instance_valid(carriage): carriage.kill()
+	dispatch_to=-1
+	if model.kind=="echo_tuning": displayed_echo=Vector2(model.state[0],model.state[1])
 
 func _hint():
 	if game.modal: return
@@ -149,12 +197,14 @@ func _hint():
 func _undo():
 	if game.modal: return
 	model.undo()
+	_restore_motion()
 	highlighted=-1;feedback.text=""
 	_refresh();changed.emit()
 
 func _reset():
 	if game.modal: return
 	model.reset()
+	_restore_motion()
 	highlighted=-1;feedback.text=""
 	_refresh();changed.emit();focus_board()
 
@@ -242,10 +292,7 @@ func _paint_letter():
 			piece.rotate_90(CLOCKWISE)
 
 func _draw():
-	draw_rect(Rect2(Vector2.ZERO,size),INK)
-	draw_rect(Rect2(Vector2(1,1),size-Vector2(2,2)),Color("657080"),false)
-	draw_rect(Rect2(Vector2(12,10),Vector2(356,178)),Color("303447"))
-	draw_line(Vector2(376,12),Vector2(376,203),Color("535969"))
+	Stage.draw(self,model.kind,376)
 	match model.kind:
 		"letter_press":
 			draw_rect(Rect2(98,12,174,166),Color("6a514b"),false,3)
@@ -279,25 +326,41 @@ func _draw_rails():
 	var pivot=Vector2(105,80)
 	var junctions=[Vector2(193,43),Vector2(193,109)]
 	var rails=Color("697583")
-	draw_line(entry,pivot,MINT,4)
+	_track(entry,pivot,MINT)
 	for j in range(2):
-		draw_line(pivot,junctions[j],MINT if model.state[0]==j else rails,4)
+		_track(pivot,junctions[j],MINT if model.state[0]==j else rails)
 		for k in range(2):
 			var end=Vector2(302,27+j*66+k*30)
-			draw_line(junctions[j],end,MINT if model.station()==j*2+k else rails,4)
+			_track(junctions[j],end,MINT if model.station()==j*2+k else rails)
 			var station_color=AMBER if not model.won() and Rules.STATIONS[model.round_index]==j*2+k else SKY
 			draw_rect(Rect2(end-Vector2(4,7),Vector2(27,14)),station_color.darkened(.65))
 			_caption(end+Vector2(4,4),STATION_NAMES[j*2+k],station_color)
-	draw_rect(Rect2(entry-Vector2(10,9),Vector2(22,14)),AMBER)
-	draw_rect(Rect2(entry-Vector2(7,-6),Vector2(5,4)),rails)
-	draw_rect(Rect2(entry+Vector2(5,6),Vector2(5,4)),rails)
+	if dispatch_to>=0:
+		var lane=floori(dispatch_to/2.0)
+		var points=[entry,pivot,junctions[lane],Vector2(302,27+lane*66+dispatch_to%2*30)]
+		var segment=mini(2,int(rail_u*3))
+		entry=points[segment].lerp(points[segment+1],clampf(rail_u*3-segment,0,1)).round()
+	draw_rect(Rect2(entry-Vector2(10,9),Vector2(22,14)),Color("725c55"))
+	draw_rect(Rect2(entry-Vector2(8,8),Vector2(18,10)),AMBER)
+	draw_rect(Rect2(entry-Vector2(7,6),Vector2(7,4)),SKY.darkened(.25))
+	for x in [-7,6]: draw_rect(Rect2(entry+Vector2(x,4),Vector2(5,4)),Color("292d37"))
+
+func _track(from: Vector2,to: Vector2,tint: Color):
+	draw_line(from,to,Color("303244"),7)
+	draw_line(from,to,tint.darkened(.43),4)
+	draw_line(from,to,tint,1)
+	var span=from.distance_to(to)
+	var normal=from.direction_to(to).orthogonal()
+	for i in range(1,ceili(span/12)):
+		var tie=from.lerp(to,i*12/span).round()
+		draw_line((tie+normal*4).round(),(tie-normal*4).round(),Color("a08d79"),1)
 
 func _draw_echo():
 	for i in range(10): draw_line(Vector2(24+i*36,24),Vector2(24+i*36,120),Color("44485a"))
 	for i in range(4): draw_line(Vector2(20,29+i*27),Vector2(355,29+i*27),Color("44485a"))
 	var target: Array=Rules.ECHOES[mini(model.round_index,Rules.ECHOES.size()-1)]
 	_wave(target,Color("7993b6"),4)
-	_wave(model.state,AMBER,2)
+	_wave([displayed_echo.x,displayed_echo.y],AMBER,2)
 	_caption(Vector2(36,139),game.t("Высота","Height"),AMBER)
 	_caption(Vector2(169,139),game.t("Сдвиг","Shift"),AMBER)
 
