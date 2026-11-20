@@ -1,5 +1,6 @@
 extends CharacterBody2D
 signal footstep(loud: bool)
+signal landed
 # Pechatai character.js: 180 / 1.65 / 1300 / 1600, normalized eight-way input.
 const SPEED=180.0
 const ACCEL=1300.0
@@ -28,6 +29,9 @@ var managed_motion=false
 var managed_velocity=Vector2.ZERO
 var npc_anchor=Vector2(32,92)
 var portrait=Rect2(8,0,48,48)
+var visual_comfort
+var settle_age=0.0
+var sprite_step=0.0
 func _ready():
 	collision_layer=2 if is_player else 4
 	collision_mask=1
@@ -100,7 +104,12 @@ func _physics_process(dt):
 		phase+=dt*(12 if running else 8)*minf(1.5,motion.length()/(297 if running else 180)) if is_player else dt*6
 		step_time+=dt
 		if is_player and step_time>(.25 if running else .42): step_time=0;footstep.emit(running)
+	var in_air=jump_age<jump_duration
 	if enabled or scripted: jump_age=minf(jump_duration,jump_age+dt)
+	if is_player and in_air and jump_age>=jump_duration:
+		settle_age=.18
+		landed.emit()
+	settle_age=maxf(0,settle_age-dt)
 	var p=jump_age/jump_duration
 	elevation=4*p*(1-p)*jump_peak if p<1 else 0.0
 	inspect_time=maxf(0,inspect_time-dt)
@@ -125,6 +134,13 @@ func _physics_process(dt):
 		sprite.texture=clips[clip]
 	sprite.region_rect=Rect2(Vector2(frame,row)*size,size)
 	sprite.position=(-anchor*.7-Vector2(0,elevation)) if is_player else -npc_anchor*sprite.scale
+	if is_player:
+		var show_motion=visual_comfort!=null and not visual_comfort.reduce_motion
+		var lean=clampf(motion.x/(320 if running else 250)*.047,-.047,.047) if show_motion else 0.0
+		sprite.skew=lerpf(sprite.skew,lean,minf(1,dt*13))
+		var lift=sin(phase*PI)*1.3 if moving and p>=1 and show_motion else 0.0
+		sprite_step=lerpf(sprite_step,lift,minf(1,dt*16))
+		if show_motion: sprite.position.y-=roundf(sprite_step-settle_age*7)
 	queue_redraw()
 func _draw():
 	var shrink=maxf(.4,1-elevation/28*.45)

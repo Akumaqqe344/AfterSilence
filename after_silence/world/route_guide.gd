@@ -1,6 +1,6 @@
 extends Control
 
-const DARK=Color("202532e9")
+const DARK=Color("253944ef")
 const TRACE=Color("f0ce8f")
 const GHOST=Color("34303e")
 const INTERVAL=.20
@@ -13,6 +13,7 @@ var travel_age=0.0
 var last_zone=""
 var remaining=0.0
 var toggle: Button
+var tile_skin: StyleBoxFlat
 
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
@@ -22,6 +23,8 @@ func _ready():
 	toggle.focus_mode=Control.FOCUS_NONE
 	toggle.pressed.connect(game._toggle_route_guide)
 	add_child(toggle)
+	tile_skin=game.ComfortTheme.panel(DARK,true)
+	game.ComfortMotion.wire_button(toggle,game.comfort)
 
 func _process(dt):
 	var available=game.state.flag("event_campaign") and not game.in_menu and not game.modal and not game.event_window.active and not game.transitions.busy and not game.cutscenes.running and not game.adventure.expanded and is_instance_valid(game.player)
@@ -93,7 +96,8 @@ func _draw():
 	var detail=game.t("Ищи проход рядом","Look for a nearby passage") if route.is_empty() else game.t("До цели · %d шаг.","To goal · %d steps")%ceili(remaining/16)
 	if close:
 		detail=game.t("E · взаимодействовать","E · interact") if target.action else game.t("Ты на месте","You're here")
-	draw_style_box(game.ComfortTheme.panel(DARK),Rect2(12,282,260,40))
+	draw_style_box(tile_skin,Rect2(12,282,260,40))
+	draw_rect(Rect2(16,288,2,28),game.ComfortTheme.BRASS)
 	draw_string(get_theme_default_font(),Vector2(23,297),caption,HORIZONTAL_ALIGNMENT_LEFT,235,8,TRACE)
 	draw_string(get_theme_default_font(),Vector2(23,312),detail,HORIZONTAL_ALIGNMENT_LEFT,235,7,game.ComfortTheme.TEXT)
 	if not route.is_empty() and not close:
@@ -113,6 +117,8 @@ func _draw():
 		var shift=0 if game.comfort.reduce_motion else roundf(sin(travel_age*TAU/3)*2)
 		var marker=dst+Vector2(0,-15+shift)
 		draw_circle(marker,9,DARK)
+		var rim=Color(.94,.80,.55,.42) if close else Color(.94,.80,.55,.30)
+		draw_arc(marker,11,0,TAU,20,rim,1)
 		_arrow(marker,Vector2.DOWN,5,TRACE)
 		if close and target.action:
 			draw_rect(Rect2(marker+Vector2(10,-7),Vector2(17,14)),DARK)

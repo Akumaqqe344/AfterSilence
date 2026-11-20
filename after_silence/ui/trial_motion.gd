@@ -51,6 +51,9 @@ func _draw():
 		var tint: Color=item.color
 		tint.a=(1.0-t)*.88
 		draw_rect(Rect2(at,Vector2.ONE*(3 if t<.32 else 2)),tint)
+		if t<.42 and item.speed.length_squared()>1200:
+			draw_rect(Rect2(at+Vector2(-2,1),Vector2(7,1)),tint)
+			draw_rect(Rect2(at+Vector2(1,-2),Vector2(1,7)),tint)
 	for item in transfers:
 		for i in range(4):
 			var t=maxf(0,item.age/DURATION-i*.08)

@@ -2,6 +2,8 @@ extends Control
 const QuietPanel=preload("res://after_silence/ui/quiet_puzzle_panel.gd")
 const RealityPanel=preload("res://after_silence/ui/reality_maze_panel.gd")
 const TrialPanel=preload("res://after_silence/ui/journey_trial_panel.gd")
+const StageArt=preload("res://after_silence/ui/trial_stage_art.gd")
+const Ambience=preload("res://after_silence/ui/board_ambience.gd")
 var game
 var frame: Panel
 var title: Label
@@ -14,15 +16,21 @@ var pause_shade: ColorRect
 var active=false
 var event_portrait: TextureRect
 var puzzle_panel: Control
+var decoration: Control
+var entrance: Tween
+var pause_motion: Tween
+var bar_motion: Tween
 
 func _ready():
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	z_index=30;mouse_filter=Control.MOUSE_FILTER_STOP
-	var shade=ColorRect.new();shade.color=Color("20242df5");shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(shade)
+	var shade=ColorRect.new();shade.color=Color("152732ee");shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(shade)
 	frame=Panel.new();frame.position=Vector2(16,12);frame.size=Vector2(608,336)
-	frame.add_theme_stylebox_override("panel",game.style(Color("1b3830"),true));add_child(frame)
-	title=Label.new();title.position=Vector2(16,8);title.add_theme_font_size_override("font_size",10);title.modulate=game.ComfortTheme.PEACH;frame.add_child(title)
-	event_portrait=TextureRect.new();event_portrait.position=Vector2(548,3);event_portrait.size=Vector2(36,36)
+	frame.add_theme_stylebox_override("panel",game.ComfortTheme.panel(Color("2b3c48"),true));add_child(frame)
+	decoration=Ambience.new();decoration.game=game
+	decoration.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);frame.add_child(decoration)
+	title=Label.new();title.position=Vector2(16,8);title.add_theme_font_size_override("font_size",11);title.modulate=game.ComfortTheme.PEACH;frame.add_child(title)
+	event_portrait=TextureRect.new();event_portrait.position=Vector2(549,6);event_portrait.size=Vector2(37,39)
 	event_portrait.expand_mode=TextureRect.EXPAND_IGNORE_SIZE;event_portrait.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	event_portrait.texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST;frame.add_child(event_portrait)
 	goal=Label.new();goal.position=Vector2(16,31);goal.size=Vector2(530,41);goal.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;frame.add_child(goal)
@@ -31,12 +39,14 @@ func _ready():
 	progress.set_deferred("size",Vector2(248,10))
 	progress_label=Label.new();progress_label.position=Vector2(280,296);progress_label.add_theme_font_size_override("font_size",8);frame.add_child(progress_label)
 	var pause=Button.new();pause.text=game.t("Пауза · Esc","Pause · Esc");pause.position=Vector2(474,295);pause.size=Vector2(118,26);pause.add_theme_font_size_override("font_size",8);pause.pressed.connect(toggle_pause);frame.add_child(pause)
+	game.ComfortMotion.wire_button(pause,game.comfort)
 	controls_hint=Label.new();controls_hint.position=Vector2(16,319);controls_hint.add_theme_font_size_override("font_size",8)
 	frame.add_child(controls_hint)
 	pause_shade=ColorRect.new();pause_shade.color=Color(0.08,0.09,0.13,.72);pause_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(pause_shade);pause_shade.hide()
 	pause_panel=Panel.new();pause_panel.position=Vector2(150,91);pause_panel.size=Vector2(340,178);pause_panel.add_theme_stylebox_override("panel",game.style(Color("203e32"),true));add_child(pause_panel)
 	for entry in [["Продолжить","Resume",resume],["Повторить","Retry",retry],["Сохранить и выйти","Save and leave",leave]]:
 		var button=Button.new();button.text=game.t(entry[0],entry[1]);button.position=Vector2(16,16+pause_panel.get_child_count()*50);button.size=Vector2(308,42);button.pressed.connect(entry[2]);pause_panel.add_child(button)
+		game.ComfortMotion.wire_button(button,game.comfort)
 	pause_panel.hide();hide()
 
 func open():
@@ -46,6 +56,9 @@ func open():
 	if activity==null: return
 	var event=director.events[director.index]
 	active=true;pause_panel.hide();pause_shade.hide();show()
+	decoration.begin(StageArt.accent(activity.mode))
+	if is_instance_valid(entrance): entrance.kill()
+	entrance=game.ComfortMotion.enter(frame,game.comfort)
 	title.text=director.pair(event.title)
 	goal.text=game.named(event.npc)+" · "+director.pair(event.context)
 	event_portrait.texture=preload("res://after_silence/core/npc_appearance.gd").portrait(director.index)
@@ -70,19 +83,26 @@ func open():
 	_refresh()
 	game.objective.hide();game.hint.hide();game.toast.hide()
 
-func _refresh():
+func _refresh(animate: bool=false):
 	var activity=game.events_controller.activity
-	progress.value=activity.progress()
+	if is_instance_valid(bar_motion): bar_motion.kill()
+	if animate and not game.comfort.reduce_motion:
+		bar_motion=create_tween()
+		bar_motion.tween_property(progress,"value",activity.progress(),.21).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	else: progress.value=activity.progress()
 	var prefix=game.t("Проходы ","Passages ") if activity.reality!=null else game.t("Готово ","Done ")
 	progress_label.text=prefix+"%d/%d"%[activity.progress(),activity.goal()]
 
 func _changed():
-	_refresh()
+	_refresh(true)
 	game._save(false)
 
 func close():
 	if not active: return
 	active=false
+	decoration.set_process(false)
+	for animation in [entrance,pause_motion,bar_motion]:
+		if is_instance_valid(animation): animation.kill()
 	if is_instance_valid(puzzle_panel):
 		frame.remove_child(puzzle_panel)
 		puzzle_panel.queue_free();puzzle_panel=null
@@ -93,8 +113,12 @@ func toggle_pause():
 	if not active or pause_panel.visible: return
 	puzzle_panel.remember_focus()
 	game.modal=true;pause_shade.show();pause_panel.show();pause_panel.get_child(0).grab_focus()
+	if is_instance_valid(pause_motion): pause_motion.kill()
+	pause_panel.position=Vector2(150,91)
+	pause_motion=game.ComfortMotion.enter(pause_panel,game.comfort,Vector2(0,6),.20)
 
 func resume():
+	if is_instance_valid(pause_motion): pause_motion.kill()
 	game._close();pause_panel.hide();pause_shade.hide()
 	if is_instance_valid(puzzle_panel): puzzle_panel.focus_board()
 

@@ -28,13 +28,15 @@ static func _texture(kind: String) -> Texture2D:
 
 static func draw(canvas: Control, kind: String, divider: int, board_height: int=187) -> void:
 	var trim=accent(kind)
-	canvas.draw_rect(Rect2(Vector2.ZERO,canvas.size),Color("242738"))
-	canvas.draw_rect(Rect2(Vector2(1,1),canvas.size-Vector2(2,2)),Color("626a7e"),false)
-	canvas.draw_rect(Rect2(8,7,divider-12,board_height),Color("171e2a"))
+	canvas.draw_rect(Rect2(Vector2.ZERO,canvas.size),Color("1d2d39"))
+	canvas.draw_rect(Rect2(Vector2(1,1),canvas.size-Vector2(2,2)),Color("647c80"),false)
+	canvas.draw_rect(Rect2(8,7,divider-12,board_height),Color("17262e"))
 	canvas.draw_texture_rect(_texture(kind),Rect2(11,10,divider-18,board_height-7),true)
 	canvas.draw_rect(Rect2(10,9,divider-15,board_height-4),trim.darkened(.38),false)
 	canvas.draw_rect(Rect2(divider,10,1,191),trim.darkened(.48))
 	canvas.draw_rect(Rect2(divider+3,10,1,191),Color("303344"))
+	canvas.draw_rect(Rect2(divider+9,7,canvas.size.x-divider-17,4),trim.darkened(.31))
+	canvas.draw_rect(Rect2(divider+9,canvas.size.y-8,canvas.size.x-divider-17,1),trim.darkened(.44))
 	for y in [11,board_height-4]:
 		for x in [12,divider-13]:
 			canvas.draw_rect(Rect2(x,y,3,3),trim)

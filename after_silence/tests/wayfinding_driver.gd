@@ -73,8 +73,15 @@ func click(button: Button):
 
 func test_board_motion():
 	var panel=begin_board(0)
+	check(is_instance_valid(game.event_window.entrance),"board enters with animation")
+	await get_tree().create_timer(.10).timeout
+	check(game.event_window.decoration.time>.04,"board decorative motion advances")
+	game.event_window.toggle_pause()
+	check(is_instance_valid(game.event_window.pause_motion),"pause panel enters with animation")
+	game.event_window.resume()
 	click(panel.action_buttons[panel.model.hint()])
 	check(not panel.effects.turns.is_empty() and not panel.effects.particles.is_empty(),"letter rotates its artwork")
+	check(is_instance_valid(game.event_window.bar_motion),"accepted move animates the progress bar")
 	await shot("05-letter-motion")
 	panel=begin_board(8)
 	for attempt in range(4):
@@ -91,6 +98,7 @@ func test_board_motion():
 	await shot("07-maze-arrows")
 	game.comfort.reduce_motion=true
 	panel=begin_board(0)
+	check(not is_instance_valid(game.event_window.entrance) and not game.event_window.decoration.is_processing(),"reduced motion removes entry and decorative effects")
 	click(panel.action_buttons[panel.model.hint()])
 	check(panel.effects.turns.is_empty() and panel.effects.particles.is_empty(),"reduced motion suppresses puzzle effects")
 	game.event_window.leave()
@@ -115,6 +123,8 @@ func run():
 	game._new_event_game();game._close()
 	game.set_physics_process(false);game.events_controller.set_physics_process(false)
 	test_route(0,"town",Vector2(690,647),"lev","ready")
+	game.story_hud.announce(game.t("Площадь","Square"))
+	check(game.story_hud.arrival_age>0,"zone arrival ribbon appears")
 	await shot("02-npc")
 	test_route(0,"town",Vector2(888,675),"event_preparation","action")
 	await shot("03-object")

@@ -55,6 +55,7 @@ func _add_button(id: String, caption: String, at: Vector2, action: Callable):
 	var button=Button.new()
 	button.name=id;button.position=at;button.size=Vector2(120,28)
 	button.text=caption;button.pressed.connect(action);add_child(button)
+	game.ComfortMotion.wire_button(button,game.comfort)
 
 func remember_focus():
 	var focused=get_viewport().gui_get_focus_owner()

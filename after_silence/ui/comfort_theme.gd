@@ -2,12 +2,14 @@ extends RefCounted
 ## Shared palette and control states for the whole desktop interface.
 const FONT_FILE=preload("res://after_silence/assets/fonts/PressStart2P-Regular.ttf")
 static var FONT: Font=_make_font()
-const INK=Color("262637")
-const SURFACE=Color("38364b")
-const TEXT=Color("fff3e2")
-const MUTED=Color("c6cccf")
-const SAGE=Color("b5d4bd")
-const PEACH=Color("efbe9e")
+const INK=Color("1c2932")
+const SURFACE=Color("2c3a45")
+const TEXT=Color("f6ede0")
+const MUTED=Color("bbcacb")
+const SAGE=Color("b8cfc0")
+const PEACH=Color("ebc49d")
+const BRASS=Color("c69e75")
+const EDGE=Color("6d807d")
 
 static func world_light(zone: String, night: bool, echo: bool) -> Color:
 	if echo: return Color("a0a7c8")
@@ -23,19 +25,20 @@ static func _make_font() -> Font:
 static func panel(bg: Color=SURFACE, accent: bool=false) -> StyleBoxFlat:
 	var box=StyleBoxFlat.new()
 	box.bg_color=bg
-	box.border_color=SAGE if accent else Color("626c73")
+	box.border_color=BRASS if accent else EDGE
 	box.set_border_width_all(1)
-	box.set_corner_radius_all(2)
+	box.border_width_bottom=2
+	box.set_corner_radius_all(4)
 	box.set_content_margin_all(8)
-	box.shadow_color=Color(0.07,0.08,0.12,0.3)
-	box.shadow_size=2
-	box.shadow_offset=Vector2(0,2)
+	box.shadow_color=Color("11192262")
+	box.shadow_size=4
+	box.shadow_offset=Vector2(0,3)
 	box.anti_aliasing=false
 	return box
 
 static func button(active: bool=false, pressed: bool=false) -> StyleBoxFlat:
-	var box=panel(Color("5a625f") if pressed else Color("4e585c") if active else Color("414055"))
-	box.border_color=SAGE if active else Color("68727b")
+	var box=panel(Color("50564e") if pressed else Color("405854") if active else Color("354754"))
+	box.border_color=PEACH if active else Color("617480")
 	box.content_margin_top=4
 	box.content_margin_bottom=4
 	box.content_margin_left=8
@@ -61,7 +64,7 @@ static func create(large: bool=false) -> Theme:
 	focus.shadow_size=0
 	result.set_stylebox("focus","Button",focus)
 	result.set_stylebox("focus","HSlider",focus)
-	var disabled=button();disabled.bg_color=Color("343b46");disabled.border_color=Color("525b65")
+	var disabled=button();disabled.bg_color=Color("2d3944");disabled.border_color=Color("546572")
 	result.set_stylebox("disabled","Button",disabled)
 	for state in ["font_hover_color","font_pressed_color","font_focus_color"]:
 		result.set_color(state,"Button",TEXT)
@@ -70,8 +73,8 @@ static func create(large: bool=false) -> Theme:
 	result.set_stylebox("panel","PanelContainer",panel())
 	result.set_stylebox("panel","TooltipPanel",panel(INK,true))
 	result.set_font_size("font_size","TooltipLabel",8)
-	var track=panel(Color("222934"));track.set_content_margin_all(0);track.shadow_size=0
-	var fill=track.duplicate();fill.bg_color=SAGE;fill.border_color=SAGE
+	var track=panel(Color("1d2b36"));track.set_content_margin_all(0);track.shadow_size=0
+	var fill=track.duplicate();fill.bg_color=BRASS;fill.border_color=PEACH
 	result.set_stylebox("background","ProgressBar",track)
 	result.set_stylebox("fill","ProgressBar",fill)
 	var scroll=track.duplicate();scroll.content_margin_left=3;scroll.content_margin_right=3

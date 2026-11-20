@@ -89,6 +89,7 @@ func _tool(id: String, caption: String, y: int, action: Callable) -> Button:
 		if state=="disabled": skin.bg_color=Color("343b46")
 		button.add_theme_stylebox_override(state,skin)
 	button.pressed.connect(action);add_child(button)
+	game.ComfortMotion.wire_button(button,game.comfort)
 	return button
 
 func _action(at: Vector2, bounds: Vector2, caption: String, tooltip: String="") -> Button:
@@ -99,6 +100,7 @@ func _action(at: Vector2, bounds: Vector2, caption: String, tooltip: String="") 
 	var buttons_before=get_child_count()
 	add_child(button)
 	move_child(button,maxi(0,buttons_before-4))
+	game.ComfortMotion.wire_button(button,game.comfort)
 	button.pressed.connect(play.bind(id))
 	action_buttons.append(button)
 	return button

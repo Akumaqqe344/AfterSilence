@@ -46,7 +46,7 @@ func click(control: Control):
 		var event=InputEventMouseButton.new()
 		event.position=point;event.global_position=point;event.button_index=MOUSE_BUTTON_LEFT;event.pressed=pressed
 		get_viewport().push_input(event,true)
-		await get_tree().process_frame
+	await get_tree().process_frame
 
 func dialog_bounds(label: String, all_visible: bool=false):
 	var bounds=Rect2(Vector2.ZERO,game.ui.size)

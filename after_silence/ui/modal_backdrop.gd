@@ -9,6 +9,7 @@ var menu_mode=false
 var english=false
 var journey_mode=false
 var animation_enabled=false
+var finish_mark=false
 var sky_time=0.0
 var frame_budget=0.0
 
@@ -18,14 +19,15 @@ func _ready() -> void:
 	set_process(false)
 
 func configure_motion(enabled: bool):
-	animation_enabled=menu_mode and enabled
-	if not animation_enabled: sky_time=0.0
+	animation_enabled=(menu_mode or finish_mark) and enabled
+	if not menu_mode or not animation_enabled: sky_time=0.0
 	set_process(animation_enabled)
 	queue_redraw()
 
 func _process(dt):
 	if not is_visible_in_tree(): return
 	sky_time=fmod(sky_time+dt,120.0)
+	if not menu_mode and sky_time>.9: set_process(false);queue_redraw();return
 	frame_budget+=dt
 	if frame_budget>=1.0/24.0:
 		frame_budget=0
@@ -46,19 +48,64 @@ func _plant(at: Vector2, flip: float=1.0) -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO,size),DESIGN.INK)
-	draw_rect(Rect2(10,10,size.x-20,size.y-20),Color("65716f"),false)
-	draw_rect(Rect2(10,10,46,2),DESIGN.SAGE)
-	draw_rect(Rect2(size.x-56,size.y-12,46,2),DESIGN.PEACH)
+	if menu_mode: _panorama()
+	else: _dialog_backdrop()
+	draw_rect(Rect2(10,10,size.x-20,size.y-20),Color("82989787"),false)
+	for corner in [Vector2(10,10),Vector2(size.x-56,size.y-12)]:
+		draw_rect(Rect2(corner,Vector2(46,2)),DESIGN.BRASS)
 	if menu_mode:
 		_dusk_postcard()
-	else:
-		_plant(Vector2(613,331),-1)
+	if finish_mark and animation_enabled and sky_time<.9: _quiet_victory()
 	var footer="Take your time · Tab to choose · Enter to open" if english else "Не спеши · Tab — выбрать · Enter — открыть"
 	draw_string(get_theme_default_font(),Vector2(28,size.y-20),footer,HORIZONTAL_ALIGNMENT_LEFT,580,6,DESIGN.MUTED)
 
+func _panorama():
+	for y in range(0,360,12):
+		var tint=Color("26354a").lerp(Color("52605c"),float(y)/360.0)
+		draw_rect(Rect2(0,y,640,12),tint)
+	for i in range(20):
+		var x=posmod(i*47+int(sky_time*2),623)
+		var y=50+posmod(i*29,118)
+		draw_rect(Rect2(x,y,mini(19+i%11,640-x),1),Color("b0a3ab49"))
+	for i in range(48):
+		var height=225+roundi(sin(float(i)*.19)*31)+posmod(i*53,27)
+		var x=i*14
+		draw_rect(Rect2(x,height,14,360-height),Color("354b52"))
+	for i in range(8):
+		var x=9+i*81
+		draw_texture_rect(TREE,Rect2(x,179+posmod(i*57,57),85,122),false,Color("465c667f"))
+	for i in range(10):
+		var x=13+i*34
+		draw_rect(Rect2(x,0,34,360),Color(.085,.13,.18,lerpf(.66,.18,i/9.0)))
+	draw_rect(Rect2(0,320,640,40),Color("1626309c"))
+
+func _dialog_backdrop():
+	for y in range(0,360,16):
+		draw_rect(Rect2(0,y,640,16),Color("1d3039").lerp(Color("304047"),float(y)/360.0))
+	for x in [19,611]:
+		draw_rect(Rect2(x,43,2,269),Color("74958e4b"))
+		for i in range(5):
+			var at=Vector2(x+1,50+i*51)
+			draw_colored_polygon(PackedVector2Array([at+Vector2(0,-3),at+Vector2(3,0),at+Vector2(0,3),at-Vector2(3,0)]),Color("9ab3a177"))
+	_plant(Vector2(613,331),-1)
+
+func _quiet_victory():
+	var t=sky_time/.9
+	for i in range(14):
+		var side=1 if i%2==0 else -1
+		var x=320+side*(237+sin(i*2.4+t*2.0)*16)
+		var y=113+i*10-t*45
+		var gold=Color("e4bf8d")
+		gold.a=(1-t)*.78
+		draw_rect(Rect2(Vector2(x,y).round(),Vector2(2+i%2,2+i%2)),gold)
+
 func _dusk_postcard():
-	var frame=Rect2(372,25,248,295)
-	draw_style_box(DESIGN.panel(Color("362f49"),true),frame)
+	var frame=Rect2(364,17,264,311)
+	draw_style_box(DESIGN.panel(Color("304752"),true),frame)
+	draw_rect(Rect2(369,22,254,301),Color("101f2d94"))
+	for x in [370,618]:
+		for y in [24,318]:
+			draw_rect(Rect2(x,y,5,3),Color("d0ac83"))
 	for band in range(15):
 		var amount=band/14.0
 		draw_rect(Rect2(378,31+band*9,236,9),Color("292a46").lerp(Color("8e6068"),amount))
@@ -96,6 +143,10 @@ func _dusk_postcard():
 	draw_rect(Rect2(378,266,236,28),Color("394b4d"))
 	draw_rect(Rect2(378,266,236,2),Color("b49474"))
 	draw_texture_rect(LAMP,Rect2(395,191,41,78),false,Color("dbc5a6"))
+	var glow_at=Vector2(423,226)
+	for i in range(4):
+		var strength=.055+sin(sky_time*1.3)*.009
+		draw_circle(glow_at,22-i*4,Color(.91,.68,.35,strength))
 	_plant(Vector2(589,267),-1)
 	var bob=roundf(sin(sky_time*2.4)) if animation_enabled else 0
 	draw_rect(Rect2(484,281,48,5),Color("222d3b"))
@@ -105,5 +156,5 @@ func _dusk_postcard():
 		draw_rect(Rect2(at-Vector2.ONE,Vector2(4,4)),Color("dcb98346"))
 		draw_rect(Rect2(at,Vector2(2,2)),Color("f0d29d"))
 	draw_rect(Rect2(378,294,236,20),Color("282737"))
-	var caption="A little light stays with you" if english else "Маленький свет всегда рядом"
+	var caption="A light in the town" if english else "Огонёк в городе"
 	draw_string(get_theme_default_font(),Vector2(388,307),caption,HORIZONTAL_ALIGNMENT_LEFT,219,7,DESIGN.TEXT)

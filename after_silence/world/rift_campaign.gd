@@ -470,9 +470,9 @@ func epilogue() -> String:
 
 func _draw() -> void:
 	if not active: return
-	draw_rect(Rect2(Vector2.ZERO,size),Color("292d38fa"))
-	draw_style_box(game.ComfortTheme.panel(),Rect2(17,17,size.x-34,size.y-34))
-	draw_rect(Rect2(32,18,60,2),game.ComfortTheme.SAGE)
+	draw_rect(Rect2(Vector2.ZERO,size),Color("172830fa"))
+	draw_style_box(game.ComfortTheme.panel(Color("2b3b47"),true),Rect2(17,17,size.x-34,size.y-34))
+	draw_rect(Rect2(32,18,74,2),game.ComfortTheme.BRASS)
 	if phase!="play": return
 	draw_rect(ARENA,Color("10242a"))
 	match play_mode():
@@ -485,10 +485,14 @@ func _draw() -> void:
 		"rhythm": draw_texture_rect(FLOOR if index==5 else DIRT if index==7 else GRASS,ARENA,true,Color("718c91"))
 		"defense": draw_texture_rect(WATER if index==4 else GRASS if index==10 else DIRT,ARENA,true,Color("71888b"))
 	draw_rect(ARENA,Color("07151bbb"))
-	draw_rect(ARENA,Color("488e88"),false,2)
+	draw_rect(ARENA,Color("8ca99d"),false,2)
+	for x in [ARENA.position.x+4,ARENA.end.x-11]:
+		for y in [ARENA.position.y+4,ARENA.end.y-7]:
+			draw_rect(Rect2(x,y,7,3),Color("ba9472"))
 	var font=get_theme_default_font()
-	var accent=Color("9adad0")
+	var accent=game.ComfortTheme.PEACH
 	if play_mode() in ["memory","circuit","herbs"]: draw_board()
+	draw_rect(Rect2(59,80,200,21),Color("233843ec"))
 	draw_string(font,Vector2(67,95),"%02d / 12   ♥ %d   %02d"%[index+1,health,maxi(0,ceili(remaining))],HORIZONTAL_ALIGNMENT_LEFT,-1,8,accent)
 	match play_mode():
 		"route":

@@ -22,6 +22,7 @@ const Rift=preload("res://after_silence/world/rift_campaign.gd")
 
 
 const ComfortTheme=preload("res://after_silence/ui/comfort_theme.gd")
+const ComfortMotion=preload("res://after_silence/ui/comfort_motion.gd")
 var comfort=preload("res://after_silence/ui/comfort_preferences.gd").new()
 var modal_back: Callable
 var settings_volume: Label
@@ -34,6 +35,7 @@ var events_controller
 var journey=preload("res://after_silence/world/journey.gd").new(self)
 var event_window
 var route_guide: Control
+var story_hud: Control
 var evidence
 var inventory
 var quests
@@ -211,10 +213,10 @@ func _setup_ui():
 	ui.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	layer.add_child(ui)
 	ui.theme=ComfortTheme.create(comfort.large_text)
-	var hud=load("res://after_silence/world/story_hud.gd").new()
-	hud.game=self
-	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ui.add_child(hud)
+	story_hud=load("res://after_silence/world/story_hud.gd").new()
+	story_hud.game=self
+	story_hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui.add_child(story_hud)
 	route_guide=preload("res://after_silence/world/route_guide.gd").new()
 	route_guide.game=self
 	route_guide.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -314,6 +316,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	modal_backdrop.menu_mode=main_layout
 	modal_backdrop.english=state.language=="en"
 	modal_backdrop.journey_mode=state.flag("event_campaign") and not main_layout
+	modal_backdrop.finish_mark=id.ends_with("_decision")
 	modal_backdrop.configure_motion(not comfort.reduce_motion)
 	var target=Vector2(28,26) if main_layout else Vector2(30,24)
 	card.position=target
@@ -321,10 +324,9 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	if not main_layout: target=Vector2(52,34);card.position=target
 	var panel_style=ComfortTheme.panel()
 	if main_layout:
-		panel_style.bg_color=Color.TRANSPARENT
-		panel_style.set_border_width_all(0)
-		panel_style.shadow_size=0
-		panel_style.set_content_margin_all(0)
+		panel_style=ComfortTheme.panel(Color("1b2b35ce"))
+		panel_style.border_color=Color("677c8270")
+		panel_style.set_content_margin_all(9)
 	card.add_theme_stylebox_override("panel",panel_style)
 	card.modulate.a=1
 	for child in column.get_children():
@@ -390,10 +392,10 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		buttons[item.id]=button
 		if item.id in ["back","close"]: modal_back=item.run
 		if item.id in ["events_new","events_load","resume","start"] and i==0:
-			var primary=ComfortTheme.button()
-			primary.bg_color=Color("536b59")
-			primary.border_color=ComfortTheme.SAGE
+			var primary=ComfortTheme.button(true)
+			primary.bg_color=Color("415854")
 			button.add_theme_stylebox_override("normal",primary)
+		ComfortMotion.wire_button(button,comfort)
 	if seen and animated and not state.flag("event_campaign"):
 		var skip=Label.new()
 		skip.text=t("Уже прочитано · текст показан целиком","Previously read · full text shown")
@@ -401,12 +403,7 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		column.add_child(skip)
 	_wire_dialog_focus()
 	card_scroll.scroll_vertical=0
-	if not comfort.reduce_motion:
-		card.position=target+Vector2(0,5)
-		card.modulate.a=0
-		modal_tween=create_tween().set_parallel(true)
-		modal_tween.tween_property(card,"position",target,.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		modal_tween.tween_property(card,"modulate:a",1.0,.16)
+	modal_tween=ComfortMotion.enter(card,comfort,Vector2(-7,3) if main_layout else Vector2(0,6),.26)
 
 func _wire_dialog_focus():
 	var enabled=[]
@@ -442,12 +439,12 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("После тишины","After Silence"),t("Маленький город. Истории, которые сближают.","A little town. Stories that bring us closer."),[choice("events_load","Продолжить путешествие","Continue journey",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_confirm_new_event),choice("archive","Прежние истории","Earlier stories",_archive_menu),choice("settings","Настройки и комфорт","Settings & comfort",_settings),choice("quit","До встречи","See you soon",func():get_tree().quit())],false,true)
+	_dialog("",t("После тишины","After Silence"),t("Путешествие Веры по городу, который помнит.","Vera's journey through the town that remembers."),[choice("events_load","Продолжить путешествие","Continue journey",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_confirm_new_event),choice("archive","Архив историй","Story archive",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выйти из игры","Quit game",func():get_tree().quit())],false,true)
 	buttons["events_load"].disabled=not event_saves.exists()
 	buttons["events_load"].tooltip_text=t("Здесь появится твоё сохранённое путешествие","Your saved journey will appear here") if not event_saves.exists() else t("Вернуться к сохранённой истории","Return to your saved story")
 	_wire_dialog_focus()
 	if not event_saves.exists():
-		var primary=ComfortTheme.button();primary.bg_color=Color("536b59");primary.border_color=ComfortTheme.SAGE
+		var primary=ComfortTheme.button(true);primary.bg_color=Color("415854");primary.border_color=ComfortTheme.PEACH
 		buttons["events_new"].add_theme_stylebox_override("normal",primary)
 func _confirm_new_event():
 	if not event_saves.exists():
@@ -542,7 +539,12 @@ func _travel(id: String,p: Vector2):
 	if transitions.busy: return
 	modal=false
 	shade.hide()
-	await transitions.transition(self,veil,func(): _build_world(id,p))
+	await transitions.transition(self,veil,func(): _build_world(id,p),comfort.reduce_motion)
+	if state.flag("event_campaign"):
+		var destination=""
+		for place in journey.places.values():
+			if place.zone==id: destination=journey.pair(place.name);break
+		if not destination.is_empty(): story_hud.announce(destination)
 	_save(false)
 	if id in Homes.IDS: _notify(Story.pair(Homes.NAMES[Homes.IDS.find(id)],state.language))
 func _build_world(id: String,p: Vector2):
@@ -562,6 +564,7 @@ func _build_world(id: String,p: Vector2):
 	if not is_instance_valid(player):
 		player=Actor.new()
 		player.is_player=true
+		player.visual_comfort=comfort
 		player.sheet=load("res://after_silence/assets/pechatai/player/walk.png")
 		player.footstep.connect(_footstep)
 		camera=Camera2D.new()
@@ -592,6 +595,7 @@ func _build_world(id: String,p: Vector2):
 	atmosphere.game=self
 	world.add_child(atmosphere)
 	player.footstep.connect(atmosphere.footstep)
+	player.landed.connect(atmosphere.landing)
 	world.modulate=ComfortTheme.world_light(id,state.clock>=20 or state.clock<7,state.echo)
 	npcs.populate(self)
 	enemy=null
@@ -918,6 +922,7 @@ func _begin_boss(id: String):
 	living.focus("boss")
 	modal=false
 	shade.hide()
+	battle.reduced_motion=comfort.reduce_motion
 	battle.start(id,state.language=="en")
 func _boss_won(id: String,flawless: bool):
 	state.set_flag("boss_"+id+"_defeated")
@@ -1145,6 +1150,7 @@ func _settings():
 		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
 		button.pressed.connect(entry[2])
 		grid.add_child(button)
+		ComfortMotion.wire_button(button,comfort)
 		buttons[entry[0]]=button
 	column.add_child(grid)
 	column.move_child(grid,3)
