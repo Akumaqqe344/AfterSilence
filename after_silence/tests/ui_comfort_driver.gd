@@ -201,9 +201,13 @@ func run():
 	await click(board.tools[0])
 	await click(board.slots[0])
 	check(board.values[0]==0,"catalogue pockets can be operated with the mouse")
-	game._clock()
-	await settle()
-	dialog_bounds("clock controls",true)
+	for language in ["ru","en"]:
+		game.state.language = language
+		game._clock()
+		await settle()
+		dialog_bounds("clock controls "+language,true)
+		var footer = game.column.get_node("ArchiveBoard").footer
+		check(game.card_scroll.get_global_rect().encloses(footer.get_global_rect()),"clock footer fully visible "+language)
 	game._relay()
 	await settle()
 	dialog_bounds("relay controls",true)

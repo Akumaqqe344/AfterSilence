@@ -1093,7 +1093,7 @@ func _clock():
 	var description = t("Свяжите афишу и часы в журнале. Без этого времени на циферблате будет недостаточно.", "Connect the poster and clock in the journal. The time alone won't establish what happened.")
 	if linked:
 		description = t("Афиша называет 02:17. Часы остановили при отключении сигнала. Введите время, которое подтверждают оба свидетельства.", "The poster gives 02:17. The clock stopped at the signal cut. Enter the time supported by both records.")
-	_open_archive_board("clock",t("Остановленные часы","The stopped clock"),description,[choice("journal","Открыть журнал","Open the journal",_journal)])
+	_open_archive_board("clock",t("Остановленные часы","The stopped clock"),description,[choice("journal","Журнал","Journal",_journal)])
 
 func _relay():
 	if state.flag("forest_power"):
