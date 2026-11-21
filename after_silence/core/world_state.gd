@@ -1,6 +1,6 @@
 extends RefCounted
 signal changed
-const ZONES = ["town", "library", "forest","home_nadia","home_lev","home_pavel","home_sonya","orchard","harbor","shop"]
+const ZONES = ["town", "library", "forest","home_nadia","home_lev","home_pavel","home_sonya","orchard","harbor","shop","records_annex","pump_chamber"]
 const SIZES={"town":Vector2(1792,1280),"forest":Vector2(1792,1344),"library":Vector2(960,720),"orchard":Vector2(1200,900),"harbor":Vector2(1200,900)}
 const ITEMS = ["fuse", "lens", "key", "ribbon", "bandage", "keepsake"]
 const CLUES = ["photo", "poster", "ledger", "clock", "diagram", "testimony", "signature", "medical"]
@@ -28,6 +28,7 @@ var storage: Dictionary={}
 var minigame: Dictionary={}
 var tokens=3
 var event_state: Dictionary={}
+var case_trials: Dictionary={}
 func flag(id: String) -> bool:
 	return flags.get(id, false) == true
 func set_flag(id: String, value: bool = true) -> void:
@@ -46,10 +47,19 @@ func give(id: String, count: int = 1) -> bool:
 	changed.emit()
 	return true
 func to_data() -> Dictionary:
-	return {"event_state":event_state.duplicate(true),"tokens":tokens,"schema":3,"storage":storage.duplicate(),"minigame":minigame.duplicate(true),"last_memories":last_memories.duplicate(),"away_times":away_times.duplicate(),"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "achievements":achievements.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
+	return {"case_trials":case_trials.duplicate(true),"event_state":event_state.duplicate(true),"tokens":tokens,"schema":3,"storage":storage.duplicate(),"minigame":minigame.duplicate(true),"last_memories":last_memories.duplicate(),"away_times":away_times.duplicate(),"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "achievements":achievements.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
 func restore(d: Dictionary) -> bool:
 	var saved_event=d.get("event_state",{})
 	if not saved_event is Dictionary or not preload("res://after_silence/core/event_progress.gd").valid(saved_event): return false
+	var raw_trials: Variant=d.get("case_trials",{})
+	var safe_trials: Dictionary={}
+	if raw_trials is Dictionary:
+		var Trial=preload("res://after_silence/core/journey_trials.gd")
+		for panel in {"weights_panel":["balance","weights"],"lamp_frame":["signal_grid","lamps"]}:
+			if not raw_trials.has(panel): continue
+			var mode: String="balance" if panel=="weights_panel" else "signal_grid"
+			var trial=Trial.new(mode,"weights" if panel=="weights_panel" else "lamps")
+			if trial.restore(raw_trials[panel]): safe_trials[panel]=trial.capture()
 	var saved_tokens=d.get("tokens",3)
 	if not (saved_tokens is int or saved_tokens is float) or not is_finite(float(saved_tokens)) or saved_tokens<0 or saved_tokens>999: return false
 	var schema=d.get("schema",2)
@@ -149,6 +159,7 @@ func restore(d: Dictionary) -> bool:
 	storage=saved_storage
 	tokens=int(saved_tokens)
 	event_state=saved_event.duplicate(true)
+	case_trials=safe_trials
 	minigame=saved_game
 	last_memories=saved_memories
 	away_times=saved_times

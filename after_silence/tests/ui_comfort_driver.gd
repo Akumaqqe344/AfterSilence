@@ -57,7 +57,9 @@ func dialog_bounds(label: String, all_visible: bool=false):
 		if all_visible: check(game.card.get_global_rect().encloses(button.get_global_rect()),label+" visible "+button.text)
 
 func run():
-	game.event_saves.path="user://qa_ui_story_"+str(Time.get_ticks_usec())+".json"
+	var run_id=str(Time.get_ticks_usec())
+	game.event_saves.path="user://qa_ui_story_"+run_id+".json"
+	game.comfort.path="user://qa_ui_comfort_"+run_id+".cfg"
 	game.comfort.large_text=false;game.comfort.reduce_motion=false;game.comfort.instant_text=false
 	game.state.language="ru";game.ui.theme=game.ComfortTheme.create()
 	game._main_menu()
@@ -67,6 +69,10 @@ func run():
 	check(game.ComfortTheme.FONT.get_font_name().contains("Pixelify"),"pixel typeface used throughout the interface")
 	check(game.buttons.events_load.disabled,"continue disabled without save")
 	check(get_viewport().gui_get_focus_owner()==game.buttons.events_new,"new journey focused")
+	check(not game.body.visible and not game.buttons.has("archive"),"front menu has only title and actions")
+	check(game.modal_backdrop.COTTAGE.get_size()==Vector2(320,180),"cottage uses a 320 × 180 pixel canvas")
+	await tap(KEY_1)
+	check(game.buttons.has("events_new"),"numeric shortcut cannot activate disabled continue")
 	dialog_bounds("menu",true)
 	await capture("01-menu")
 	await click(game.buttons.settings)
@@ -95,15 +101,26 @@ func run():
 	await capture("03-comfort-large")
 	await tap(KEY_ESCAPE)
 	check(game.buttons.has("events_new"),"Esc returns from settings to menu")
+	await click(game.buttons.settings)
 	game.buttons.archive.grab_focus()
 	await tap(KEY_ENTER)
-	check(game.buttons.has("rift"),"archive opened by keyboard")
+	check(game.buttons.has("rift"),"archive opened from settings by keyboard")
 	await capture("04-archive")
 	await tap(KEY_ESCAPE)
-	check(game.buttons.has("events_new"),"Esc returns from archive")
+	check(game.buttons.has("reduce_motion"),"Esc returns from archive to settings")
+	await click(game.buttons.reduce_motion)
+	await tap(KEY_ESCAPE)
 	await click(game.buttons.events_new)
+	check(game.departing_home and not game.card.visible,"new journey shows the cottage departure")
+	check(not game.event_saves.exists(),"departure creates no save before entering the world")
+	await tap(KEY_ESCAPE)
+	await tap(KEY_ENTER)
+	check(game.departing_home and game.in_menu,"keyboard cannot interrupt or restart the departure")
+	await capture("04b-vera-leaves")
+	await capture("04c-house-dark")
+	await get_tree().create_timer(.8).timeout
 	await settle()
-	check(not game.in_menu,"new journey starts by mouse")
+	check(not game.in_menu and not game.departing_home,"new journey starts after the departure")
 	game._close()
 	await capture("05-world")
 	await tap(KEY_M)
@@ -148,10 +165,12 @@ func run():
 	await capture("09-dialogue")
 	await tap(KEY_ESCAPE)
 	game._main_menu()
+	var previous_save=FileAccess.get_sha256(game.event_saves.path)
 	await click(game.buttons.events_new)
 	check(game.buttons.has("restart"),"existing story asks before replacement")
 	await tap(KEY_ESCAPE)
 	check(game.buttons.has("events_load") and not game.buttons.events_load.disabled,"cancel replacement keeps saved journey")
+	check(FileAccess.get_sha256(game.event_saves.path)==previous_save,"cancel leaves save byte-for-byte intact")
 	game.state.language="en";game._settings()
 	await capture("10-settings-en")
 	dialog_bounds("English settings",true)
@@ -169,6 +188,11 @@ func run():
 		DisplayServer.window_set_size(Vector2i(1600,900))
 		await capture("13-large-window")
 		dialog_bounds("large window",true)
+	game.comfort.reduce_motion=true
+	game._main_menu()
+	await click(game.buttons.events_new)
+	await click(game.buttons.restart)
+	check(not game.in_menu and not game.departing_home,"reduced motion starts immediately after confirmation")
 	game.comfort.large_text=false;game.comfort.reduce_motion=false;game.comfort.instant_text=false
 	game.state.language="ru";game._save_comfort()
 	var report={"checks":checks,"failures":failures,"screenshots":images,"automated":true,"version":ProjectSettings.get_setting("application/config/version")}

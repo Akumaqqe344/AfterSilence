@@ -33,7 +33,10 @@ func run() -> void:
 	old_story.set_flag("archive_sentinel")
 	check(game.archive_saves.save(old_story),"archive slot prepared")
 	check(game.buttons.has("events_new"),"NPC campaign in main menu")
-	check(game.buttons.has("archive"),"old campaign in archive menu")
+	game.buttons.settings.pressed.emit()
+	check(game.buttons.has("archive"),"archive accessible from settings")
+	game.buttons.archive.pressed.emit()
+	check(game.buttons.has("rift") and game.buttons.has("archive_load"),"old campaigns in archive menu")
 	for event_index in range(Rift.QUESTS.size()):
 		for option in Rift.QUESTS[event_index].choices:
 			check(Rift.OUTCOMES.has("%02d_%s"%[event_index+1,option[0]]),"event %02d outcome %s"%[event_index+1,option[0]])

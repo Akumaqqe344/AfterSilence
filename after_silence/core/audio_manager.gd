@@ -64,6 +64,28 @@ func door(at: Vector2,volume: float):
 func scene_cue(kind: String,volume: float):
 	_play_ui("danger" if kind=="boss" else "memory",volume*.24)
 
+func case_signal(tones: Array,volume: float):
+	if volume<=0 or tones.is_empty(): return
+	var key="case_signal:"+str(tones)
+	if not cache.has(key):
+		var stream=AudioStreamWAV.new()
+		stream.format=AudioStreamWAV.FORMAT_16_BITS
+		stream.mix_rate=RATE
+		var count=roundi(RATE*.32)
+		var data=PackedByteArray()
+		data.resize(count*tones.size()*2)
+		for note in tones.size():
+			for sample in count:
+				var t=float(sample)/RATE
+				var envelope=clampf(minf(t*75.0,(.23-t)*23.0),0.0,1.0)
+				var value=sin(TAU*float(tones[note])*t)*envelope*.28
+				data.encode_s16((note*count+sample)*2,roundi(value*32760))
+		stream.data=data
+		cache[key]=stream
+	cue.stream=cache[key]
+	cue.volume_db=linear_to_db(volume*.34)
+	cue.play()
+
 func _play_ui(kind: String,gain: float):
 	if gain<=0: return
 	cue.stream=_sample(kind,0)

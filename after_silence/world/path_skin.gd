@@ -1,18 +1,36 @@
 extends Node2D
 const Water=preload("res://after_silence/world/watercourse.gd")
 const Garden=preload("res://after_silence/world/garden_pixels.gd")
+const Art=preload("res://after_silence/core/ppae_art.gd")
 var world
+
+func _ready() -> void:
+	texture_repeat=CanvasItem.TEXTURE_REPEAT_ENABLED
 
 func _draw():
 	_meadow()
 	# Paint each layer across all segments so intersections merge into one road.
-	var colors=[Color("968761"),Color("ae966c"),Color("baa277")]
+	var colors=[Color("8d8063"),Color("ab916a")]
 	for layer in range(colors.size()):
 		for path in world.paths:
 			var radius: float=path[2]+5-layer*4
 			draw_line(path[0],path[1],colors[layer],radius*2)
 			draw_circle(path[0],radius,colors[layer])
 			draw_circle(path[1],radius,colors[layer])
+	var material:=Art.texture("dirt")
+	for path in world.paths:
+		var a: Vector2=path[0]
+		var b: Vector2=path[1]
+		var angle=a.angle_to_point(b)
+		var points:=PackedVector2Array()
+		var uvs:=PackedVector2Array()
+		for i in range(18):
+			var end:=b if i<9 else a
+			var offset:=float(i%9)/8.0*PI-PI*.5+(0.0 if i<9 else PI)
+			var at: Vector2=(end+Vector2.from_angle(angle+offset)*(path[2]-2.0)).round()
+			points.append(at)
+			uvs.append(at/material.get_size())
+		draw_polygon(points,PackedColorArray([Color("ffffffce")]),uvs,material)
 	for y in range(35,int(world.dimensions.y)-24,9):
 		for x in range(35,int(world.dimensions.x)-24,9):
 			var seed_value=posmod(x*73856093 ^ y*19349663,101)

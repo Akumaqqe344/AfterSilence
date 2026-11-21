@@ -16,12 +16,24 @@ const ACTIONS={"letter_press":4,"footprints":6,"balance":5,"signal_grid":25,"rai
 const MOVE_LIMIT=200
 
 var kind: String
+var variant: String
+var loads: Array=LOADS
+var balance_plan: Array=BALANCED
+var signal_rows: Array=SIGNAL
 var history: Array[int]=[]
 var state: Array
 var round_index=0
 
-func _init(mode: String):
+func _init(mode: String, configuration: String=""):
 	kind=mode
+	variant=configuration
+	if kind=="balance" and variant=="weights":
+		loads=[2,3,4,7,8]
+		balance_plan=[2,2,1,2,1]
+	if kind=="signal_grid" and variant=="lamps":
+		signal_rows=[17,10,4,10,17]
+	if kind=="signal_grid" and variant=="quiet_plaza":
+		signal_rows=[14,17,17,17,14]
 	reset()
 
 func reset():
@@ -67,8 +79,8 @@ func station() -> int:
 
 func weight(side: int) -> int:
 	var total=0
-	for i in range(LOADS.size()):
-		if state[i]==side: total+=LOADS[i]
+	for i in range(loads.size()):
+		if state[i]==side: total+=loads[i]
 	return total
 
 static func runs(bits: int) -> Array[int]:
@@ -97,8 +109,8 @@ func progress() -> int:
 		"signal_grid":
 			var correct=0
 			for i in range(5):
-				if runs(state[i])==runs(SIGNAL[i]): correct+=1
-				if runs(column(state,i))==runs(column(SIGNAL,i)): correct+=1
+				if runs(state[i])==runs(signal_rows[i]): correct+=1
+				if runs(column(state,i))==runs(column(signal_rows,i)): correct+=1
 			return correct
 		_: return round_index
 
@@ -114,11 +126,11 @@ func hint() -> int:
 		"footprints": return GUEST_TRACES[round_index].find(GUEST_CLUES[round_index])
 		"balance":
 			for i in range(state.size()):
-				if state[i]!=BALANCED[i]: return i
+				if state[i]!=balance_plan[i]: return i
 		"signal_grid":
 			for y in range(5):
 				for x in range(5):
-					if (state[y]^SIGNAL[y])&(1<<x): return y*5+x
+					if (state[y]^signal_rows[y])&(1<<x): return y*5+x
 		"railway":
 			var target: int=STATIONS[round_index]
 			var lane=floori(target/2.0)
@@ -137,7 +149,7 @@ func capture() -> Array:
 
 func restore(raw: Variant) -> bool:
 	if not raw is Array or raw.size()>MOVE_LIMIT: return false
-	var trial=get_script().new(kind)
+	var trial=get_script().new(kind,variant)
 	for action in raw:
 		if not (action is int or action is float) or not is_finite(float(action)) or action<0 or action>=ACTIONS[kind] or int(action)!=action: return false
 		if not trial.perform(int(action)): return false

@@ -3,6 +3,7 @@ extends RefCounted
 # bodies are added to the player's World2D.
 const World = preload("res://after_silence/world/world_view.gd")
 const Homes = preload("res://after_silence/world/homes.gd")
+const Cases = preload("res://after_silence/core/investigation_catalog.gd")
 var cache: Dictionary = {}
 
 func geometry(zone: String, echo: bool, story: bool) -> Dictionary:
@@ -65,6 +66,9 @@ func portals(echo: bool) -> Array:
 		["town", Vector2(350,468), "shop", Vector2(320,422)]
 	]
 	for id in Homes.IDS: result.append(["town", Homes.door(id,echo), id, Vector2(320,422)])
+	for id in Cases.data.rooms:
+		var room: Dictionary=Cases.data.rooms[id]
+		result.append([room.parent,Cases.point(room.from),id,Cases.point(room.exit)])
 	var reverse = []
 	for edge in result: reverse.append([edge[2],edge[3],edge[0],edge[1]])
 	return result + reverse

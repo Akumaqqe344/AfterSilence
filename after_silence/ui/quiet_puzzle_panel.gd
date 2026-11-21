@@ -61,6 +61,7 @@ func _ready() -> void:
 		tile.size=tile_size
 		tile.pressed.connect(_pick.bind(i))
 		add_child(tile)
+		Stage.button(tile)
 		game.ComfortMotion.wire_button(tile,game.comfort)
 		tiles.append(tile)
 	for i in range(count):
@@ -95,6 +96,7 @@ func _button(caption: String, y: int, action: Callable) -> Button:
 	add_child(button)
 	button.size=Vector2(149,26)
 	game.ComfortMotion.wire_button(button,game.comfort)
+	Stage.button(button)
 	return button
 
 func focus_board() -> void:

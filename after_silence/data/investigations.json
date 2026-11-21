@@ -1,0 +1,1335 @@
+{
+  "rooms": {
+    "records_annex": {
+      "name": [
+        "Подшивная библиотеки",
+        "The bindery annex"
+      ],
+      "parent": "library",
+      "gate": "reading_door",
+      "from": [
+        796,
+        426
+      ],
+      "entry": [
+        320,
+        397
+      ],
+      "exit": [
+        320,
+        422
+      ],
+      "decor": "paper"
+    },
+    "pump_chamber": {
+      "name": [
+        "Камера старого водосброса",
+        "Old sluice chamber"
+      ],
+      "parent": "town",
+      "gate": "sluice_door",
+      "from": [
+        1184,
+        904
+      ],
+      "entry": [
+        320,
+        397
+      ],
+      "exit": [
+        320,
+        422
+      ],
+      "decor": "metal"
+    }
+  },
+  "chapters": [
+    {
+      "id": "arrival",
+      "after": "",
+      "before": "letter",
+      "title": [
+        "Знак для той, кто вернётся",
+        "A mark for the one coming back"
+      ],
+      "intro": [
+        "Вера ищет сестру. Первые ориентиры остались на площади.",
+        "Vera is looking for her sister. Their first markers are in the square."
+      ],
+      "steps": [
+        {
+          "id": "arrival_notice",
+          "zone": "town",
+          "at": [
+            674,
+            666
+          ],
+          "art": "notice",
+          "title": [
+            "Записка Веры",
+            "Vera's note"
+          ],
+          "body": [
+            "Если имя сотрут, останется пароль. Один знак у воды, другой под правильно идущими часами.",
+            "If a name is erased, the password will survive. One sign is by the water, another by a working clock."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "arrival_rope",
+          "zone": "town",
+          "at": [
+            849,
+            578
+          ],
+          "art": "ribbon",
+          "title": [
+            "Нить на перекладине",
+            "Thread on the rail"
+          ],
+          "body": [
+            "На красной нити два одинаковых узла. С другого края обрывка нет: нить завязали специально.",
+            "The red thread has two identical knots. Its end is intact: someone tied it deliberately."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "arrival_watch",
+          "zone": "town",
+          "at": [
+            545,
+            526
+          ],
+          "art": "clock",
+          "title": [
+            "Маленький будильник",
+            "Little clock"
+          ],
+          "body": [
+            "Большие часы стоят. Будильник под ними тикает. На футляре надпись: «двойной узел».",
+            "The big clock has stopped. The little clock beneath it ticks. Its case is marked “double knot”."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "arrival_report",
+          "zone": "town",
+          "at": [
+            676,
+            573
+          ],
+          "art": "notice",
+          "title": [
+            "Доска маршрутов",
+            "Route board"
+          ],
+          "body": [
+            "Какой след можно считать сообщением сестры?",
+            "Which mark could be a message from Vera's sister?"
+          ],
+          "kind": "question",
+          "options": [
+            [
+              "Остановившиеся часы",
+              "The stopped clock"
+            ],
+            [
+              "Нить с двумя узлами",
+              "Thread with two knots"
+            ],
+            [
+              "Любая красная вещь",
+              "Anything red"
+            ]
+          ],
+          "correct": 1
+        }
+      ],
+      "owner": "lev",
+      "branches": [
+        {
+          "id": "open_signal",
+          "title": [
+            "Оставить знак на виду",
+            "Leave the sign visible"
+          ],
+          "result": [
+            "Лев сможет показать другим начало маршрута.",
+            "Lev can show others where the route starts."
+          ]
+        },
+        {
+          "id": "quiet_signal",
+          "title": [
+            "Снять нить и запомнить путь",
+            "Keep the thread and remember the way"
+          ],
+          "result": [
+            "Вера прячет нить, чтобы чужой не повторил знак.",
+            "Vera keeps the thread so a stranger can't copy it."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "copies",
+      "after": "guest",
+      "before": "epochs",
+      "title": [
+        "Страница под страницей",
+        "A page beneath the page"
+      ],
+      "intro": [
+        "Мара упоминала подшивную за восточным стеллажом. Кто-то передвинул строку в ведомости.",
+        "Mara mentioned a bindery behind the east shelves. Someone moved a line in the register."
+      ],
+      "steps": [
+        {
+          "id": "copies_lamp",
+          "zone": "library",
+          "at": [
+            624,
+            395
+          ],
+          "art": "lamp",
+          "title": [
+            "Боковой светильник",
+            "Side lamp"
+          ],
+          "body": [
+            "Косой свет проявляет четвёрку на полях. Дневная выписка называет тот же лист третьим.",
+            "Raking light reveals a four in the margin. The daytime extract calls the same sheet number three."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "reading_door",
+          "zone": "library",
+          "at": [
+            796,
+            426
+          ],
+          "art": "door",
+          "title": [
+            "Панель за стеллажом",
+            "Panel behind the shelves"
+          ],
+          "body": [
+            "У панели четыре насечки. Под ними скрыт зацеп.",
+            "Four notches mark the panel. A catch is concealed beneath them."
+          ],
+          "kind": "door",
+          "room": "records_annex"
+        },
+        {
+          "id": "copies_entry",
+          "zone": "records_annex",
+          "at": [
+            158,
+            203
+          ],
+          "art": "papers",
+          "title": [
+            "Угольный оттиск",
+            "Carbon impression"
+          ],
+          "body": [
+            "На исходном листе переправа стоит до отключения. Подпись смещена уже поверх высохшего текста.",
+            "On the original, the crossing predates the shutdown. The signature was shifted after the text dried."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "copies_thread",
+          "zone": "records_annex",
+          "at": [
+            476,
+            210
+          ],
+          "art": "stamp",
+          "title": [
+            "Сургуч на корешке",
+            "Wax on the spine"
+          ],
+          "body": [
+            "Третий и пятый листы скреплены сургучом. На месте четвёртого остались нити.",
+            "Wax joins the third and fifth sheets. Loose thread marks the place of the fourth."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "copies_proof",
+          "zone": "records_annex",
+          "at": [
+            320,
+            296
+          ],
+          "art": "desk",
+          "title": [
+            "Указатель подшивки",
+            "Bindery index"
+          ],
+          "body": [
+            "Восстанови порядок трёх записей по исходному листу.",
+            "Recover the order of the three entries from the original sheet."
+          ],
+          "kind": "sequence",
+          "options": [
+            [
+              "Объявили отключение",
+              "Shutdown recorded"
+            ],
+            [
+              "Переправа началась",
+              "Crossing began"
+            ],
+            [
+              "Сдвинули подпись",
+              "Signature moved"
+            ]
+          ],
+          "order": [
+            1,
+            0,
+            2
+          ]
+        }
+      ],
+      "owner": "mara",
+      "branches": [
+        {
+          "id": "redact",
+          "title": [
+            "Оставить выписку без имени",
+            "Leave an unsigned extract"
+          ],
+          "result": [
+            "На площади смогут сверить даты, не раскрывая имя.",
+            "The square can compare dates without revealing a name."
+          ]
+        },
+        {
+          "id": "seal_copy",
+          "title": [
+            "Хранить копию в подшивной",
+            "Keep the copy in the bindery"
+          ],
+          "result": [
+            "Мара запечатает запись. В лесу помогут метки, а не имена.",
+            "Mara seals the record. Markers, rather than names, will help in the woods."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sluice",
+      "after": "machine",
+      "before": "bridge",
+      "title": [
+        "Ключ у нижней воды",
+        "The key at low water"
+      ],
+      "intro": [
+        "Под мостом тянется потёртый канат. Лев оставил бирку привода.",
+        "A frayed line runs under the bridge. Lev left a tag on the drive."
+      ],
+      "steps": [
+        {
+          "id": "sluice_plate",
+          "zone": "home_lev",
+          "at": [
+            330,
+            255
+          ],
+          "art": "gear",
+          "title": [
+            "Бирка привода",
+            "Drive tag"
+          ],
+          "body": [
+            "Сбросить давление, переключить подачу, проверить уровень. Пуск до сброса выбивает защёлку.",
+            "Relieve pressure, redirect the flow, check the level. Starting before relief jams the latch."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "sluice_hitch",
+          "zone": "town",
+          "at": [
+            1115,
+            884
+          ],
+          "art": "rope",
+          "title": [
+            "Канат у дороги",
+            "Line by the road"
+          ],
+          "body": [
+            "Канат не порван. Он тёрся о стену камеры. На камне вырезано «вход с сухой стороны».",
+            "The line is intact. It rubbed against the chamber wall. The stone reads “entrance on the dry side”."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "sluice_door",
+          "zone": "town",
+          "at": [
+            1184,
+            904
+          ],
+          "art": "door",
+          "title": [
+            "Люк водосброса",
+            "Sluice hatch"
+          ],
+          "body": [
+            "Колесо поворачивается, пока Вера держит трос. Внизу слышна вода.",
+            "The wheel turns while Vera holds the line. Water can be heard below."
+          ],
+          "kind": "door",
+          "room": "pump_chamber"
+        },
+        {
+          "id": "sluice_gauge",
+          "zone": "pump_chamber",
+          "at": [
+            162,
+            204
+          ],
+          "art": "gauge",
+          "title": [
+            "Манометр",
+            "Relief gauge"
+          ],
+          "body": [
+            "Стрелка выше метки. Если сначала открыть отвод, давление уйдёт в старый канал.",
+            "The needle is above its mark. Opening the bypass first will drain pressure into the old channel."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "sluice_valves",
+          "zone": "pump_chamber",
+          "at": [
+            336,
+            279
+          ],
+          "art": "gear",
+          "title": [
+            "Пульт водосброса",
+            "Sluice controls"
+          ],
+          "body": [
+            "Сверь надписи с биркой Льва. При ошибке порядок можно начать снова.",
+            "Match the controls to Lev's tag. You can restart the order."
+          ],
+          "kind": "sequence",
+          "options": [
+            [
+              "Проверить уровень",
+              "Check the level"
+            ],
+            [
+              "Переключить подачу",
+              "Redirect the flow"
+            ],
+            [
+              "Сбросить давление",
+              "Relieve pressure"
+            ]
+          ],
+          "order": [
+            2,
+            1,
+            0
+          ]
+        }
+      ],
+      "owner": "lev",
+      "branches": [
+        {
+          "id": "leave_bypass",
+          "title": [
+            "Отметить сухой обход",
+            "Mark the dry bypass"
+          ],
+          "result": [
+            "Карта обхода понадобится у последней переправы.",
+            "The bypass map will matter at the last crossing."
+          ]
+        },
+        {
+          "id": "protect_gear",
+          "title": [
+            "Оставить механизм под присмотром",
+            "Keep watch over the mechanism"
+          ],
+          "result": [
+            "Для поздней переправы придётся сверить расписание Павла.",
+            "For the last crossing, Pavel's timetable will need checking."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bench",
+      "after": "bridge",
+      "before": "memory",
+      "title": [
+        "Скамья для двоих",
+        "A bench for two"
+      ],
+      "intro": [
+        "У моста стоит вторая чашка, хотя по списку все ушли.",
+        "A second cup sits by the bridge, though the register says everyone left."
+      ],
+      "steps": [
+        {
+          "id": "bench_cup",
+          "zone": "town",
+          "at": [
+            636,
+            926
+          ],
+          "art": "cup",
+          "title": [
+            "Вторая чашка",
+            "The second cup"
+          ],
+          "body": [
+            "На тёплой чашке детская царапина в форме солнца.",
+            "A child scratched a sun on the warm cup."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "bench_ribbon",
+          "zone": "town",
+          "at": [
+            631,
+            806
+          ],
+          "art": "ribbon",
+          "title": [
+            "Лента на ограждении",
+            "Ribbon on the rail"
+          ],
+          "body": [
+            "Лента смотрит к площади. Кто-то ждёт встречи, чтобы вернуться вместе.",
+            "The ribbon faces the square. Someone is waiting to return together."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "bench_scene",
+          "zone": "town",
+          "at": [
+            701,
+            674
+          ],
+          "art": "flag",
+          "title": [
+            "Записка ребёнку",
+            "A note to the child"
+          ],
+          "body": [
+            "Как передать весточку, не обещая, что Вера уже нашла того, кого ждут?",
+            "How can Vera leave word without promising the person has been found?"
+          ],
+          "kind": "question",
+          "options": [
+            [
+              "Пусть ждёт на площади: кто-то возвращается",
+              "Wait at the square: someone is coming back"
+            ],
+            [
+              "Все давно ушли",
+              "Everyone left long ago"
+            ],
+            [
+              "Мост закрыт навсегда",
+              "The bridge is closed forever"
+            ]
+          ],
+          "correct": 0
+        }
+      ],
+      "owner": "child",
+      "branches": []
+    },
+    {
+      "id": "garden_calls",
+      "after": "garden",
+      "before": "crowd",
+      "title": [
+        "Перекличка после дождя",
+        "The orchard call"
+      ],
+      "intro": [
+        "Дождь повернул сигнальные ленты. На площади могут понять знак неверно.",
+        "Rain turned the signal ribbons. The square could misread the call."
+      ],
+      "steps": [
+        {
+          "id": "calls_rule",
+          "zone": "orchard",
+          "at": [
+            571,
+            555
+          ],
+          "art": "notice",
+          "title": [
+            "Договор у колодца",
+            "Rule at the well"
+          ],
+          "body": [
+            "Высокий тон зовёт к свету, низкий — остаться у земли. Повтор последнего означает «идите вместе».",
+            "A high note calls toward the light; a low note means stay low. Repeating the last note means “go together”."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "calls_whistle",
+          "zone": "orchard",
+          "at": [
+            697,
+            603
+          ],
+          "art": "whistle",
+          "title": [
+            "Дождевой свисток",
+            "Rain whistle"
+          ],
+          "body": [
+            "Три звука: высокий, низкий, снова низкий. Сигнал можно прослушать ещё раз.",
+            "Three sounds: high, low, then low again. You can listen to the signal again."
+          ],
+          "kind": "listen",
+          "tones": [
+            659,
+            330,
+            330
+          ]
+        },
+        {
+          "id": "calls_square",
+          "zone": "town",
+          "at": [
+            691,
+            555
+          ],
+          "art": "lamp",
+          "title": [
+            "Фонарь переклички",
+            "Call lantern"
+          ],
+          "body": [
+            "Передай на площадь смысл последнего повторённого тона.",
+            "Tell the square what the final repeated note means."
+          ],
+          "kind": "question",
+          "options": [
+            [
+              "Разбегаться по домам",
+              "Scatter towards home"
+            ],
+            [
+              "Подойти к огню по одному",
+              "Approach the light alone"
+            ],
+            [
+              "Собраться и идти вместе",
+              "Gather and walk together"
+            ]
+          ],
+          "correct": 2
+        }
+      ],
+      "owner": "nadia",
+      "branches": [
+        {
+          "id": "ring_together",
+          "title": [
+            "Сообщить всему кварталу",
+            "Signal the whole quarter"
+          ],
+          "result": [
+            "У колодца зажжётся фонарь для тех, кто ждёт сопровождение.",
+            "A lantern will show where people can wait for company."
+          ]
+        },
+        {
+          "id": "quiet_call",
+          "title": [
+            "Сообщить сначала Наде",
+            "Tell Nadia first"
+          ],
+          "result": [
+            "Надя передаст сигнал тем, кого пугает толпа.",
+            "Nadia will tell the people a crowd might frighten."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "service",
+      "after": "crowd",
+      "before": "train",
+      "title": [
+        "Жетон на рейс",
+        "Token for the last service"
+      ],
+      "intro": [
+        "У пристани дважды записано одно отправление. Павел ждёт подтверждения платформы.",
+        "One departure is listed twice. Pavel needs the platform confirmed."
+      ],
+      "steps": [
+        {
+          "id": "service_ticket",
+          "zone": "harbor",
+          "at": [
+            550,
+            540
+          ],
+          "art": "ticket",
+          "title": [
+            "Билет без числа",
+            "Undated ticket"
+          ],
+          "body": [
+            "На обороте стоит «В, после третьего сигнала». Край выцвел со стороны воды.",
+            "The back reads “C, after the third signal”. The edge that faced the water is faded."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "service_board",
+          "zone": "harbor",
+          "at": [
+            665,
+            530
+          ],
+          "art": "notice",
+          "title": [
+            "Расписание пристани",
+            "Pier timetable"
+          ],
+          "body": [
+            "В верхней строке В переписали на А. Надёжнее сверить метку у платформы.",
+            "Someone changed C to A at the top. Check the platform marker instead."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "service_steps",
+          "zone": "harbor",
+          "at": [
+            756,
+            536
+          ],
+          "art": "flag",
+          "title": [
+            "Метка на платформе",
+            "Platform mark"
+          ],
+          "body": [
+            "Третья зарубка совпадает с билетом. На этой стороне табличка В.",
+            "The third notch matches the ticket. This side is marked C."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "service_dispatch",
+          "zone": "harbor",
+          "at": [
+            691,
+            465
+          ],
+          "art": "clock",
+          "title": [
+            "Пульт отправления",
+            "Dispatch desk"
+          ],
+          "body": [
+            "Какой путь подтверждают билет и зарубка?",
+            "Which route do the ticket and notch both confirm?"
+          ],
+          "kind": "question",
+          "options": [
+            [
+              "А после первого звонка",
+              "A after the first bell"
+            ],
+            [
+              "В после третьего звонка",
+              "C after the third bell"
+            ],
+            [
+              "А после третьего звонка",
+              "A after the third bell"
+            ]
+          ],
+          "correct": 1
+        }
+      ],
+      "owner": "pavel",
+      "branches": []
+    },
+    {
+      "id": "forest_margin",
+      "after": "collision",
+      "before": "alina",
+      "title": [
+        "Отметка на пустой стороне",
+        "Mark on the silent side"
+      ],
+      "intro": [
+        "Из библиотеки видны два лесных огонька. В лесу надо найти точку, откуда оба знака совпадут.",
+        "Two lights are visible from the library. Find where their marks line up in the woods."
+      ],
+      "steps": [
+        {
+          "id": "forest_echo",
+          "zone": "forest",
+          "at": [
+            714,
+            786
+          ],
+          "art": "post",
+          "title": [
+            "Развилка лесной тропы",
+            "Fork in the trail"
+          ],
+          "body": [
+            "Краска на ярком знаке свежая. На старом камне трещина проходит сквозь нанесённую метку.",
+            "The paint on the bright marker is fresh. A crack runs through the mark on the old stone."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "forest_stone",
+          "zone": "forest",
+          "at": [
+            744,
+            638
+          ],
+          "art": "stone",
+          "title": [
+            "Рисунок на камне",
+            "Stone diagram"
+          ],
+          "body": [
+            "Три точки образуют треугольник. Под ним подпись: «читать с юга, когда видны оба огонька».",
+            "Three points form a triangle. A note says: “read from the south when both lights are visible”."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "forest_view",
+          "zone": "forest",
+          "at": [
+            790,
+            577
+          ],
+          "art": "scope",
+          "title": [
+            "Точка обзора",
+            "Survey point"
+          ],
+          "body": [
+            "С южной стороны видно, что старый знак смотрит к Алине. Свежую краску нанесли поверх ложного следа.",
+            "From the south, the old mark points towards Alina. The fresh paint follows a false trail."
+          ],
+          "kind": "survey",
+          "correct": 2
+        },
+        {
+          "id": "forest_pin",
+          "zone": "forest",
+          "at": [
+            760,
+            547
+          ],
+          "art": "ribbon",
+          "title": [
+            "Знак для Алины",
+            "A sign for Alina"
+          ],
+          "body": [
+            "Какой ориентир передать Алине?",
+            "Which landmark should Vera give Alina?"
+          ],
+          "kind": "question",
+          "options": [
+            [
+              "Старый знак на южном ориентире",
+              "The old mark on the southern landmark"
+            ],
+            [
+              "Свежий свет",
+              "The freshly painted trail"
+            ],
+            [
+              "Все метки без различия",
+              "All the marks indiscriminately"
+            ]
+          ],
+          "correct": 0
+        }
+      ],
+      "owner": "alina",
+      "branches": [
+        {
+          "id": "forest_visible",
+          "title": [
+            "Поставить общий указатель",
+            "Put up a shared sign"
+          ],
+          "result": [
+            "У выхода леса появится общий указатель.",
+            "A shared sign will point out of the woods."
+          ]
+        },
+        {
+          "id": "forest_private",
+          "title": [
+            "Записать личный ориентир",
+            "Record a private landmark"
+          ],
+          "result": [
+            "Алина узнает метку по трещине, без имени на табличке.",
+            "Alina can recognise the mark from the crack without a name on the sign."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "crossing",
+      "after": "alina",
+      "before": "shore",
+      "title": [
+        "Последнее свободное место",
+        "The last empty seat"
+      ],
+      "intro": [
+        "Прежде чем пересчитать семьи, Соня просит проверить, какой путь уцелел у берега.",
+        "Before counting families, Sonya asks which shore route still works."
+      ],
+      "steps": [
+        {
+          "id": "crossing_manifest",
+          "zone": "harbor",
+          "at": [
+            744,
+            613
+          ],
+          "art": "papers",
+          "title": [
+            "Список двух причалов",
+            "Two-pier register"
+          ],
+          "body": [
+            "В верхнем списке одна семья записана дважды. У берега сверяют знаки, а не фамилии.",
+            "One family appears twice on the upper list. At the shore they check tags, not surnames."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "crossing_current",
+          "zone": "harbor",
+          "at": [
+            920,
+            651
+          ],
+          "art": "gauge",
+          "title": [
+            "Отметка на свае",
+            "Mark on the pile"
+          ],
+          "body": [
+            "Вода ниже зарубки. Обход нужно сверить с картой, а рейс — с расписанием Павла.",
+            "Water is below the notch. Check the bypass map or Pavel's departure timetable."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "crossing_map",
+          "zone": "harbor",
+          "at": [
+            902,
+            603
+          ],
+          "art": "scope",
+          "title": [
+            "Карта сухого обхода",
+            "Dry bypass map"
+          ],
+          "body": [
+            "Это обход, который Вера отметила у камеры. Можно провести людей, пока Соня сверяет метки.",
+            "This is the bypass Vera marked at the chamber. People can take it while Sonya checks the tags."
+          ],
+          "kind": "note",
+          "if_branch": "leave_bypass"
+        },
+        {
+          "id": "crossing_schedule",
+          "zone": "harbor",
+          "at": [
+            866,
+            716
+          ],
+          "art": "clock",
+          "title": [
+            "Расписание Павла",
+            "Pavel's timetable"
+          ],
+          "body": [
+            "Последний рейс подтверждён двумя отметками. По непроверенному обходу Павел людей не поведёт.",
+            "Two independent marks confirm the last service. Pavel won't lead people along an unchecked bypass."
+          ],
+          "kind": "note",
+          "unless_branch": "leave_bypass"
+        },
+        {
+          "id": "crossing_final",
+          "zone": "harbor",
+          "at": [
+            784,
+            673
+          ],
+          "art": "stamp",
+          "title": [
+            "Последний лист у Сони",
+            "Sonya's last sheet"
+          ],
+          "body": [
+            "Что написать на свободном месте, чтобы никто не пропал из счёта?",
+            "What goes in the blank so no one is lost from the count?"
+          ],
+          "kind": "question",
+          "options": [
+            [
+              "Дважды переписанную фамилию",
+              "The family name written twice"
+            ],
+            [
+              "Знак семьи, у которой ещё нет места",
+              "The tag of the family still waiting for a seat"
+            ],
+            [
+              "Только номер рейса",
+              "Only the service number"
+            ]
+          ],
+          "correct": 1
+        }
+      ],
+      "owner": "sonya",
+      "branches": [
+        {
+          "id": "keep_trace",
+          "title": [
+            "Оставить свидетельство на берегу",
+            "Leave the record on the shore"
+          ],
+          "result": [
+            "На берегу останется знак тех, кого нашли.",
+            "The shore will keep a mark for those found."
+          ]
+        },
+        {
+          "id": "carry_trace",
+          "title": [
+            "Отнести свидетельство на площадь",
+            "Take the record to the square"
+          ],
+          "result": [
+            "На площади узнают семью по её знаку.",
+            "The square will know the family by its tag."
+          ]
+        }
+      ]
+    }
+  ],
+  "sides": [
+    {
+      "id": "thread",
+      "after": "letter",
+      "before": "",
+      "title": [
+        "Узел у двери",
+        "A knot at the door"
+      ],
+      "intro": [
+        "У Нади могла остаться часть той же ленты.",
+        "Nadia may have kept a piece of the ribbon."
+      ],
+      "steps": [
+        {
+          "id": "thread_shelf",
+          "zone": "home_nadia",
+          "at": [
+            363,
+            216
+          ],
+          "art": "ribbon",
+          "title": [
+            "Лента Нади",
+            "Nadia's ribbon"
+          ],
+          "body": [
+            "Двойной узел отмечает поиск. Один узел — просьбу подождать. У этой ленты узел один.",
+            "Two knots mark a search. One asks you to wait. This ribbon has one."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "thread_seat",
+          "zone": "town",
+          "at": [
+            520,
+            593
+          ],
+          "art": "flag",
+          "title": [
+            "Место для ответа",
+            "A place to reply"
+          ],
+          "body": [
+            "Как ответить тому, кто оставил один узел?",
+            "How do you answer the person who left one knot?"
+          ],
+          "kind": "question",
+          "options": [
+            [
+              "Буду ждать здесь",
+              "I will wait here"
+            ],
+            [
+              "Дорога закрыта",
+              "The road is closed"
+            ],
+            [
+              "Ищи у воды",
+              "Look by the water"
+            ]
+          ],
+          "correct": 0
+        }
+      ],
+      "owner": "nadia",
+      "branches": []
+    },
+    {
+      "id": "counterweight",
+      "after": "machine",
+      "before": "",
+      "title": [
+        "Гирька для мастерской",
+        "A workshop counterweight"
+      ],
+      "intro": [
+        "Льву нужно проверить новую партию гирь, прежде чем отпускать её к мосту.",
+        "Lev needs a new batch of weights checked before sending it to the bridge."
+      ],
+      "steps": [
+        {
+          "id": "weights_receipt",
+          "zone": "shop",
+          "at": [
+            372,
+            301
+          ],
+          "art": "papers",
+          "title": [
+            "Накладная лавки",
+            "Shop receipt"
+          ],
+          "body": [
+            "Лёгкие гири сменили местами в ящике. Новые значения подписаны на карточке.",
+            "The lighter weights were swapped. Their new values are printed on the card."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "weights_panel",
+          "zone": "home_lev",
+          "at": [
+            327,
+            264
+          ],
+          "art": "gear",
+          "title": [
+            "Запасные весы",
+            "Spare scales"
+          ],
+          "body": [
+            "Разложи все новые гири так, чтобы чаши сравнялись.",
+            "Use every new weight and balance both trays."
+          ],
+          "kind": "trial",
+          "variant": "weights"
+        }
+      ],
+      "owner": "lev",
+      "branches": []
+    },
+    {
+      "id": "plant_labels",
+      "after": "garden",
+      "before": "",
+      "title": [
+        "Метки зимних грядок",
+        "Winter plot markers"
+      ],
+      "intro": [
+        "На краю сада остались таблички для следующего посева.",
+        "Markers for the next planting were left at the orchard edge."
+      ],
+      "steps": [
+        {
+          "id": "plant_water",
+          "zone": "orchard",
+          "at": [
+            504,
+            547
+          ],
+          "art": "gauge",
+          "title": [
+            "Тень поилок",
+            "Trough shadows"
+          ],
+          "body": [
+            "У воды посадят жёлуди. Сухая грядка выше остальных, над ней — плоская метка.",
+            "Acorns go by the water. The dry bed is higher and carries the flat marker."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "plant_box",
+          "zone": "orchard",
+          "at": [
+            564,
+            610
+          ],
+          "art": "papers",
+          "title": [
+            "Коробка меток",
+            "Box of markers"
+          ],
+          "body": [
+            "Какая метка должна остаться на возвышении?",
+            "Which marker belongs on the raised bed?"
+          ],
+          "kind": "question",
+          "options": [
+            [
+              "Плоская",
+              "Flat"
+            ],
+            [
+              "Узкая",
+              "Narrow"
+            ],
+            [
+              "Круглая",
+              "Round"
+            ]
+          ],
+          "correct": 0
+        }
+      ],
+      "owner": "child",
+      "branches": []
+    },
+    {
+      "id": "lamp_pattern",
+      "after": "crowd",
+      "before": "",
+      "title": [
+        "Малый фонарь для скамьи",
+        "A small bench lantern"
+      ],
+      "intro": [
+        "Надя хочет более тихий рисунок огней у места для отдыха.",
+        "Nadia wants a quieter light pattern near the resting place."
+      ],
+      "steps": [
+        {
+          "id": "lamp_frame",
+          "zone": "town",
+          "at": [
+            763,
+            635
+          ],
+          "art": "lamp",
+          "title": [
+            "Малая схема фонарей",
+            "Small lantern diagram"
+          ],
+          "body": [
+            "Сверь новую раскладку по длинам групп в строках и столбцах.",
+            "Match the new arrangement to the runs in the rows and columns."
+          ],
+          "kind": "trial",
+          "variant": "lamps"
+        }
+      ],
+      "owner": "nadia",
+      "branches": []
+    },
+    {
+      "id": "last_window",
+      "after": "shore",
+      "before": "",
+      "title": [
+        "Последнее освещённое окно",
+        "The last lit window"
+      ],
+      "intro": [
+        "После переправы на площади зажгли одну лампу. Можно вернуться и прочитать запись.",
+        "One lamp was left in the square after the crossing. Return to read the record."
+      ],
+      "steps": [
+        {
+          "id": "last_lamp",
+          "zone": "town",
+          "at": [
+            697,
+            588
+          ],
+          "art": "lamp",
+          "title": [
+            "Свет у скамьи",
+            "Light by the bench"
+          ],
+          "body": [
+            "Под лампой два листа. Первый открыт всем; во втором место для имени ещё пустое.",
+            "There are two sheets beneath the lamp. The first is public; the second still leaves a blank for a name."
+          ],
+          "kind": "note"
+        },
+        {
+          "id": "last_room",
+          "zone": "library",
+          "at": [
+            625,
+            391
+          ],
+          "art": "papers",
+          "title": [
+            "Копия для пришедших позже",
+            "Copy for those arriving later"
+          ],
+          "body": [
+            "Вера пишет две строки: что она знает и что ещё надо спросить. Кто-то допишет свою позже.",
+            "Vera writes two lines: what she knows and what she still needs to ask. Someone else can add theirs later."
+          ],
+          "kind": "note"
+        }
+      ],
+      "owner": "mara",
+      "branches": []
+    }
+  ]
+}

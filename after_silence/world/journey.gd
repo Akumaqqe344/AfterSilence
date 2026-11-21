@@ -33,6 +33,8 @@ func zone_allowed(zone: String) -> bool:
 		if places[id].zone==zone and unlocked(id): return true
 	return false
 func guide_target() -> Dictionary:
+	var investigation: Dictionary=game.investigations.guide()
+	if not investigation.is_empty(): return investigation
 	var director=game.events_controller
 	if not director.enabled() or director.index>=director.events.size(): return {}
 	var event=director.events[director.index]
@@ -75,7 +77,10 @@ func open():
 		var label=marker+pair(places[id].name)+(game.t(" · закрыто"," · closed") if not unlocked(id) else "")
 		actions.append(game.choice(id,label,label,func():details(id)))
 	actions.append(game.choice("close","Вернуться в мир · Esc","Return · Esc",game._close))
-	game._dialog("",game.t("Путешествие","Travel"),game.t("Ты здесь: ","You are here: ")+pair(places[selected].name)+"\n"+game.t("Выбери место, чтобы узнать дорогу. Переходи через мир.","Select a place for directions. Travel through the world."),actions,false)
+	if game.investigations.enabled():
+		actions.push_front(game.choice("cases","Доска расследований","Investigation board",game.investigations.journal))
+	var here_name=game.investigations.locate(game.state.zone) if game.investigations.Catalog.data.rooms.has(game.state.zone) else pair(places[selected].name)
+	game._dialog("",game.t("Путешествие","Travel"),game.t("Ты здесь: ","You are here: ")+here_name+"\n"+game.t("Выбери место, чтобы узнать дорогу. Переходи через мир.","Select a place for directions. Travel through the world."),actions,false)
 	if game.buttons.has(selected): game.buttons[selected].grab_focus()
 func details(id: String):
 	var place=places[id]

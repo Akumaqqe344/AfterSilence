@@ -1,5 +1,6 @@
 extends Node2D
 const Garden=preload("res://after_silence/world/garden_pixels.gd")
+const Ppae=preload("res://after_silence/core/ppae_art.gd")
 var kind = "tree"
 var tex: Texture2D
 var tint = Color.WHITE
@@ -7,18 +8,39 @@ var size = Vector2(48,72)
 var variant = 0
 var lit=true
 var focused=false
+var wind_key=""
+var wind_pose=1
+var solar_shadow=Vector3.ZERO
+var glass: Texture2D
+var window_light=0.0
+
+func sway(next: int, shadow: Vector3) -> void:
+	if wind_pose==next and solar_shadow==shadow: return
+	wind_pose=next
+	solar_shadow=shadow
+	tex=Ppae.texture(wind_key+str(next))
+	queue_redraw()
 func light_anchor() -> Vector2:
 	if kind=="street_lamp": return Vector2(0,-size.y*.78)
 	if kind=="trace": return Vector2(size.x*.29,-size.y*.54)
 	return Vector2(0,-size.y*.75)
 func _draw():
-	if kind=="flowers":
+	if kind=="flowers" and not tex:
 		Garden.bunch(self,Vector2.ZERO,variant,0,4+variant%3)
 		return
 	if tex:
+		if not wind_key.is_empty() and solar_shadow.z>0.0:
+			var tip=Vector2(solar_shadow.x,solar_shadow.y)
+			var shade=Color(.14,.17,.16,solar_shadow.z)
+			draw_set_transform(tip*.45,tip.angle(),Vector2(maxf(12.0,tip.length()*.68),6.0))
+			draw_circle(Vector2.ZERO,1.0,shade)
+			draw_set_transform(Vector2.ZERO)
 		var color=tint
 		if not lit and kind in ["lamp","street_lamp","trace"]: color*=Color(.48,.55,.62)
-		draw_texture_rect(tex,Rect2(-floor(size.x/2),-size.y,size.x,size.y),false,color)
+		var root_offset=roundf(size.y*4.0/tex.get_height()) if not wind_key.is_empty() or kind in ["flowers","stone","rock"] else 0.0
+		var bounds:=Rect2(-floor(size.x/2),-size.y+root_offset,size.x,size.y)
+		draw_texture_rect(tex,bounds,false,color)
+		if glass and window_light>0.0: draw_texture_rect(glass,bounds,false,Color(1,1,1,window_light))
 		if focused: draw_rect(Rect2(-floor(size.x/2)-2,-size.y-2,size.x+4,size.y+4),Color("bce3ac"),false,1)
 		return
 	if kind == "house":

@@ -1,0 +1,693 @@
+{
+  "revision": "ed98da220d9ac30e35b23da555d60f5a0ec84a51",
+  "seed": 304211,
+  "tile": 16,
+  "directions": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N",
+    "NW",
+    "W",
+    "SW"
+  ],
+  "groundPivot": {
+    "tree_0_0_0": [
+      32,
+      64
+    ],
+    "tree_0_0_1": [
+      32,
+      64
+    ],
+    "tree_0_0_2": [
+      32,
+      64
+    ],
+    "tree_0_1_0": [
+      32,
+      64
+    ],
+    "tree_0_1_1": [
+      32,
+      64
+    ],
+    "tree_0_1_2": [
+      32,
+      64
+    ],
+    "tree_0_2_0": [
+      32,
+      64
+    ],
+    "tree_0_2_1": [
+      32,
+      64
+    ],
+    "tree_0_2_2": [
+      32,
+      64
+    ],
+    "tree_1_0_0": [
+      32,
+      64
+    ],
+    "tree_1_0_1": [
+      32,
+      64
+    ],
+    "tree_1_0_2": [
+      32,
+      64
+    ],
+    "tree_1_1_0": [
+      32,
+      64
+    ],
+    "tree_1_1_1": [
+      32,
+      64
+    ],
+    "tree_1_1_2": [
+      32,
+      64
+    ],
+    "tree_1_2_0": [
+      32,
+      64
+    ],
+    "tree_1_2_1": [
+      32,
+      64
+    ],
+    "tree_1_2_2": [
+      32,
+      64
+    ],
+    "tree_2_0_0": [
+      32,
+      64
+    ],
+    "tree_2_0_1": [
+      32,
+      64
+    ],
+    "tree_2_0_2": [
+      32,
+      64
+    ],
+    "tree_2_1_0": [
+      32,
+      64
+    ],
+    "tree_2_1_1": [
+      32,
+      64
+    ],
+    "tree_2_1_2": [
+      32,
+      64
+    ],
+    "tree_2_2_0": [
+      32,
+      64
+    ],
+    "tree_2_2_1": [
+      32,
+      64
+    ],
+    "tree_2_2_2": [
+      32,
+      64
+    ],
+    "flower_cluster_0": [
+      20,
+      44
+    ],
+    "flower_cluster_1": [
+      20,
+      44
+    ],
+    "flower_cluster_2": [
+      20,
+      44
+    ],
+    "wild_flower_0": [
+      20,
+      44
+    ],
+    "wild_flower_1": [
+      20,
+      44
+    ],
+    "wild_flower_2": [
+      20,
+      44
+    ],
+    "fern_0": [
+      20,
+      44
+    ],
+    "fern_1": [
+      20,
+      44
+    ],
+    "fern_2": [
+      20,
+      44
+    ],
+    "low_shrub_0": [
+      20,
+      44
+    ],
+    "low_shrub_1": [
+      20,
+      44
+    ],
+    "low_shrub_2": [
+      20,
+      44
+    ],
+    "short_grass_0": [
+      20,
+      44
+    ],
+    "short_grass_1": [
+      20,
+      44
+    ],
+    "short_grass_2": [
+      20,
+      44
+    ],
+    "water_reed_0": [
+      20,
+      44
+    ],
+    "water_reed_1": [
+      20,
+      44
+    ],
+    "water_reed_2": [
+      20,
+      44
+    ],
+    "mushroom_cluster_0": [
+      20,
+      44
+    ],
+    "mushroom_cluster_1": [
+      20,
+      44
+    ],
+    "mushroom_cluster_2": [
+      20,
+      44
+    ],
+    "rounded_riverstone": [
+      32,
+      44
+    ],
+    "mossy_boulder": [
+      32,
+      44
+    ],
+    "surface_pebbles": [
+      32,
+      44
+    ]
+  },
+  "fx": {
+    "step": [
+      48,
+      48,
+      8,
+      24,
+      30
+    ],
+    "land": [
+      48,
+      48,
+      8,
+      24,
+      30
+    ],
+    "spark": [
+      48,
+      48,
+      8,
+      24,
+      30
+    ],
+    "mote": [
+      48,
+      48,
+      8,
+      24,
+      30
+    ],
+    "ember": [
+      48,
+      48,
+      8,
+      24,
+      30
+    ],
+    "smoke": [
+      48,
+      48,
+      8,
+      24,
+      30
+    ]
+  },
+  "daylight": [
+    {
+      "ambient": {
+        "phase": "night",
+        "ambientColorHex": "#1e3a8a",
+        "ambientIntensity": 0.22,
+        "shadowLengthMultiplier": 0.4
+      },
+      "shadow": {
+        "phase": "night",
+        "dirX": -0.35,
+        "dirY": -0.3,
+        "lengthMultiplier": 0.4,
+        "shadowAlpha": 65
+      }
+    },
+    {
+      "ambient": {
+        "phase": "night",
+        "ambientColorHex": "#1e3a8a",
+        "ambientIntensity": 0.22,
+        "shadowLengthMultiplier": 0.4
+      },
+      "shadow": {
+        "phase": "night",
+        "dirX": -0.35,
+        "dirY": -0.3,
+        "lengthMultiplier": 0.4,
+        "shadowAlpha": 65
+      }
+    },
+    {
+      "ambient": {
+        "phase": "night",
+        "ambientColorHex": "#1e3a8a",
+        "ambientIntensity": 0.22,
+        "shadowLengthMultiplier": 0.4
+      },
+      "shadow": {
+        "phase": "night",
+        "dirX": -0.35,
+        "dirY": -0.3,
+        "lengthMultiplier": 0.4,
+        "shadowAlpha": 65
+      }
+    },
+    {
+      "ambient": {
+        "phase": "night",
+        "ambientColorHex": "#1e3a8a",
+        "ambientIntensity": 0.22,
+        "shadowLengthMultiplier": 0.4
+      },
+      "shadow": {
+        "phase": "night",
+        "dirX": -0.35,
+        "dirY": -0.3,
+        "lengthMultiplier": 0.4,
+        "shadowAlpha": 65
+      }
+    },
+    {
+      "ambient": {
+        "phase": "night",
+        "ambientColorHex": "#1e3a8a",
+        "ambientIntensity": 0.22,
+        "shadowLengthMultiplier": 0.4
+      },
+      "shadow": {
+        "phase": "night",
+        "dirX": -0.35,
+        "dirY": -0.3,
+        "lengthMultiplier": 0.4,
+        "shadowAlpha": 65
+      }
+    },
+    {
+      "ambient": {
+        "phase": "dawn",
+        "ambientColorHex": "#fdba74",
+        "ambientIntensity": 0.58,
+        "shadowLengthMultiplier": 1.6
+      },
+      "shadow": {
+        "phase": "dawn",
+        "dirX": -1.2,
+        "dirY": -0.35,
+        "lengthMultiplier": 1.6,
+        "shadowAlpha": 95
+      }
+    },
+    {
+      "ambient": {
+        "phase": "dawn",
+        "ambientColorHex": "#fdba74",
+        "ambientIntensity": 0.58,
+        "shadowLengthMultiplier": 1.6
+      },
+      "shadow": {
+        "phase": "dawn",
+        "dirX": -1.045,
+        "dirY": -0.382,
+        "lengthMultiplier": 1.6,
+        "shadowAlpha": 95
+      }
+    },
+    {
+      "ambient": {
+        "phase": "morning",
+        "ambientColorHex": "#fef9c3",
+        "ambientIntensity": 0.85,
+        "shadowLengthMultiplier": 1.15
+      },
+      "shadow": {
+        "phase": "morning",
+        "dirX": -0.89,
+        "dirY": -0.415,
+        "lengthMultiplier": 1.15,
+        "shadowAlpha": 105
+      }
+    },
+    {
+      "ambient": {
+        "phase": "morning",
+        "ambientColorHex": "#fef9c3",
+        "ambientIntensity": 0.85,
+        "shadowLengthMultiplier": 1.15
+      },
+      "shadow": {
+        "phase": "morning",
+        "dirX": -0.735,
+        "dirY": -0.447,
+        "lengthMultiplier": 1.15,
+        "shadowAlpha": 105
+      }
+    },
+    {
+      "ambient": {
+        "phase": "morning",
+        "ambientColorHex": "#fef9c3",
+        "ambientIntensity": 0.85,
+        "shadowLengthMultiplier": 1.15
+      },
+      "shadow": {
+        "phase": "morning",
+        "dirX": -0.581,
+        "dirY": -0.479,
+        "lengthMultiplier": 1.15,
+        "shadowAlpha": 105
+      }
+    },
+    {
+      "ambient": {
+        "phase": "morning",
+        "ambientColorHex": "#fef9c3",
+        "ambientIntensity": 0.85,
+        "shadowLengthMultiplier": 1.15
+      },
+      "shadow": {
+        "phase": "morning",
+        "dirX": -0.426,
+        "dirY": -0.511,
+        "lengthMultiplier": 1.15,
+        "shadowAlpha": 105
+      }
+    },
+    {
+      "ambient": {
+        "phase": "noon",
+        "ambientColorHex": "#ffffff",
+        "ambientIntensity": 1,
+        "shadowLengthMultiplier": 0.65
+      },
+      "shadow": {
+        "phase": "noon",
+        "dirX": -0.271,
+        "dirY": -0.544,
+        "lengthMultiplier": 0.65,
+        "shadowAlpha": 115
+      }
+    },
+    {
+      "ambient": {
+        "phase": "noon",
+        "ambientColorHex": "#ffffff",
+        "ambientIntensity": 1,
+        "shadowLengthMultiplier": 0.65
+      },
+      "shadow": {
+        "phase": "noon",
+        "dirX": -0.116,
+        "dirY": -0.576,
+        "lengthMultiplier": 0.65,
+        "shadowAlpha": 115
+      }
+    },
+    {
+      "ambient": {
+        "phase": "noon",
+        "ambientColorHex": "#ffffff",
+        "ambientIntensity": 1,
+        "shadowLengthMultiplier": 0.65
+      },
+      "shadow": {
+        "phase": "noon",
+        "dirX": 0.039,
+        "dirY": -0.592,
+        "lengthMultiplier": 0.65,
+        "shadowAlpha": 115
+      }
+    },
+    {
+      "ambient": {
+        "phase": "noon",
+        "ambientColorHex": "#ffffff",
+        "ambientIntensity": 1,
+        "shadowLengthMultiplier": 0.65
+      },
+      "shadow": {
+        "phase": "noon",
+        "dirX": 0.194,
+        "dirY": -0.56,
+        "lengthMultiplier": 0.65,
+        "shadowAlpha": 115
+      }
+    },
+    {
+      "ambient": {
+        "phase": "afternoon",
+        "ambientColorHex": "#fef08a",
+        "ambientIntensity": 0.88,
+        "shadowLengthMultiplier": 1.1
+      },
+      "shadow": {
+        "phase": "afternoon",
+        "dirX": 0.348,
+        "dirY": -0.527,
+        "lengthMultiplier": 1.1,
+        "shadowAlpha": 105
+      }
+    },
+    {
+      "ambient": {
+        "phase": "afternoon",
+        "ambientColorHex": "#fef08a",
+        "ambientIntensity": 0.88,
+        "shadowLengthMultiplier": 1.1
+      },
+      "shadow": {
+        "phase": "afternoon",
+        "dirX": 0.503,
+        "dirY": -0.495,
+        "lengthMultiplier": 1.1,
+        "shadowAlpha": 105
+      }
+    },
+    {
+      "ambient": {
+        "phase": "afternoon",
+        "ambientColorHex": "#fef08a",
+        "ambientIntensity": 0.88,
+        "shadowLengthMultiplier": 1.1
+      },
+      "shadow": {
+        "phase": "afternoon",
+        "dirX": 0.658,
+        "dirY": -0.463,
+        "lengthMultiplier": 1.1,
+        "shadowAlpha": 105
+      }
+    },
+    {
+      "ambient": {
+        "phase": "dusk",
+        "ambientColorHex": "#f97316",
+        "ambientIntensity": 0.52,
+        "shadowLengthMultiplier": 1.75
+      },
+      "shadow": {
+        "phase": "dusk",
+        "dirX": 0.813,
+        "dirY": -0.431,
+        "lengthMultiplier": 1.75,
+        "shadowAlpha": 95
+      }
+    },
+    {
+      "ambient": {
+        "phase": "dusk",
+        "ambientColorHex": "#f97316",
+        "ambientIntensity": 0.52,
+        "shadowLengthMultiplier": 1.75
+      },
+      "shadow": {
+        "phase": "dusk",
+        "dirX": 0.968,
+        "dirY": -0.398,
+        "lengthMultiplier": 1.75,
+        "shadowAlpha": 95
+      }
+    },
+    {
+      "ambient": {
+        "phase": "dusk",
+        "ambientColorHex": "#f97316",
+        "ambientIntensity": 0.52,
+        "shadowLengthMultiplier": 1.75
+      },
+      "shadow": {
+        "phase": "dusk",
+        "dirX": 1.123,
+        "dirY": -0.366,
+        "lengthMultiplier": 1.75,
+        "shadowAlpha": 95
+      }
+    },
+    {
+      "ambient": {
+        "phase": "night",
+        "ambientColorHex": "#1e3a8a",
+        "ambientIntensity": 0.22,
+        "shadowLengthMultiplier": 0.4
+      },
+      "shadow": {
+        "phase": "night",
+        "dirX": -0.35,
+        "dirY": -0.3,
+        "lengthMultiplier": 0.4,
+        "shadowAlpha": 65
+      }
+    },
+    {
+      "ambient": {
+        "phase": "night",
+        "ambientColorHex": "#1e3a8a",
+        "ambientIntensity": 0.22,
+        "shadowLengthMultiplier": 0.4
+      },
+      "shadow": {
+        "phase": "night",
+        "dirX": -0.35,
+        "dirY": -0.3,
+        "lengthMultiplier": 0.4,
+        "shadowAlpha": 65
+      }
+    },
+    {
+      "ambient": {
+        "phase": "night",
+        "ambientColorHex": "#1e3a8a",
+        "ambientIntensity": 0.22,
+        "shadowLengthMultiplier": 0.4
+      },
+      "shadow": {
+        "phase": "night",
+        "dirX": -0.35,
+        "dirY": -0.3,
+        "lengthMultiplier": 0.4,
+        "shadowAlpha": 65
+      }
+    }
+  ],
+  "breeze": [
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    -1,
+    -1,
+    -1,
+    -2,
+    -2,
+    -2,
+    -2,
+    -2,
+    -1,
+    -1,
+    -1,
+    -1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    0
+  ]
+}

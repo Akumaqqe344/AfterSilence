@@ -7,16 +7,21 @@ var mode: String
 var puzzle
 var reality
 var trial
+var variant: String=""
 
 func _init(event: Dictionary):
 	mode=event.mode
+	variant=event.get("variant","")
 	if mode=="reality": reality=Reality.new(event.id)
-	elif mode in Trials.ACTIONS: trial=Trials.new(mode)
+	elif mode in Trials.ACTIONS: trial=Trials.new(mode,variant)
 	else: puzzle=Puzzle.new(mode)
 
 func checkpoint() -> Dictionary:
 	if reality!=null: return {"mode":mode,"reality":reality.capture()}
-	if trial!=null: return {"mode":mode,"moves":trial.capture()}
+	if trial!=null:
+		var data={"mode":mode,"moves":trial.capture()}
+		if not variant.is_empty(): data.variant=variant
+		return data
 	return {"mode":mode,"moves":puzzle.checkpoint()}
 
 func restore(data: Dictionary):

@@ -64,6 +64,12 @@ func _ready():
 	feedback=_label(Vector2(14,194),Vector2(354,19),"")
 	feedback.add_theme_color_override("font_color",ThemeArt.PEACH)
 	_build_board()
+	var tab_order: Array=action_buttons.duplicate()
+	tab_order.append_array([get_node("Hint"),undo_button,reset_button])
+	for i in tab_order.size():
+		var button: Button=tab_order[i]
+		button.focus_next=button.get_path_to(tab_order[(i+1)%tab_order.size()])
+		button.focus_previous=button.get_path_to(tab_order[posmod(i-1,tab_order.size())])
 	effects=Motion.new();effects.game=game;add_child(effects)
 	if model.kind=="echo_tuning": displayed_echo=Vector2(model.state[0],model.state[1])
 	_refresh()
@@ -85,11 +91,7 @@ func _tool(id: String, caption: String, y: int, action: Callable) -> Button:
 	var button=Button.new()
 	button.name=id;button.text=caption;button.position=Vector2(386,y)
 	button.add_theme_font_size_override("font_size",12 if game.comfort.large_text else 11)
-	for state in ["normal","hover","pressed","disabled"]:
-		var skin=ThemeArt.button(state in ["hover","pressed"],state=="pressed")
-		skin.content_margin_top=2;skin.content_margin_bottom=2
-		if state=="disabled": skin.bg_color=Color("343b46")
-		button.add_theme_stylebox_override(state,skin)
+	Stage.button(button)
 	button.pressed.connect(action);add_child(button)
 	button.size=Vector2(176,24)
 	game.ComfortMotion.wire_button(button,game.comfort)
@@ -105,6 +107,7 @@ func _action(at: Vector2, bounds: Vector2, caption: String, tooltip: String="") 
 	move_child(button,maxi(0,buttons_before-4))
 	game.ComfortMotion.wire_button(button,game.comfort)
 	button.pressed.connect(play.bind(id))
+	Stage.button(button)
 	action_buttons.append(button)
 	return button
 
@@ -123,11 +126,15 @@ func _build_board():
 				tile.expand_icon=true;tile.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER
 				tile.add_theme_constant_override("icon_max_width",49)
 		"balance":
-			for i in range(5): _action(Vector2.ZERO,Vector2(63,24),str(Rules.LOADS[i]),game.t("Переложить груз","Move weight"))
+			for i in range(5):
+				var weight=_action(Vector2.ZERO,Vector2(63,24),str(model.loads[i]),game.t("Переложить груз","Move weight"))
+				weight.icon=Stage.icon(12)
+				weight.add_theme_constant_override("icon_max_width",17)
 		"signal_grid":
 			for i in range(25):
 				var tile=_action(GRID_AT+Vector2(i%5,floori(i/5.0))*GRID_STEP,Vector2(27,27),"",game.t("Переключить фонарь","Toggle lamp"))
 				tile.add_theme_font_size_override("font_size",10)
+				tile.add_theme_constant_override("icon_max_width",19)
 		"railway":
 			for i in range(3): _action(Vector2(18+i*87,147),Vector2(77,30),"",game.t("Перевести стрелку","Set switch"))
 			_action(Vector2(278,147),Vector2(88,30),game.t("Пуск","Send"))
@@ -233,10 +240,11 @@ func _refresh():
 				active=side>0
 			"signal_grid":
 				active=(model.state[floori(i/5.0)]&(1<<(i%5)))!=0
-				tile.text="●" if active else "·"
+				tile.icon=Stage.icon(1 if active else 0)
+				tile.tooltip_text=game.t("Горит","Lit") if active else game.t("Погашен","Unlit")
 			"railway":
 				if i<3: tile.text=["I","II","III"][i]+(" ↘" if model.state[i] else " ↗")
-		tile.add_theme_stylebox_override("normal",ThemeArt.button(active or i==highlighted))
+		Stage.button(tile,active or i==highlighted)
 		if i==highlighted:
 			var mark=ThemeArt.button(true)
 			mark.border_color=AMBER;mark.set_border_width_all(2)
@@ -267,6 +275,8 @@ func _paint_traces():
 					var color=clay.darkened(.28) if x==18-wide or (x+y*9)%11==0 else clay
 					icon.set_pixel(x,y,color)
 			icon.fill_rect(Rect2i(12,26,12,6),clay.darkened(.2))
+			icon.fill_rect(Rect2i(14,26,8,1),clay.lightened(.15))
+			for x in range(12,24,3): icon.fill_rect(Rect2i(x,29,1,2),clay.darkened(.35))
 			if mark==0:
 				icon.fill_rect(Rect2i(17,12,2,8),INK)
 				icon.fill_rect(Rect2i(14,15,8,2),INK)
@@ -290,6 +300,9 @@ func _paint_letter():
 		art.fill_rect(Rect2i(10+(i*11)%8,y,end-13,1),Color("7e6b71"))
 	art.fill_rect(Rect2i(43,53,17,11),Color("9f5e52"))
 	art.fill_rect(Rect2i(46,55,11,7),Color("be7d63"))
+	art.fill_rect(Rect2i(49,56,5,4),Color("d09875"))
+	for corner in [Vector2i(6,6),Vector2i(62,6),Vector2i(6,62),Vector2i(62,62)]:
+		art.fill_rect(Rect2i(corner,Vector2i(3,3)),Color("ad8565"))
 	for i in range(4):
 		var piece=art.get_region(Rect2i(Vector2i(i%2,floori(i/2.0))*36,Vector2i(36,36)))
 		for rot in range(4):
@@ -313,7 +326,7 @@ func _caption(at: Vector2, value: String, color: Color=Color("fff3e2")):
 
 func _draw_balance():
 	for i in range(3):
-		draw_rect(Rect2(34+i*110,29,84,149),Color("3d3b4a"))
+		draw_style_box(Stage.plate("hud"),Rect2(34+i*110,29,84,149))
 		draw_rect(Rect2(36+i*110,175,80,3),AMBER if i==0 else MINT)
 	_caption(Vector2(45,25),game.t("Запас","Depot"))
 	_caption(Vector2(150,25),game.t("Слева","Left"))
@@ -321,8 +334,8 @@ func _draw_balance():
 
 func _draw_signals():
 	for i in range(5):
-		var row=" ".join(Rules.runs(Rules.SIGNAL[i]).map(func(n):return str(n)))
-		var col=" ".join(Rules.runs(Rules.column(Rules.SIGNAL,i)).map(func(n):return str(n)))
+		var row=" ".join(Rules.runs(model.signal_rows[i]).map(func(n):return str(n)))
+		var col=" ".join(Rules.runs(Rules.column(model.signal_rows,i)).map(func(n):return str(n)))
 		_caption(GRID_AT+Vector2(-35,i*GRID_STEP+18),row)
 		_caption(GRID_AT+Vector2(i*GRID_STEP+9,-9),col)
 
@@ -348,6 +361,8 @@ func _draw_rails():
 	draw_rect(Rect2(entry-Vector2(10,9),Vector2(22,14)),Color("725c55"))
 	draw_rect(Rect2(entry-Vector2(8,8),Vector2(18,10)),AMBER)
 	draw_rect(Rect2(entry-Vector2(7,6),Vector2(7,4)),SKY.darkened(.25))
+	draw_rect(Rect2(entry+Vector2(4,-8),Vector2(5,5)),Color("573e37"))
+	draw_rect(Rect2(entry+Vector2(7,-3),Vector2(5,3)),Color("fff1b6"))
 	for x in [-7,6]: draw_rect(Rect2(entry+Vector2(x,4),Vector2(5,4)),Color("292d37"))
 
 func _track(from: Vector2,to: Vector2,tint: Color):
@@ -361,11 +376,13 @@ func _track(from: Vector2,to: Vector2,tint: Color):
 		draw_line((tie+normal*4).round(),(tie-normal*4).round(),Color("a08d79"),1)
 
 func _draw_echo():
+	draw_style_box(Stage.plate("hud"),Rect2(17,18,346,110))
 	for i in range(10): draw_line(Vector2(24+i*36,24),Vector2(24+i*36,120),Color("44485a"))
 	for i in range(4): draw_line(Vector2(20,29+i*27),Vector2(355,29+i*27),Color("44485a"))
 	var target: Array=Rules.ECHOES[mini(model.round_index,Rules.ECHOES.size()-1)]
 	_wave(target,Color("7993b6"),4)
 	_wave([displayed_echo.x,displayed_echo.y],AMBER,2)
+	Stage.stamp(self,15,Vector2(351,138),Vector2(18,18))
 	_caption(Vector2(36,139),game.t("Высота","Height"),AMBER)
 	_caption(Vector2(169,139),game.t("Сдвиг","Shift"),AMBER)
 

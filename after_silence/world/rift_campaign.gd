@@ -11,6 +11,9 @@ const SONYA=preload("res://after_silence/assets/pechatai/npc/ella.png")
 const Catalog=preload("res://after_silence/core/quest_catalog.gd")
 const ARENA=Rect2(64,111,512,207)
 const Guardian=preload("res://after_silence/world/pixel_guardian.gd")
+const Stage=preload("res://after_silence/ui/trial_stage_art.gd")
+const Art=preload("res://after_silence/core/ppae_art.gd")
+const TABLES=["footprints","echo_tuning","reality","signal_grid","balance","pairs","reality","seeds","railway","lights","shelves","reality"]
 static var STOPS: Array=Catalog.points()
 static var SHORT: Array=Catalog.summaries()
 var easy_mode=true
@@ -32,7 +35,7 @@ var title_label: Label
 var brief_label: Label
 var status_label: Label
 var actions: VBoxContainer
-var player_pos=Vector2(92,215)
+var player_pos:=Vector2(92,215)
 var escort_pos=Vector2(118,255)
 var rescued=0
 var switch_round=0
@@ -47,8 +50,13 @@ var mask=0
 var wave=0
 var lane=1
 var guard_age=0.0
+var rhythm_buffer:=0
+var player_direction="S"
+var route_moving=false
+var response=""
 
 func _ready() -> void:
+	texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
 	mouse_filter=Control.MOUSE_FILTER_STOP
 	set_process_input(true)
 	title_label=Label.new()
@@ -97,7 +105,7 @@ func begin_travel():
 	visible=false
 	phase="travel"
 	game._close()
-	game._build_world("town",Vector2(600,600) if index==1 else STOPS[index-1]+Vector2(0,36))
+	game._build_world("town",Vector2(600,600) if index<=1 else STOPS[index-1]+Vector2(0,36))
 	game.objective.text=game.t("Иди к огоньку • E: ","Follow the light • E: ")+pair(QUESTS[index].title)
 	game._save(false)
 
@@ -120,6 +128,8 @@ func add_action(label: String, callback: Callable, available: bool=true) -> void
 	button.disabled=not available
 	button.pressed.connect(callback)
 	actions.add_child(button)
+	Stage.button(button)
+	game.ComfortMotion.wire_button(button,game.comfort)
 	if available and actions.get_child_count()==1: call_deferred("focus_first_action")
 
 func focus_first_action() -> void:
@@ -168,6 +178,10 @@ func start_play() -> void:
 	wave=0
 	lane=1
 	guard_age=0
+	rhythm_buffer=0
+	player_direction="S"
+	route_moving=false
+	response=""
 	brief_label.text=""
 	status_label.text=instruction()
 	queue_redraw()
@@ -191,7 +205,7 @@ func rhythm_key() -> int:
 
 func _input(event: InputEvent) -> void:
 	if active and phase=="play" and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
-		var point=get_local_mouse_position()
+		var point=get_global_transform_with_canvas().affine_inverse()*event.position
 		if ARENA.has_point(point):
 			match play_mode():
 				"memory","circuit","herbs":
@@ -210,6 +224,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if not active or not event is InputEventKey or not event.pressed or event.echo: return
 	if event.physical_keycode==KEY_ESCAPE:
+		rhythm_buffer=0
 		if phase=="pause": phase=before_pause;show_phase()
 		else: before_pause=phase;phase="pause";show_pause()
 		get_viewport().set_input_as_handled()
@@ -223,7 +238,9 @@ func _input(event: InputEvent) -> void:
 				if event.physical_keycode>=KEY_1 and event.physical_keycode<=KEY_8: board_input(int(event.physical_keycode-KEY_1))
 			"route":
 				if event.physical_keycode==KEY_SPACE and dodge_cooldown<=0: invulnerable=.45;dodge_cooldown=1.2
-			"rhythm": rhythm_input(event.physical_keycode)
+			"rhythm":
+				var aliases={KEY_UP:KEY_W,KEY_LEFT:KEY_A,KEY_DOWN:KEY_S,KEY_RIGHT:KEY_D}
+				rhythm_input(aliases.get(event.physical_keycode,event.physical_keycode))
 			"switch":
 				if event.physical_keycode>=KEY_1 and event.physical_keycode<=KEY_4: mask^=1<<int(event.physical_keycode-KEY_1)
 				elif event.physical_keycode==KEY_E:
@@ -243,6 +260,7 @@ func show_phase() -> void:
 	if phase=="intro": show_intro()
 	elif phase=="play": clear_actions();brief_label.text="";status_label.text=instruction()
 	elif phase=="decision": show_decision()
+	elif phase=="fail": fail()
 	else: show_intro()
 
 func show_pause() -> void:
@@ -268,6 +286,11 @@ func _physics_process(dt: float) -> void:
 		"route": update_route(dt)
 		"rhythm":
 			beat_age+=dt
+			if rhythm_buffer!=0 and beat_age>=rhythm_duration()*.38:
+				var buffered:=rhythm_buffer
+				rhythm_buffer=0
+				rhythm_input(buffered)
+				if phase!="play": return
 			if beat_age>=rhythm_duration():
 				beat_age=0;damage()
 				if not easy_mode: beat+=1
@@ -278,11 +301,16 @@ func _physics_process(dt: float) -> void:
 	queue_redraw()
 
 func update_route(dt: float) -> void:
+	var start:=player_pos
 	var motion=Input.get_vector("as_left","as_right","as_up","as_down")
 	if motion!=Vector2.ZERO: click_target=Vector2.ZERO
 	if click_target!=Vector2.ZERO: player_pos=player_pos.move_toward(click_target,167.0*dt)
 	else: player_pos+=motion*167.0*dt
 	player_pos=player_pos.clamp(ARENA.position+Vector2(14,16),ARENA.end-Vector2(14,16))
+	var motion_delta:=player_pos-start
+	route_moving=motion_delta.length_squared()>.01
+	if route_moving:
+		player_direction=("E" if motion_delta.x>0 else "W") if absf(motion_delta.x)>absf(motion_delta.y) else ("S" if motion_delta.y>0 else "N")
 	if index==0:
 		escort_pos=escort_pos.move_toward(player_pos,120.0*dt)
 	if index==6:
@@ -307,11 +335,18 @@ func update_route(dt: float) -> void:
 
 func rhythm_input(code: int) -> void:
 	var keys=[KEY_W,KEY_A,KEY_S,KEY_D]
-	if code not in keys or (not easy_mode and beat_age<rhythm_duration()*.38): return
+	if code not in keys: return
+	var threshold=rhythm_duration()*.38
+	if not easy_mode and beat_age<threshold:
+		if threshold-beat_age<=.16 and code==rhythm_key(): rhythm_buffer=code
+		return
 	if code==rhythm_key():
+		response=game.t("В ритме","On beat")
 		beat+=1
 		if beat>=8: succeed();return
-	else: damage()
+	else:
+		response=game.t("Сверь клавишу","Check the key")
+		damage()
 	beat_age=0
 
 func switch_targets() -> Array:
@@ -374,26 +409,22 @@ func draw_board():
 	var font=get_theme_default_font()
 	for cell in range(board.size()):
 		var rect=cell_rect(cell)
-		draw_rect(rect,Color("354b4a"))
-		draw_rect(rect,Color("9bb59b"),false,2)
+		draw_style_box(Stage.plate("hover" if cell in picked or cell in matched else "hud"),rect)
 		var center=rect.get_center()
 		draw_string(font,rect.position+Vector2(5,13),str(cell+1),HORIZONTAL_ALIGNMENT_LEFT,-1,8,Color("f0dbaa"))
 		if play_mode()=="memory":
 			if cell not in picked and cell not in matched:
-				draw_rect(Rect2(center-Vector2(15,15),Vector2(30,30)),Color("6c8582"))
+				Stage.stamp(self,8,center,Vector2(42,42))
 			else:
 				var portraits=[LEV,NADIA,SONYA,PORTRAIT]
 				draw_texture_rect_region(portraits[board[cell]-1],Rect2(center-Vector2(22,25),Vector2(44,50)),Rect2(0,0,64,64))
 		elif play_mode()=="circuit":
 			var horizontal=board[cell]%2==0
-			draw_rect(Rect2(center-Vector2(32,5) if horizontal else center-Vector2(5,23),Vector2(64,10) if horizontal else Vector2(10,46)),Color("d9ac73"))
-			draw_rect(Rect2(center-Vector2(5,5),Vector2(10,10)),Color("f4d897"))
+			Stage.stamp(self,4 if horizontal else 5,center,Vector2(54,46))
 		else:
 			if board[cell]==0:
-				var color=Color("a2cf79") if cell%2==0 else Color("b986a7")
-				draw_rect(Rect2(center+Vector2(-2,0),Vector2(4,22)),Color("9b815a"))
-				for offset in [Vector2(-17,-10),Vector2(1,-18),Vector2(-13,4)]: draw_rect(Rect2(center+offset,Vector2(17,12)),color)
-			else: draw_string(font,center+Vector2(-8,5),"OK",HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("bce3ac"))
+				Stage.stamp(self,2 if cell%2==0 else 3,center,Vector2(46,46))
+			else: Stage.stamp(self,7,center,Vector2(30,30),Color("bce3ac"))
 
 func fail() -> void:
 	phase="fail"
@@ -401,6 +432,7 @@ func fail() -> void:
 	brief_label.text="Разлом отбросил Веру. Попробуй ещё раз: рисунок опасности повторяется." if game.state.language=="ru" else "The rift pushed Vera back. Try again: the danger follows a pattern."
 	status_label.text=""
 	add_action("ПОВТОРИТЬ" if game.state.language=="ru" else "RETRY",start_play)
+	add_action(game.t("ОТДОХНУТЬ НА ПЛОЩАДИ","BACK TO THE SQUARE"),begin_travel)
 	queue_redraw()
 
 func succeed() -> void:
@@ -472,8 +504,11 @@ func epilogue() -> String:
 func _draw() -> void:
 	if not active: return
 	draw_rect(Rect2(Vector2.ZERO,size),Color("151f1afa"))
-	draw_style_box(game.ComfortTheme.panel(Color("25322b"),true),Rect2(17,17,size.x-34,size.y-34))
-	if phase!="play": return
+	draw_style_box(Stage.plate("panel"),Rect2(17,17,size.x-34,size.y-34))
+	if phase!="play":
+		if phase in ["fail","decision"]:
+			Stage.stamp(self,11 if phase=="decision" else 9,Vector2(544,53),Vector2(38,38))
+		return
 	draw_rect(ARENA,Color("10242a"))
 	match play_mode():
 		"memory","circuit","herbs": draw_texture_rect(FLOOR,ARENA,true,Color("697e80"))
@@ -484,7 +519,9 @@ func _draw() -> void:
 		"switch": draw_texture_rect(FLOOR if index!=8 else DIRT,ARENA,true,Color("697e80"))
 		"rhythm": draw_texture_rect(FLOOR if index==5 else DIRT if index==7 else GRASS,ARENA,true,Color("718c91"))
 		"defense": draw_texture_rect(WATER if index==4 else GRASS if index==10 else DIRT,ARENA,true,Color("71888b"))
-	draw_rect(ARENA,Color("07151bbb"))
+	draw_rect(ARENA,Color("07151b81"))
+	if play_mode()!="route":
+		Stage.surface(self,TABLES[index],ARENA.grow(-3))
 	draw_rect(ARENA,Color("8ca99d"),false,2)
 	for x in [ARENA.position.x+4,ARENA.end.x-11]:
 		for y in [ARENA.position.y+4,ARENA.end.y-7]:
@@ -492,8 +529,12 @@ func _draw() -> void:
 	var font=get_theme_default_font()
 	var accent=game.ComfortTheme.PEACH
 	if play_mode() in ["memory","circuit","herbs"]: draw_board()
-	draw_rect(Rect2(59,80,200,21),Color("25362dec"))
-	draw_string(font,Vector2(67,95),"%02d / 12   ♥ %d   %02d"%[index+1,health,maxi(0,ceili(remaining))],HORIZONTAL_ALIGNMENT_LEFT,-1,11,accent)
+	draw_style_box(Stage.plate("hud"),Rect2(59,80,186,21))
+	draw_string(font,Vector2(67,95),"%d / %d"%[index+1,QUESTS.size()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,accent)
+	for i in range(3):
+		Stage.stamp(self,10,Vector2(124+i*18,90),Vector2(16,16),Color.WHITE if i<health else Color("6e6672"))
+	if not easy_mode:
+		draw_string(font,Vector2(185,95),"%02d"%maxi(0,ceili(remaining)),HORIZONTAL_ALIGNMENT_LEFT,-1,11,accent)
 	match play_mode():
 		"route":
 			if index==6:
@@ -510,12 +551,13 @@ func _draw() -> void:
 						draw_texture_rect_region([NADIA,LEV,SONYA][person],Rect2(location-Vector2(17,25),Vector2(34,38)),Rect2(0,0,64,64))
 			for i in range(3):
 				var hazard=Vector2(190+i*116,210+sin(elapsed*(2.1+i*.34)+i*2.2)*72)
-				draw_rect(Rect2(hazard-Vector2(20,20),Vector2(40,40)),Color("e5aaa6"),false,2)
-				draw_rect(Rect2(hazard-Vector2(13,13),Vector2(26,26)),Color("ad577c"))
-				draw_rect(Rect2(hazard-Vector2(5,5),Vector2(10,10)),Color("f6c8a7"))
-			draw_rect(Rect2(ARENA.end.x-25,ARENA.position.y+9,9,ARENA.size.y-18),Color("82d4aa"))
-			if index==0: draw_texture_rect_region(LEV,Rect2(escort_pos-Vector2(18,28),Vector2(36,42)),Rect2(0,0,64,64))
-			draw_texture_rect_region(PORTRAIT,Rect2(player_pos-Vector2(19,28),Vector2(38,42)),Rect2(4,2,56,61),Color.WHITE if invulnerable<=0 else Color("7ce4e0"))
+				draw_arc(hazard,23.0,0,TAU,24,Color("dfa28ab0"),1)
+				Stage.stamp(self,9,hazard,Vector2(38,38))
+			draw_rect(Rect2(ARENA.end.x-26,ARENA.position.y+12,3,ARENA.size.y-24),Color("8cc1a9"))
+			Stage.stamp(self,11,Vector2(ARENA.end.x-37,ARENA.get_center().y),Vector2(38,38))
+			var frame_id=0 if game.comfort.reduce_motion else floori(elapsed*10)
+			if index==0: Art.paint_actor(self,"lev","walk_"+player_direction,frame_id,escort_pos,.84)
+			Art.paint_actor(self,"vera",("walk_" if route_moving else "idle_")+player_direction,frame_id,player_pos,.9,Color.WHITE if invulnerable<=0 else Color("b4dddb"))
 			if index==11: draw_string(font,Vector2(464,162),"%d / 3"%[int(bool(rescued&1))+int(bool(rescued&2))+int(bool(rescued&4))],HORIZONTAL_ALIGNMENT_LEFT,-1,9,accent)
 		"rhythm":
 			if index==1:
@@ -534,6 +576,7 @@ func _draw() -> void:
 			draw_rect(Rect2(105,282,430*minf(1,beat_age/rhythm_duration()),8),Color("8ccfbd"))
 			draw_rect(Rect2(105+430*.38,279,2,14),Color("f7dfab"))
 			draw_string(font,Vector2(105,162),"%d / 8"%beat,HORIZONTAL_ALIGNMENT_LEFT,-1,11,accent)
+			draw_string(font,Vector2(378,162),response,HORIZONTAL_ALIGNMENT_LEFT,-1,11,accent)
 		"switch":
 			draw_string(font,Vector2(110,156),"%d / %d"%[switch_round+1,switch_targets().size()],HORIZONTAL_ALIGNMENT_LEFT,-1,9,accent)
 			if index==8:
@@ -542,8 +585,8 @@ func _draw() -> void:
 				var x=109+i*113
 				var on=mask&(1<<i)!=0
 				var wanted=switch_target()&(1<<i)!=0
-				draw_rect(Rect2(x,172,76,76),Color("5ac0ac") if on else Color("29464d"))
-				draw_rect(Rect2(x,172,76,76),Color("bedbd1"),false,2)
+				draw_style_box(Stage.plate("hover" if on else "hud"),Rect2(x,172,76,76))
+				Stage.stamp(self,6 if index==8 else 15,Vector2(x+38,201),Vector2(38,38),Color.WHITE if on else Color("a7a4aa"))
 				if index==2:
 					draw_rect(Rect2(x+14,181,47,58),Color("d1b7a0"),false,2)
 					draw_rect(Rect2(x+52,211,5,5),Color("e7d58b"))
@@ -551,15 +594,15 @@ func _draw() -> void:
 					draw_line(Vector2(x+4,241),Vector2(x+72,177),Color("e4ba87"),3)
 				elif index==8:
 					draw_rect(Rect2(x+6,178,64,53),Color("d9c5a3"),false,2)
-				draw_string(font,Vector2(x+28,219),str(i+1),HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("071015"))
-				draw_circle(Vector2(x+38,274),5,Color("b5e39d") if wanted else Color("b86f85"))
+				draw_string(font,Vector2(x+34,237),str(i+1),HORIZONTAL_ALIGNMENT_LEFT,-1,15,accent)
+				Stage.stamp(self,1 if wanted else 0,Vector2(x+38,274),Vector2(19,19))
 		"defense":
 			if index==10: draw_texture_rect_region(SONYA,Rect2(304,117,31,35),Rect2(0,0,64,64),Color("c0d9cf"))
 			for i in range(3):
 				var y=139+i*56
 				draw_rect(Rect2(86,y,468,45),Color("42505b") if i==incoming_lane() else Color("193238"))
 				draw_rect(Rect2(86,y,468,45),Color("597c7a"),false,1)
-				if i==lane: draw_circle(Vector2(145,y+22),15,Color("b7e2c9") if guard_age>0 else Color("84b5aa"))
-				if i==incoming_lane(): draw_circle(Vector2(495-330*minf(1,beat_age/1.45),y+22),12,Color("d88595"))
+				if i==lane: Stage.stamp(self,10,Vector2(145,y+22),Vector2(39,39),Color.WHITE if guard_age>0 else Color("9c9bad"))
+				if i==incoming_lane(): Stage.stamp(self,9,Vector2(495-330*minf(1,beat_age/1.45),y+22),Vector2(34,34))
 			draw_string(font,Vector2(405,99),"%d / %d"%[wave,defense_waves()],HORIZONTAL_ALIGNMENT_LEFT,-1,8,accent)
 			Guardian.paint(self,Vector2(512,157),0 if index==4 else 1 if index==9 else 2,guard_age>0)

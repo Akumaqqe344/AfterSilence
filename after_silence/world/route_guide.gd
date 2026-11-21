@@ -17,7 +17,7 @@ var sampled_target=Vector2.INF
 var sampled_revision=-1
 var sampled_id=""
 var toggle: Button
-var tile_skin: StyleBoxFlat
+var tile_skin: StyleBox
 
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
@@ -27,7 +27,7 @@ func _ready():
 	toggle.focus_mode=Control.FOCUS_NONE
 	toggle.pressed.connect(game._toggle_route_guide)
 	add_child(toggle)
-	tile_skin=game.ComfortTheme.panel(DARK,true)
+	tile_skin=game.PixelArt.panel("hud",5)
 	game.ComfortMotion.wire_button(toggle,game.comfort)
 
 func _process(dt):

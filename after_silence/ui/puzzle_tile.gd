@@ -1,4 +1,5 @@
 extends Button
+const Art=preload("res://after_silence/ui/trial_stage_art.gd")
 
 const COLORS=[Color("e6af89"),Color("acd0b1"),Color("aac0e1"),Color("d3a9c8"),Color("e4cf95"),Color("8fd0c9")]
 const SYMBOLS=[
@@ -47,6 +48,8 @@ func _draw() -> void:
 		if stage>=0:
 			draw_rect(Rect2(center-Vector2(16,-2),Vector2(32,12)),Color("74584f"))
 			draw_rect(Rect2(center-Vector2(16,-3),Vector2(32,2)),Color("aa8068"))
+		if stage<=0:
+			Art.stamp(self,7,center-Vector2(0,4),Vector2(24,24),Color("ffffff8f"))
 		if stage>0:
 			draw_rect(Rect2(center-Vector2(1,10),Vector2(3,17)),Color("9ab092"))
 			draw_rect(Rect2(center-Vector2(7,3),Vector2(6,2)),Color("a7bc8e"))
@@ -58,22 +61,17 @@ func _draw() -> void:
 				draw_rect(Rect2(center-Vector2(22,15),Vector2(44,30)),Color("282739"))
 				draw_rect(Rect2(center-Vector2(20,14),Vector2(40,27)),Color("765b67"))
 				draw_rect(Rect2(center-Vector2(19,13),Vector2(38,25)),Color("a68680"))
+				draw_rect(Rect2(center-Vector2(18,12),Vector2(36,23)),Color("c2a299"),false,1)
 				draw_rect(Rect2(center-Vector2(16,10),Vector2(32,19)),COLORS[tone].darkened(.54))
 				_symbol(center,tone,2)
 			"lights":
-				draw_rect(Rect2(center-Vector2(14,11),Vector2(28,22)),Color("272638"))
-				draw_rect(Rect2(center-Vector2(10,14),Vector2(20,27)),Color("272638"))
-				draw_rect(Rect2(center-Vector2(11,9),Vector2(22,18)),COLORS[tone].darkened(.32))
-				draw_rect(Rect2(center-Vector2(8,12),Vector2(16,23)),COLORS[tone].darkened(.32))
-				draw_rect(Rect2(center-Vector2(6,10),Vector2(12,2)),COLORS[tone])
-				_symbol(center,tone,2)
+				Art.stamp(self,1,center,Vector2(32,32),COLORS[tone].lerp(Color.WHITE,.46))
+				_symbol(center+Vector2(0,2),tone,1)
 			"shelves":
 				draw_rect(Rect2(center+Vector2(-26,15),Vector2(52,4)),Color("987265"))
 				draw_rect(Rect2(center+Vector2(-26,19),Vector2(52,2)),Color("2c2839"))
-				draw_rect(Rect2(center-Vector2(13,10),Vector2(26,23)),Color("272638"))
-				draw_rect(Rect2(center-Vector2(11,7),Vector2(22,18)),COLORS[tone].darkened(.42))
-				draw_rect(Rect2(center-Vector2(8,13),Vector2(16,5)),Color("a48d77"))
-				_symbol(center+Vector2(0,2),tone,2)
+				Art.stamp(self,13,center,Vector2(32,32),COLORS[tone].lerp(Color.WHITE,.58))
+				_symbol(center+Vector2(0,4),tone,1)
 	if suggested: draw_rect(Rect2(Vector2(3,3),size-Vector2(6,6)),Color("e4cf95"),false,2)
 	if picked: draw_rect(Rect2(Vector2(5,5),size-Vector2(10,10)),Color("c2ddc8"),false,2)
 

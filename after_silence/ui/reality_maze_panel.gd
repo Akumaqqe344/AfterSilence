@@ -4,9 +4,8 @@ signal solved
 signal changed
 const Model=preload("res://after_silence/core/reality_maze.gd")
 const Stage=preload("res://after_silence/ui/trial_stage_art.gd")
-const TILES=preload("res://after_silence/assets/remaster0290/maze.png")
-const WALK_ATLAS=preload("res://after_silence/assets/pechatai/player/walk.png")
-const VERA_IDLE=preload("res://after_silence/assets/remaster0290/vera_idle.png")
+const TILES=preload("res://after_silence/assets/minigames0310/maze.png")
+const Art=preload("res://after_silence/core/ppae_art.gd")
 const CELL=28
 const ORIGIN=Vector2(29,10)
 const COLORS=[Color("ecb184"),Color("add4b0"),Color("bbabe1")]
@@ -29,6 +28,8 @@ var display_tile=Vector2.ZERO
 var move_tween: Tween
 var room_tween: Tween
 var room_tint=0.0
+var buffered_step:=Vector2i.ZERO
+var buffer_left:=0.0
 var portal_age=0.0
 var cycle=0.0
 var stride_index=0
@@ -64,6 +65,7 @@ func _add_button(id: String, caption: String, at: Vector2, action: Callable):
 	game.ComfortMotion.wire_button(button,game.comfort)
 
 func remember_focus():
+	buffered_step=Vector2i.ZERO
 	var focused=get_viewport().gui_get_focus_owner()
 	if focused==self or (is_instance_valid(focused) and is_ancestor_of(focused)): focus_before_pause=focused
 
@@ -82,6 +84,7 @@ func _hint():
 func _reset():
 	if game.modal: return
 	model.reset();route.clear();hint_visible=false;notes_visible=true
+	buffered_step=Vector2i.ZERO
 	if is_instance_valid(move_tween): move_tween.kill()
 	display_tile=Vector2(model.tile)
 	feedback.text=game.t("Ты снова у входа.","Back at the entrance.")
@@ -92,16 +95,32 @@ func _gui_input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 		var target=Vector2i(((event.position-ORIGIN)/CELL).floor())
 		if Rect2i(0,0,9,7).has_point(target):
+			buffered_step=Vector2i.ZERO
 			route=model.route(target);walk_delay=0
 			grab_focus();accept_event()
 	if event is InputEventKey and event.pressed:
 		var key=event.physical_keycode if event.physical_keycode!=0 else event.keycode
 		var move: Vector2i=DIRECTIONS.get(key,Vector2i.ZERO)
 		if move!=Vector2i.ZERO:
-			route.clear();accept_event();_step(model.tile+move,true)
+			route.clear();accept_event()
+			if is_instance_valid(move_tween) and move_tween.is_running():
+				buffered_step=move
+				buffer_left=.16
+			else:
+				buffered_step=Vector2i.ZERO
+				_step(model.tile+move,true)
 
 func _process(delta):
 	if game.modal: return
+	if buffered_step!=Vector2i.ZERO:
+		buffer_left-=delta
+		if buffer_left<=0:
+			buffered_step=Vector2i.ZERO
+		elif not is_instance_valid(move_tween) or not move_tween.is_running():
+			var move:=buffered_step
+			buffered_step=Vector2i.ZERO
+			_step(model.tile+move,true)
+			return
 	if not game.comfort.reduce_motion:
 		cycle=fposmod(cycle+delta,12.0)
 		portal_age+=delta
@@ -183,13 +202,13 @@ func _draw():
 	if is_instance_valid(resident):
 		_draw_person(resident,focus+Vector2(21,24),14,0,Color("ddd1f2"))
 	var walking=is_instance_valid(move_tween) and move_tween.is_running()
-	var player_source=Rect2((stride_index if walking else 0)*64+5,direction*96+10,54,84)
 	var feet=focus+Vector2(12,25)
-	draw_texture_rect_region(WALK_ATLAS if walking else VERA_IDLE,Rect2(feet-Vector2(9,24),Vector2(18,25)),player_source)
+	Art.paint_actor(self,"vera",("walk_" if walking else "idle_")+Art.CARDINALS[direction],stride_index if walking else 0,feet,.42)
 	if room_tint>0.0:
 		draw_rect(Rect2(ORIGIN,Vector2(9,7)*CELL),Color(.40,.34,.55,room_tint))
 
 func _draw_person(actor,feet: Vector2,height: int,facing: int,tint: Color):
+	if Art.paint_actor(self,actor.art_id,"idle_"+Art.CARDINALS[facing],0,feet,float(height)/48.0,tint): return
 	if actor.sheet==null: return
 	var source=Rect2(10,facing*96+25,44,65)
 	draw_texture_rect_region(actor.sheet,Rect2(feet-Vector2(7,height),Vector2(14,height)),source,tint)

@@ -1,0 +1,388 @@
+{
+  "ground": {
+    "town": {
+      "material": "meadow_grass",
+      "colors": [
+        "7f9069",
+        "6c815e",
+        "9b9d71",
+        "aeb17a",
+        "697e5e"
+      ]
+    },
+    "forest": {
+      "material": "forest_moss",
+      "colors": [
+        "617658",
+        "465f4f",
+        "7b8c64",
+        "9e9c63",
+        "5a7055"
+      ]
+    },
+    "orchard": {
+      "material": "meadow_grass",
+      "colors": [
+        "8a975f",
+        "778557",
+        "a7aa6b",
+        "b7b578",
+        "728758"
+      ]
+    },
+    "harbor": {
+      "material": "meadow_grass",
+      "colors": [
+        "969678",
+        "7d8a73",
+        "b1a784",
+        "bec19a",
+        "777f66"
+      ]
+    }
+  },
+  "road": [
+    "ad916e",
+    "927b5b",
+    "c3a681",
+    "cfb68d",
+    "ad936f"
+  ],
+  "shore": [
+    "b29a79",
+    "947f64",
+    "c5ab85",
+    "e0c098",
+    "9b9371"
+  ],
+  "liquid": [
+    [
+      "698f89",
+      "5a817f",
+      "819e8f",
+      "b1bfa1",
+      "83a496"
+    ],
+    [
+      "456d76",
+      "3f636f",
+      "65868c",
+      "a3b6aa",
+      "5a8287"
+    ]
+  ],
+  "floor": {
+    "default": [
+      "997d64",
+      "80654f",
+      "9e8066"
+    ],
+    "home_nadia": [
+      "a99071",
+      "907757",
+      "af9576"
+    ],
+    "home_lev": [
+      "88735e",
+      "685948",
+      "8e785e"
+    ],
+    "home_pavel": [
+      "93816d",
+      "76695a",
+      "9b8a74"
+    ],
+    "home_sonya": [
+      "a4846c",
+      "876953",
+      "ad8e76"
+    ],
+    "shop": [
+      "a18a6e",
+      "7f694e",
+      "a68e74"
+    ],
+    "library": [
+      "9c866e",
+      "806952",
+      "a18a74"
+    ]
+  },
+  "buildings": {
+    "house-0": {
+      "base": "village_cottage_01",
+      "widthInTiles": 5,
+      "heightInTiles": 5,
+      "wallPrimaryHex": "#a89a7b",
+      "wallSecondaryHex": "#634a3d",
+      "roofPrimaryHex": "#526862",
+      "roofShadowHex": "#394f4c",
+      "hasFlowerBoxes": true,
+      "hasWindowShutters": true
+    },
+    "house-1": {
+      "base": "village_cottage_01",
+      "widthInTiles": 5,
+      "heightInTiles": 5,
+      "wallPrimaryHex": "#bfa381",
+      "wallSecondaryHex": "#724c38",
+      "roofPrimaryHex": "#946850",
+      "roofShadowHex": "#6a4b42",
+      "hasDormerWindow": true,
+      "facadeTimberPattern": "cross_braced"
+    },
+    "house-2": {
+      "base": "blue_slate_manor_01",
+      "widthInTiles": 5,
+      "heightInTiles": 5,
+      "wallPrimaryHex": "#b6a28b",
+      "wallSecondaryHex": "#554c4a",
+      "roofPrimaryHex": "#586575",
+      "roofShadowHex": "#3b4755",
+      "hasWindowShutters": true
+    },
+    "house-3": {
+      "base": "village_cottage_01",
+      "widthInTiles": 5,
+      "heightInTiles": 5,
+      "wallPrimaryHex": "#ae926f",
+      "wallSecondaryHex": "#6c5144",
+      "roofPrimaryHex": "#856051",
+      "roofShadowHex": "#664b45",
+      "hasDormerWindow": true,
+      "hasFlowerBoxes": true
+    },
+    "library": {
+      "base": "blue_slate_manor_01",
+      "widthInTiles": 5,
+      "heightInTiles": 5,
+      "wallPrimaryHex": "#a69b87",
+      "wallSecondaryHex": "#534b46",
+      "roofPrimaryHex": "#526575",
+      "roofShadowHex": "#394753",
+      "windowCount": 4,
+      "hasDormerWindow": true
+    },
+    "shop_front": {
+      "base": "village_cottage_01",
+      "widthInTiles": 5,
+      "heightInTiles": 5,
+      "wallPrimaryHex": "#c0a483",
+      "wallSecondaryHex": "#694b3d",
+      "roofPrimaryHex": "#647255",
+      "roofShadowHex": "#475645",
+      "hasFlowerBoxes": true,
+      "hasWindowShutters": true
+    },
+    "well": {
+      "base": "village_stone_well_01",
+      "roofPrimaryHex": "#706957",
+      "roofShadowHex": "#454a42"
+    }
+  },
+  "furniture": [
+    [
+      "bed",
+      2,
+      3
+    ],
+    [
+      "dining_table",
+      3,
+      2
+    ],
+    [
+      "wooden_chair",
+      1,
+      1
+    ],
+    [
+      "bookshelf",
+      3,
+      2
+    ],
+    [
+      "storage_chest",
+      2,
+      1
+    ],
+    [
+      "furnace_hearth",
+      2,
+      2
+    ],
+    [
+      "wall_torch",
+      1,
+      2
+    ],
+    [
+      "woven_rug",
+      3,
+      2
+    ],
+    [
+      "anvil_station",
+      2,
+      1
+    ],
+    [
+      "alchemy_bench",
+      3,
+      2
+    ],
+    [
+      "wooden_barrel",
+      1,
+      2
+    ],
+    [
+      "potted_plant",
+      1,
+      1
+    ]
+  ],
+  "people": {
+    "vera": {
+      "hairStyle": "ponytail",
+      "hairColorHex": "#534035",
+      "hairShadowHex": "#3b302d",
+      "eyeColorHex": "#697f56",
+      "skinColorHex": "#e9c5a1",
+      "skinShadowHex": "#b68871",
+      "armor": "noble_coat",
+      "coat": "#514849",
+      "trim": "#312b31",
+      "bodyBuild": "slim",
+      "heightScale": 0.96
+    },
+    "lev": {
+      "hairStyle": "short_crop",
+      "hairColorHex": "#674634",
+      "hairShadowHex": "#4c3731",
+      "armor": "blacksmith_apron",
+      "coat": "#826049",
+      "trim": "#c19968",
+      "bodyBuild": "sturdy"
+    },
+    "guest": {
+      "hairStyle": "wavy_shoulder",
+      "hairColorHex": "#b6a58b",
+      "hairShadowHex": "#807266",
+      "armor": "mage_robe",
+      "coat": "#675a77",
+      "trim": "#a99a88",
+      "hood": true
+    },
+    "sonya": {
+      "hairStyle": "braided_crown",
+      "hairColorHex": "#8d5942",
+      "hairShadowHex": "#623c36",
+      "armor": "noble_coat",
+      "coat": "#885d70",
+      "trim": "#bd8881",
+      "bodyBuild": "slim"
+    },
+    "pavel": {
+      "hairStyle": "short_crop",
+      "hairColorHex": "#443832",
+      "hairShadowHex": "#2d2928",
+      "armor": "leather_vest",
+      "coat": "#5d747d",
+      "trim": "#9e835e",
+      "beardStyle": "stubble",
+      "bodyBuild": "sturdy"
+    },
+    "child": {
+      "hairStyle": "curly_afro",
+      "hairColorHex": "#775039",
+      "hairShadowHex": "#553d31",
+      "armor": "cloth_tunic",
+      "coat": "#548d87",
+      "trim": "#b4ac6f",
+      "bodyBuild": "slim",
+      "ageGroup": "youth",
+      "heightScale": 0.9
+    },
+    "nadia": {
+      "hairStyle": "wavy_shoulder",
+      "hairColorHex": "#574035",
+      "hairShadowHex": "#392f2c",
+      "armor": "cloth_tunic",
+      "coat": "#6b8660",
+      "trim": "#cca979"
+    },
+    "mara": {
+      "hairStyle": "braided_crown",
+      "hairColorHex": "#b7a992",
+      "hairShadowHex": "#81746a",
+      "armor": "noble_coat",
+      "coat": "#577680",
+      "trim": "#c19d72",
+      "ageGroup": "elder"
+    },
+    "alina": {
+      "hairStyle": "long_adventure",
+      "hairColorHex": "#333337",
+      "hairShadowHex": "#252629",
+      "armor": "noble_coat",
+      "coat": "#647759",
+      "trim": "#a1aa7b",
+      "bodyBuild": "slim"
+    },
+    "guardian": {
+      "hairStyle": "bald",
+      "skinColorHex": "#748782",
+      "skinShadowHex": "#485d61",
+      "eyeColorHex": "#d4bc7c",
+      "armor": "iron_plate",
+      "coat": "#586e75",
+      "trim": "#a58761",
+      "bodyBuild": "sturdy",
+      "heightScale": 1.1
+    },
+    "watcher": {
+      "hairStyle": "bald",
+      "skinColorHex": "#9c90a3",
+      "skinShadowHex": "#6e6577",
+      "eyeColorHex": "#d4aa81",
+      "armor": "mage_robe",
+      "coat": "#3c3549",
+      "trim": "#695571",
+      "hood": true,
+      "heightScale": 1.1
+    }
+  },
+  "ui": {
+    "panel": [
+      "211d24",
+      "8e7361",
+      245
+    ],
+    "hud": [
+      "241f27",
+      "a18a74",
+      238
+    ],
+    "hover": [
+      "39303a",
+      "c49b79",
+      255
+    ],
+    "normal": [
+      "29242c",
+      "76616a",
+      250
+    ],
+    "pressed": [
+      "443441",
+      "ce9e74",
+      255
+    ],
+    "disabled": [
+      "25232a",
+      "4e4551",
+      248
+    ]
+  }
+}

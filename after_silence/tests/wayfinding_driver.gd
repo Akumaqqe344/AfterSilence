@@ -117,12 +117,12 @@ func run():
 	var time=game.modal_backdrop.sky_time
 	await get_tree().create_timer(.32).timeout
 	check(game.modal_backdrop.sky_time>time+.15,"actual animated menu")
-	check(game.modal_backdrop.menu_actor_pose(.0)!=game.modal_backdrop.menu_actor_pose(.5),"walking advances the menu sprite and position")
+	check(game.modal_backdrop.departure_elapsed<0.0,"Vera stays inside until the player starts a new journey")
 	await shot("01-dusk")
 	game.comfort.reduce_motion=true
 	game._main_menu()
 	check(not game.modal_backdrop.is_processing(),"reduced motion stops menu animation")
-	check(game.modal_backdrop.menu_actor_pose(0)==game.modal_backdrop.menu_actor_pose(8),"menu sprite holds a resting pose with reduced motion")
+	check(game.modal_backdrop.sky_time==0.0,"reduced motion holds the cottage lighting still")
 	game.comfort.reduce_motion=false
 	game._new_event_game();game._close()
 	game.set_physics_process(false);game.events_controller.set_physics_process(false)

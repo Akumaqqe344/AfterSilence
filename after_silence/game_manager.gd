@@ -24,6 +24,8 @@ const Rift=preload("res://after_silence/world/rift_campaign.gd")
 
 const ComfortTheme=preload("res://after_silence/ui/comfort_theme.gd")
 const ComfortMotion=preload("res://after_silence/ui/comfort_motion.gd")
+const PixelArt=preload("res://after_silence/core/ppae_art.gd")
+const JourneyMenuButton=preload("res://after_silence/ui/menu_button.gd")
 var comfort=preload("res://after_silence/ui/comfort_preferences.gd").new()
 var modal_back: Callable
 var settings_volume: Label
@@ -34,6 +36,8 @@ var rift_saves=Saves.new()
 var event_saves=Saves.new()
 var events_controller
 var journey=preload("res://after_silence/world/journey.gd").new(self)
+var investigations=preload("res://after_silence/world/investigation_director.gd").new(self)
+var expanded_new_game=true
 var event_window
 var route_guide: Control
 var story_hud: Control
@@ -76,6 +80,7 @@ var toast: Label
 var buttons: Dictionary={}
 var modal=true
 var in_menu=true
+var departing_home=false
 var type_progress=0.0
 var autosave_age=0.0
 var shift_cooldown=0.0
@@ -296,6 +301,7 @@ func _setup_ui():
 	battle.visible=false
 	battle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	battle.won.connect(_boss_won)
+	battle.left.connect(func():living.restore_camera();_close())
 	battle.struck.connect(func(): audio.ping(state.volume))
 	battle.hurt.connect(func(): audio.ping(state.volume))
 
@@ -316,16 +322,17 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	modal=true
 	modal_back=Callable()
 	shade.show()
+	card.show()
 	buttons.clear()
 	if is_instance_valid(modal_tween): modal_tween.kill()
-	modal_backdrop.menu_mode=main_layout
+	modal_backdrop.menu_mode=in_menu
 	modal_backdrop.finish_mark=id.ends_with("_decision")
 	modal_backdrop.configure_motion(not comfort.reduce_motion)
-	var card_size=Vector2(268,287) if main_layout else Vector2(388,272) if compact else Vector2(518,298)
-	var target=Vector2(32,43) if main_layout else (Vector2(640,360)-card_size)*.5
+	var card_size=Vector2(257,244) if main_layout else Vector2(388,272) if compact else Vector2(518,298)
+	var target=Vector2(43,82) if main_layout else (Vector2(640,360)-card_size)*.5
 	card.position=target
 	card.size=card_size
-	var panel_style: StyleBox=ComfortTheme.panel()
+	var panel_style: StyleBox=PixelArt.panel("panel",12)
 	if main_layout:
 		panel_style=StyleBoxEmpty.new()
 	else:
@@ -340,8 +347,8 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	header.text=title
 	header.add_theme_color_override("font_color",ComfortTheme.PEACH)
 	header.add_theme_font_override("font",ComfortTheme.HEADING)
-	header.add_theme_font_size_override("font_size",33 if main_layout else 20)
-	header.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	header.add_theme_font_size_override("font_size",32 if main_layout else 20)
+	header.autowrap_mode=TextServer.AUTOWRAP_OFF if main_layout else TextServer.AUTOWRAP_WORD_SMART
 	var portrait_id=id.split("_")[0]
 	if id=="intro": portrait_id="vera"
 	if not main_layout and (portrait_id in actors or portrait_id=="vera"):
@@ -363,6 +370,14 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		row.add_child(header)
 		column.add_child(row)
 	else: column.add_child(header)
+	if main_layout:
+		var rule=HSeparator.new()
+		rule.custom_minimum_size=Vector2(84,6)
+		rule.size_flags_horizontal=Control.SIZE_SHRINK_BEGIN
+		var ink=StyleBoxLine.new()
+		ink.color=Color("a7745f")
+		rule.add_theme_stylebox_override("separator",ink)
+		column.add_child(rule)
 	body=RichTextLabel.new()
 	body.bbcode_enabled=false
 	body.text=text
@@ -372,7 +387,6 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	body.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	body.add_theme_color_override("default_color",ComfortTheme.TEXT)
 	body.add_theme_font_size_override("normal_font_size",15 if comfort.large_text else 13)
-	if main_layout: body.add_theme_color_override("default_color",ComfortTheme.MUTED)
 	column.add_child(body)
 	body.visible=not text.is_empty()
 	var seen=dialogues.was_seen(id)
@@ -381,31 +395,32 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	type_progress=0
 	for i in range(actions.size()):
 		var item=actions[i]
-		var button=Button.new()
+		var button: Button
+		if main_layout:
+			var menu_button=JourneyMenuButton.new()
+			menu_button.action_id=item.id
+			menu_button.primary=item.id==("events_load" if event_saves.exists() else "events_new")
+			button=menu_button
+		else:
+			button=Button.new()
 		button.text=item.label
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
-		button.custom_minimum_size=Vector2(0,26)
-		button.add_theme_font_size_override("font_size",14 if comfort.large_text else 13)
+		button.custom_minimum_size=Vector2(0,30 if main_layout else 26)
+		button.add_theme_font_size_override("font_size",(16 if comfort.large_text else 15) if main_layout else (14 if comfort.large_text else 13))
 		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
 		button.pressed.connect(func():
+			if departing_home or button.disabled: return
 			if body.visible_characters>=0 and body.visible_characters<body.get_total_character_count():
 				body.visible_characters=-1
 				return
 			audio.ping(state.volume)
 			item.run.call())
-		if main_layout:
-			for style in ["normal","hover","pressed"]:
-				var skin=ComfortTheme.button(style!="normal",style=="pressed")
-				skin.bg_color.a=.87 if style=="normal" else .94
-				button.add_theme_stylebox_override(style,skin)
 		column.add_child(button)
 		buttons[item.id]=button
 		if item.id in ["back","close"]: modal_back=item.run
-		if item.id in ["events_new","events_load","resume","start"] and i==0:
-			var primary=ComfortTheme.button(true)
-			primary.bg_color=Color("3c503ce8") if main_layout else Color("3c503c")
-			button.add_theme_stylebox_override("normal",primary)
+		if not main_layout and item.id in ["resume","start"] and i==0:
+			button.add_theme_stylebox_override("normal",ComfortTheme.button(true))
 		ComfortMotion.wire_button(button,comfort)
 	_wire_dialog_focus()
 	card_scroll.scroll_vertical=0
@@ -451,33 +466,46 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("После тишины","After Silence"),t("Вера ищет сестру в городе, который забывает.","Vera searches for her sister in a town that forgets."),[choice("events_load","Продолжить путешествие","Continue journey",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_confirm_new_event),choice("archive","Архив историй","Story archive",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выйти из игры","Quit game",func():get_tree().quit())],false,true)
+	_dialog("",t("После тишины","After Silence"),"",[
+		choice("events_load","Продолжить","Continue",func():saves=event_saves;_load_game()),
+		choice("events_new","Новое путешествие","New journey",_confirm_new_event),
+		choice("settings","Настройки","Settings",_settings),
+		choice("quit","Выйти","Quit",func():get_tree().quit())],false,true)
 	buttons["events_load"].disabled=not event_saves.exists()
-	buttons["events_load"].tooltip_text=t("Здесь появится твоё сохранённое путешествие","Your saved journey will appear here") if not event_saves.exists() else t("Вернуться к сохранённой истории","Return to your saved story")
 	_wire_dialog_focus()
-	if not event_saves.exists():
-		var primary=ComfortTheme.button(true);primary.bg_color=Color("3c503c");primary.border_color=ComfortTheme.PEACH
-		buttons["events_new"].add_theme_stylebox_override("normal",primary)
 func _confirm_new_event():
 	if not event_saves.exists():
-		_new_event_game()
+		_depart_home()
 		return
-	_dialog("",t("Начать сначала?","Begin again?"),t("Новое путешествие заменит текущее автосохранение. Прежние истории в архиве останутся.","A new journey replaces the current autosave. Earlier stories in the archive stay safe."),[choice("back","Оставить мою историю","Keep my story",_main_menu),choice("restart","Начать новое путешествие","Begin a new journey",_new_event_game)],false)
+	_dialog("",t("Начать сначала?","Begin again?"),t("Новое путешествие заменит текущее автосохранение.","A new journey replaces the current autosave."),[choice("back","Назад","Back",_main_menu),choice("restart","Начать новое путешествие","Begin a new journey",_depart_home)],false)
+func _depart_home():
+	if departing_home: return
+	if not comfort.reduce_motion:
+		departing_home=true
+		if is_instance_valid(modal_tween): modal_tween.kill()
+		card.hide()
+		await modal_backdrop.play_departure()
+		departing_home=false
+	_new_event_game(expanded_new_game)
 func _archive_menu():
 	in_menu=true
-	_dialog("",t("Архив","Archive"),t("Прежние истории","Earlier stories"),[choice("load","Продолжить разлом","Continue rift",_continue_rift),choice("rift","Начать разлом заново","Restart rift",_new_rift_game),choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_main_menu)],false,true)
-func _new_event_game():
+	_dialog("",t("Архив","Archive"),"",[choice("load","Продолжить разлом","Continue rift",_continue_rift),choice("rift","Начать разлом заново","Restart rift",_new_rift_game),choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_settings)],false)
+func _new_event_game(expanded: bool=false):
 	var lang=state.language
 	var volume=state.volume
 	state=State.new();state.language=lang;state.volume=volume
 	saves=event_saves
 	_setup_services()
 	state.set_flag("event_campaign");state.set_flag("rift_mode")
+	state.set_flag("case_chapters",expanded)
+	investigations.tracked=""
+	investigations.orders.clear()
 	state.set_flag("nadia_met");state.set_flag("catalog");state.set_flag("clock_solved")
 	in_menu=false;modal=false;shade.hide();adventure.expanded=false
 	if event_window.active: event_window.close()
 	_build_world("town",Vector2(600,645))
 	events_controller.start()
+	investigations.install()
 	_save(false)
 func _continue_rift():
 	saves=rift_saves
@@ -534,7 +562,11 @@ func _load_game():
 	await _travel(state.zone,state.position,false)
 	state.minigame=checkpoint
 	state.event_state=event_checkpoint
-	if state.flag("event_campaign"): events_controller.start(true)
+	if state.flag("event_campaign"):
+		investigations.tracked=""
+		investigations.orders.clear()
+		events_controller.start(true)
+		investigations.install()
 	elif state.flag("rift_mode") and not state.flag("rift_finished"): rift.start(self)
 	loading_save=false
 	_save(false)
@@ -581,6 +613,7 @@ func _build_world(id: String,p: Vector2):
 	if not is_instance_valid(player):
 		player=Actor.new()
 		player.is_player=true
+		player.art_id="vera"
 		player.visual_comfort=comfort
 		player.sheet=load("res://after_silence/assets/pechatai/player/walk.png")
 		player.footstep.connect(_footstep)
@@ -630,8 +663,10 @@ func _build_world(id: String,p: Vector2):
 	if id=="town" and rift.phase=="travel" and state.flag("rift_mode") and not state.flag("rift_finished") and rift.index<rift.STOPS.size():
 		world.spot("rift_next",rift.STOPS[rift.index],"trace")
 	if is_instance_valid(events_controller): events_controller.refresh_mementos()
+	investigations.install()
 func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	var actor=Actor.new()
+	actor.art_id=id
 	var appearance=preload("res://after_silence/core/npc_appearance.gd")
 	actor.animated_idle=appearance.PROFILES.has(id)
 	actor.visual_comfort=comfort
@@ -658,8 +693,8 @@ func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 func _physics_process(dt):
 	var board_open=is_instance_valid(event_window) and event_window.active
 	if is_instance_valid(help_button): help_button.visible=not modal and not in_menu and not rift.active and not battle.active and not board_open
-	if is_instance_valid(zoom_button): zoom_button.visible=not modal and not in_menu and not rift.active and not board_open
-	if is_instance_valid(objective): objective.visible=not modal and not in_menu and not rift.active and not board_open
+	if is_instance_valid(zoom_button): zoom_button.visible=not modal and not in_menu and not rift.active and not battle.active and not board_open
+	if is_instance_valid(objective): objective.visible=not modal and not in_menu and not rift.active and not battle.active and not board_open
 	shift_cooldown=maxf(0,shift_cooldown-dt)
 	if modal and is_instance_valid(body) and body.visible_characters>=0:
 		type_progress+=dt*42
@@ -733,10 +768,16 @@ func _nearest() -> String:
 	for spot in world.interactables:
 		if spot.position.distance_to(player.position)<28 and (spot.id in Homes.IDS or spot.id in ["to_library","to_forest","to_town","leave_home","leave_shop","visit_shop","visit_orchard","visit_harbor","district_return"]):
 			return spot.id
+	var event_actor=""
 	if state.flag("event_campaign") and is_instance_valid(events_controller) and events_controller.phase in ["observe","ready","suspended","decision"]:
 		var actor=events_controller.npc
 		if is_instance_valid(actor) and actor.is_visible_in_tree() and actor.position.distance_to(player.position)<55:
-			return events_controller.events[events_controller.index].npc
+			var event: Dictionary=events_controller.events[events_controller.index]
+			if not investigations.barrier(event.id): return event.npc
+			event_actor=event.npc
+	var case_spot=investigations.hit(player.position)
+	if not case_spot.is_empty(): return case_spot
+	if not event_actor.is_empty(): return event_actor
 	var result=""
 	var distance=55.0
 	for id in actors:
@@ -755,6 +796,7 @@ func can_interact(id: String) -> bool:
 	if not state.flag("rift_mode"): return true
 	return id not in ["photo","poster","ledger","clock","diagram","testimony","signature","medical","relay","mirror","catalog","library_light","ribbon","trace","shelter","home_memory"]
 func _object_name(id: String) -> String:
+	if id.begins_with("case_"): return investigations.label(id)
 	if state.flag("event_campaign") and events_controller.owns(id):
 		return events_controller.pair(events_controller.events[events_controller.index].title)
 	if id.begins_with("landmark_"):
@@ -780,6 +822,9 @@ func _object_name(id: String) -> String:
 	var labels={"to_library":["войти в библиотеку","enter the library"],"to_town":["вернуться в город","return to town"],"to_forest":["пойти в лес","enter the forest"],"catalog":["каталог","catalogue"],"clock":["часы","clock"],"mirror":["зеркало","mirror"],"relay":["аварийное реле","emergency relay"],"library_light":["светильник","light socket"],"well":["отдохнуть у воды","rest at the well"],"trace":["след присутствия","trace of presence"],"shelter":["каменное укрытие","stone shelter"],"ribbon":["красная лента","red ribbon"]}
 	if id in Story.CLUES: return Story.CLUES[id][1] if state.language=="en" else Story.CLUES[id][0]
 	return Story.pair(labels.get(id,[id,id]),state.language)
+func _input(_event: InputEvent) -> void:
+	if departing_home: get_viewport().set_input_as_handled()
+
 func _unhandled_key_input(event):
 	if not event.is_pressed() or event.is_echo(): return
 	if transitions.busy: return
@@ -800,7 +845,8 @@ func _unhandled_key_input(event):
 		if event.physical_keycode==KEY_E and is_instance_valid(body): body.visible_characters=-1
 		elif event.physical_keycode>=KEY_1 and event.physical_keycode<=KEY_9:
 			var index=int(event.physical_keycode-KEY_1)
-			if index<buttons.size(): buttons.values()[index].pressed.emit()
+			if index<buttons.size() and not buttons.values()[index].disabled:
+				buttons.values()[index].pressed.emit()
 		elif event.physical_keycode==KEY_ESCAPE:
 			if modal_back.is_valid():
 				modal_back.call()
@@ -853,6 +899,7 @@ func _quest_help():
 	if state.flag("event_campaign"): journey.open();return
 	_dialog("",t("Куда идти?","Where to go?"),shop.hint()+"\n"+t("Золотая отметка на карте — следующее событие. E — действие.","The gold map marker is the next event. E: interact."),[choice("map","Показать карту","Show map",func():_close();adventure.expanded=true),choice("close","Понятно","Got it",_close)],false)
 func interact(id: String):
+	if investigations.interact(id): return
 	if id.begins_with("landmark_"):
 		var site: Dictionary=Landmarks.SITES.get(id.trim_prefix("landmark_"),{})
 		if not site.is_empty() and site.zone==state.zone and player.position.distance_to(site.point)<55.0:
@@ -935,6 +982,7 @@ func _rift_talk(id: String):
 	var special=state.flag({"nadia":"rift_choice_08_defend","lev":"rift_choice_04_limit","mara":"rift_choice_02_follow","pavel":"rift_choice_05_guard","sonya":"rift_choice_11_trust"}.get(id,""))
 	_dialog("rift_talk_"+id,named(id),lines.get(id,[t("Город снова меняется, но люди помнят друг друга.","Town still changes, but its people remember one another.")])[1 if special else 0],[choice("close","Продолжить","Continue",_close)],false)
 func _talk(id: String):
+	if investigations.followup(id): return
 	if is_instance_valid(events_controller) and events_controller.talk(id): return
 	if living.talk(id): return
 	if state.flag("rift_mode"): _rift_talk(id);return
@@ -1034,6 +1082,7 @@ func _catalog():
 	var sequence=PackedStringArray()
 	for index in catalog_sequence: sequence.append(Story.pair(labels[index],state.language))
 	_dialog("",t("Каталог эвакуации","Evacuation catalogue"),t("Три защёлки откликаются на считалку с афиши. Выберите книги по порядку. Сейчас: ","Three latches follow the rhyme on the poster. Choose books in order. Current: ")+" → ".join(sequence),options,false)
+	_style_archive_puzzle(8,["book_0","book_1","book_2"])
 func _catalog_select(index: int):
 	catalog_sequence.append(index)
 	if catalog_sequence.size()==3:
@@ -1047,10 +1096,18 @@ func _catalog_select(index: int):
 			catalog_sequence.clear()
 			_notify(t("Защёлки вернулись на место. Вспомните афишу.","The latches reset. Remember the poster."))
 			_catalog()
-	else: _catalog()
+	else:
+		_catalog()
+		buttons["book_"+str(index)].grab_focus()
 func _clock():
 	if state.flag("clock_solved"): _clue("clock");return
-	_dialog("",t("Восстановить момент","Restore the moment"),t("Сначала свяжите афишу и часы в журнале. Затем выставьте время.\n","First connect the poster and clock in the journal, then set the time.\n")+("%02d:%02d"%[clock_hour,clock_minute]),[choice("hour","Час +1","Hour +1",func():clock_hour=(clock_hour+1)%24;_clock()),choice("minute","Минута +1","Minute +1",func():clock_minute=(clock_minute+1)%60;_clock()),choice("five","Минуты +5","Minutes +5",func():clock_minute=(clock_minute+5)%60;_clock()),choice("set","Зафиксировать","Set",_set_clock),choice("close","Назад","Back",_close)],false)
+	_dialog("",t("Восстановить момент","Restore the moment"),t("Сначала свяжите афишу и часы в журнале. Затем выставьте время.\n","First connect the poster and clock in the journal, then set the time.\n")+("%02d:%02d"%[clock_hour,clock_minute]),[choice("hour","Час +1","Hour +1",_adjust_clock.bind(1,0,"hour")),choice("minute","Минута +1","Minute +1",_adjust_clock.bind(0,1,"minute")),choice("five","Минуты +5","Minutes +5",_adjust_clock.bind(0,5,"five")),choice("set","Зафиксировать","Set",_set_clock),choice("close","Назад","Back",_close)],false)
+	_style_archive_puzzle(15,["hour","minute","five"])
+func _adjust_clock(hours: int,minutes: int,id: String) -> void:
+	clock_hour=(clock_hour+hours)%24
+	clock_minute=(clock_minute+minutes)%60
+	_clock()
+	buttons[id].grab_focus()
 func _set_clock():
 	if clock_hour==2 and clock_minute==17 and "date" in state.links:
 		state.set_flag("clock_solved")
@@ -1064,10 +1121,32 @@ func _relay():
 	if not state.flag("boss_relay_defeated"): _begin_boss("relay");return
 
 	var options=[]
-	for i in range(3): options.append(choice("lever_"+str(i),t("Рычаг ","Lever ")+str(i+1)+(" ●" if relay_mask&(1<<i) else " ○"),"Lever "+str(i+1)+(" ON" if relay_mask&(1<<i) else " OFF"),func():relay_mask=relay_mask^(1<<i);_relay()))
+	for i in range(3): options.append(choice("lever_"+str(i),t("Рычаг ","Lever ")+str(i+1)+(" ●" if relay_mask&(1<<i) else " ○"),"Lever "+str(i+1)+(" ON" if relay_mask&(1<<i) else " OFF"),_toggle_relay_lever.bind(i)))
 	options.append(choice("power","Вставить предохранитель и подать питание","Insert fuse and power on",_power_relay))
 	options.append(choice("close","Назад","Back",_close))
 	_dialog("",t("Аварийное реле","Emergency relay"),t("Средний контур питает колокол. Не поднимайте тревогу. Схема осталась в библиотеке.","The middle circuit powers the bell. Do not raise the alarm. The diagram is in the library."),options,false)
+	_style_archive_puzzle(4,["lever_0","lever_1","lever_2"])
+
+func _style_archive_puzzle(icon_id: int, choices: Array) -> void:
+	var artwork=preload("res://after_silence/ui/trial_stage_art.gd")
+	var header: Control=column.get_child(0)
+	var badge=TextureRect.new()
+	badge.texture=artwork.icon(icon_id)
+	badge.texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
+	badge.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	header.add_child(badge)
+	badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	badge.offset_left=-26
+	badge.offset_right=-2
+	for i in choices.size():
+		var input_button: Button=buttons[choices[i]]
+		artwork.button(input_button)
+		input_button.icon=artwork.icon(1 if icon_id==4 and (relay_mask&(1<<i))!=0 else icon_id)
+		input_button.icon_alignment=HORIZONTAL_ALIGNMENT_RIGHT
+func _toggle_relay_lever(index: int) -> void:
+	relay_mask=relay_mask^(1<<index)
+	_relay()
+	buttons["lever_"+str(index)].grab_focus()
 func _power_relay():
 	if relay_mask!=5:
 		state.pressure=mini(5,state.pressure+1)
@@ -1084,7 +1163,10 @@ func _light_socket():
 		elif not inventory.install_fuse("library_light"): _notify(t("Нужна деталь Льва.","You need Lev's part."))
 		_close()),choice("close","Назад","Back",_close)],false)
 func _journal():
-	if state.flag("event_campaign"): events_controller.journal();return
+	if state.flag("event_campaign"):
+		if state.flag("case_chapters"): investigations.journal()
+		else: events_controller.journal()
+		return
 	if state.flag("rift_mode"):
 		var completed=0
 		var event_lines=[]
@@ -1158,9 +1240,11 @@ func _pause():
 	buttons["slots"]=slot_button
 	_wire_dialog_focus()
 func _settings():
-	_dialog("",t("Настройки","Settings"),t("Изменения сохраняются сразу.","Changes save automatically."),[choice("back","Готово · Esc","Done · Esc",func():
+	var actions=[choice("back","Готово · Esc","Done · Esc",func():
 		if in_menu: _main_menu()
-		else: _pause())],false)
+		else: _pause())]
+	if in_menu: actions.push_front(choice("archive","Архив","Archive",_archive_menu))
+	_dialog("",t("Настройки","Settings"),"",actions,false)
 	var row=HBoxContainer.new()
 	row.custom_minimum_size.y=28
 	settings_volume=Label.new()

@@ -134,6 +134,9 @@ func tell_puzzle_memory(id: String) -> bool:
 	return false
 func start_activity(checkpoint: Dictionary={}):
 	if not is_instance_valid(npc) or phase not in ["ready","running","suspended"]: return
+	if game.investigations.barrier(events[index].id):
+		game.investigations.followup(events[index].npc)
+		return
 	game.state.set_flag("event_action_"+events[index].id)
 	game._close();game.toast.text=""
 	if game.event_window.active: game.event_window.close()
@@ -154,7 +157,10 @@ func refresh_mementos():
 		prop.position=game.npcs.safe_point(place.zone,Vector2(place.point[0],place.point[1])+Vector2(90,45))
 		game.world.sorter.add_child(prop)
 func make_activity(checkpoint: Dictionary={}):
-	activity=Activity.new(events[index])
+	var definition: Dictionary=events[index].duplicate()
+	if definition.id=="crowd" and game.investigations.decided("quiet_call"):
+		definition.variant="quiet_plaza"
+	activity=Activity.new(definition)
 	if checkpoint.get("mode","")==activity.mode: activity.restore(checkpoint)
 	npc.get_meta("caption").hide()
 func dispose_activity():
@@ -179,6 +185,7 @@ func success():
 		npc.modulate=Color("a1e0ca");game.create_tween().tween_property(npc,"modulate",Color.WHITE,.7)
 	game._save(false)
 	game.audio.scene_cue("memory",game.state.volume);show_decision()
+	game.event_window.present_victory()
 func show_decision():
 	var actions=[]
 	for option in events[index].choices: actions.append(game.choice(option[0],option[1],option[2],func():choose(option)))
@@ -200,15 +207,26 @@ func choose(option: Array):
 	game.npcs.release(event.npc)
 	game.state.set_flag("event_left_"+event.npc,false)
 	index+=1
-	if index>=events.size(): finish();return
+	if index>=events.size():
+		game.investigations.install()
+		finish()
+		return
 	prepare()
+	game.investigations.install()
 	game._notify(option[2] if game.state.language=="en" else option[1])
 	game._save(false)
 func finish():
 	game.event_window.close();index=events.size();phase="finished";game.state.set_flag("events_finished")
 	dispose_activity()
 	var ending=game.t("Оба времени остались рядом. Никто не один.","Both eras remain together. Nobody is alone.") if game.state.flag("events_final_together") else game.t("Жители вернулись домой. Берег сохранил их память.","The residents returned home. The shore remembers them.")
-	game._dialog("",game.t("Последний берег","The final shore"),ending,[game.choice("journal","Итоги путешествия","Journey results",journal),game.choice("menu","В главное меню","Main menu",func():game._save(false);game._main_menu())],true)
+	if game.investigations.decided("keep_trace"):
+		ending+="\n"+game.t("Свидетельство осталось на берегу рядом с семейными метками.","The witness record stayed at the shore beside the family tags.")
+	elif game.investigations.decided("carry_trace"):
+		ending+="\n"+game.t("К утру Вера принесла свидетельство на площадь.","By morning Vera brought the record to the square.")
+	var actions=[game.choice("journal","Итоги путешествия","Journey results",journal),game.choice("menu","В главное меню","Main menu",func():game._save(false);game._main_menu())]
+	if game.state.flag("case_chapters"):
+		actions.insert(1,game.choice("walk","Вернуться в мир","Return to the area",game._close))
+	game._dialog("",game.t("Последний берег","The final shore"),ending,actions,true)
 	game._save(false)
 func journal():
 	var lines=[]
@@ -228,6 +246,10 @@ func _physics_process(_dt):
 	if index>=events.size(): game.objective.text=game.t("Путешествие завершено. J — итоги.","Journey complete. J: results.");return
 	if preparing: return
 	var event=events[index]
+	var investigation: String=game.investigations.objective()
+	if not investigation.is_empty():
+		game.objective.text=investigation
+		return
 	if phase in ["running","suspended"] and not is_instance_valid(activity):
 		game.event_window.close();phase="ready"
 		game._notify(game.t("Событие восстановлено. Можно начать снова.","The event was restored. You can retry."))

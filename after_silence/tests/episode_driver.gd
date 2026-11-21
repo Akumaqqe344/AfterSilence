@@ -77,10 +77,11 @@ func run():
 	check(game.modal_backdrop.menu_mode,"main menu layout")
 	await shot("menu")
 	press("settings")
-	check(not game.modal_backdrop.menu_mode,"settings layout")
+	check(game.buttons.has("large_text") and game.buttons.has("back"),"settings layout")
 	await shot("settings")
 	press("back")
 
+	press("settings")
 	press("archive")
 	press("new")
 	await wait_world()

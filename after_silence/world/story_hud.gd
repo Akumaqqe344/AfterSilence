@@ -1,8 +1,9 @@
 extends Control
+const Art=preload("res://after_silence/core/ppae_art.gd")
 var game
 var actions: Array[Button]=[]
-var plate: StyleBoxFlat
-var badge: StyleBoxFlat
+var plate: StyleBoxTexture
+var badge: StyleBoxTexture
 var last_goal=""
 var goal_cue=0.0
 var arrival=""
@@ -10,8 +11,8 @@ var arrival_age=0.0
 
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
-	plate=game.ComfortTheme.panel(Color("1b2621ee"))
-	badge=game.ComfortTheme.panel(Color("1b2621ee"))
+	plate=Art.panel("hud",5)
+	badge=Art.panel("hud",3)
 	for entry in [["M","Карта","Map","_district_map"],["J","Журнал","Journal","_journal"],["I","Предметы","Inventory","_inventory"],["Esc","Пауза","Pause","_pause"]]:
 		var button=Button.new()
 		button.position=Vector2(498+actions.size()*33,326)
@@ -19,13 +20,9 @@ func _ready():
 		button.focus_mode=Control.FOCUS_NONE
 		button.add_theme_font_size_override("font_size",11)
 		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
-		var box=game.ComfortTheme.button()
-		box.set_content_margin_all(3)
-		button.add_theme_stylebox_override("normal",box)
+		button.add_theme_stylebox_override("normal",Art.panel("normal",3))
 		for name in ["hover","focus","pressed"]:
-			var active=game.ComfortTheme.button(true,name=="pressed")
-			active.set_content_margin_all(3)
-			button.add_theme_stylebox_override(name,active)
+			button.add_theme_stylebox_override(name,Art.panel("pressed" if name=="pressed" else "hover",3))
 		button.set_meta("entry",entry)
 		button.pressed.connect(func():game.call(entry[3]))
 		add_child(button)

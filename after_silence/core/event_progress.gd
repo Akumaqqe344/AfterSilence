@@ -25,7 +25,9 @@ static func valid(data: Dictionary) -> bool:
 		var id: String=Reality.STOPS.get(int(index),"")
 		return id!="" and Reality.new(id).restore(activity.get("reality"))
 	if mode in Trials.ACTIONS:
-		return Trials.STOPS.get(int(index))==mode and Trials.new(mode).restore(activity.get("moves"))
+		var variant: Variant=activity.get("variant","")
+		if not variant is String or (variant!="" and (variant!="quiet_plaza" or mode!="signal_grid")): return false
+		return Trials.STOPS.get(int(index))==mode and Trials.new(mode,variant).restore(activity.get("moves"))
 	return mode in Puzzle.SIZES and PUZZLE_STOPS.get(int(index))==mode and Puzzle.new(mode).restore(activity.get("moves"))
 
 static func upgrade(data: Dictionary, event: Dictionary) -> Dictionary:
