@@ -29,6 +29,8 @@ var minigame: Dictionary={}
 var tokens=3
 var event_state: Dictionary={}
 var case_trials: Dictionary={}
+var archive_boards: Dictionary={}
+var case_orders: Dictionary={}
 func flag(id: String) -> bool:
 	return flags.get(id, false) == true
 func set_flag(id: String, value: bool = true) -> void:
@@ -47,7 +49,7 @@ func give(id: String, count: int = 1) -> bool:
 	changed.emit()
 	return true
 func to_data() -> Dictionary:
-	return {"case_trials":case_trials.duplicate(true),"event_state":event_state.duplicate(true),"tokens":tokens,"schema":3,"storage":storage.duplicate(),"minigame":minigame.duplicate(true),"last_memories":last_memories.duplicate(),"away_times":away_times.duplicate(),"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "achievements":achievements.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
+	return {"archive_boards":archive_boards.duplicate(true),"case_orders":case_orders.duplicate(true),"case_trials":case_trials.duplicate(true),"event_state":event_state.duplicate(true),"tokens":tokens,"schema":3,"storage":storage.duplicate(),"minigame":minigame.duplicate(true),"last_memories":last_memories.duplicate(),"away_times":away_times.duplicate(),"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "achievements":achievements.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
 func restore(d: Dictionary) -> bool:
 	var saved_event=d.get("event_state",{})
 	if not saved_event is Dictionary or not preload("res://after_silence/core/event_progress.gd").valid(saved_event): return false
@@ -171,6 +173,25 @@ func restore(d: Dictionary) -> bool:
 	tokens=int(saved_tokens)
 	event_state=saved_event.duplicate(true)
 	case_trials=safe_trials
+	archive_boards.clear()
+	var raw_boards: Variant = d.get("archive_boards", {})
+	if raw_boards is Dictionary:
+		var archive = preload("res://after_silence/core/archive_trials.gd")
+		for kind in archive.DEFAULTS:
+			if raw_boards.has(kind):
+				archive_boards[kind] = archive.checkpoint(kind,raw_boards[kind])
+	case_orders.clear()
+	var raw_orders: Variant = d.get("case_orders", {})
+	if raw_orders is Dictionary:
+		for id in ["copies_proof","sluice_valves","audio_order"]:
+			var marks: Variant = raw_orders.get(id, [])
+			if not marks is Array or marks.size() > 2: continue
+			var order = []
+			for item in marks:
+				if (item is int or item is float) and item >= 0 and item <= 2 and int(item) == item and int(item) not in order:
+					order.append(int(item))
+			if order.size() == marks.size() and not order.is_empty():
+				case_orders[id] = order
 	minigame=saved_game
 	last_memories=saved_memories
 	away_times=saved_times

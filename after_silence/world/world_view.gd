@@ -230,7 +230,7 @@ func on_path(p: Vector2, margin: float=0.0) -> bool:
 	for segment in paths:
 		if p.distance_to(Geometry2D.get_closest_point_to_segment(p,segment[0],segment[1]))<=segment[2]+margin: return true
 	return false
-func add_light(p: Vector2):
+func add_light(p: Vector2) -> PointLight2D:
 	if not glow_texture:
 		glow_texture=Ppae.texture("light_window")
 	var light=PointLight2D.new()
@@ -240,6 +240,7 @@ func add_light(p: Vector2):
 	light.color=Color("97bfd0") if echo else Color("f1ce8b")
 	light.energy=.7 if echo else .35
 	add_child(light)
+	return light
 func decorate():
 	if zone not in ["town","forest","orchard","harbor"]: return
 	var water=preload("res://after_silence/world/watercourse.gd")

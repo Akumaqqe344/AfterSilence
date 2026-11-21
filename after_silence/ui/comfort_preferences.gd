@@ -8,6 +8,8 @@ var instant_text=false
 var fullscreen=false
 var language="ru"
 var volume=0.5
+var music_volume=.45
+var effects_volume=1.0
 var available=false
 
 func load_preferences() -> void:
@@ -24,7 +26,13 @@ func load_preferences() -> void:
 	var stored_volume=config.get_value("comfort","volume",0.5)
 	volume=clampf(float(stored_volume),0.0,1.0) if stored_volume is float or stored_volume is int else 0.5
 	if not is_finite(volume): volume=0.5
+	music_volume = _read_level(config,"music_volume",.45)
+	effects_volume = _read_level(config,"effects_volume",1.0)
 	available=true
+
+func _read_level(config: ConfigFile, key: String, fallback: float) -> float:
+	var value = config.get_value("comfort",key,fallback)
+	return clampf(float(value),0.0,1.0) if (value is int or value is float) and is_finite(float(value)) else fallback
 
 func _read_bool(config: ConfigFile, key: String) -> bool:
 	var value=config.get_value("comfort",key,false)
@@ -32,7 +40,7 @@ func _read_bool(config: ConfigFile, key: String) -> bool:
 
 func save_preferences() -> Error:
 	var config=ConfigFile.new()
-	for key in ["large_text","reduce_motion","route_guide","instant_text","fullscreen","language","volume"]:
+	for key in ["large_text","reduce_motion","route_guide","instant_text","fullscreen","language","volume","music_volume","effects_volume"]:
 		config.set_value("comfort",key,get(key))
 	var error=config.save(path)
 	if error==OK: available=true

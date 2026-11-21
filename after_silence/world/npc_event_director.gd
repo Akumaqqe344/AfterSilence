@@ -193,7 +193,10 @@ func success():
 func show_decision():
 	var actions=[]
 	for option in events[index].choices: actions.append(game.choice(option[0],option[1],option[2],func():choose(option)))
-	game._dialog(events[index].npc+"_decision",pair(events[index].title),"",actions,false)
+	var body = ""
+	if events[index].id == "shore":
+		body = game.t("Соня сбилась на последнем имени. Вера держит список, пока она начинает строку заново. «Если разойдёмся по разным берегам, кто ответит первой?»", "Sonya loses her place on the last name. Vera holds the register while she reads the line again. “If we leave for different shores, who answers first?”")
+	game._dialog(events[index].npc+"_decision",pair(events[index].title),body,actions,false)
 func choose(option: Array):
 	if phase!="decision": return
 	var event=events[index]
@@ -222,7 +225,7 @@ func choose(option: Array):
 func finish():
 	game.event_window.close();index=events.size();phase="finished";game.state.set_flag("events_finished")
 	dispose_activity()
-	var ending=game.t("Оба времени остались рядом. Никто не один.","Both eras remain together. Nobody is alone.") if game.state.flag("events_final_together") else game.t("Жители вернулись домой. Берег сохранил их память.","The residents returned home. The shore remembers them.")
+	var ending = game.t("На дальнем берегу ответили на свет фонаря. Соня подняла фонарь и услышала ответ уже с другого берега.\n\nВера сдвинулась на край скамьи. «Оставим место?» Соня села рядом. «Да. Завтра я сама приду раньше».","Someone across the water answered the lantern. Sonya raised the lantern and heard the answer from the other bank.\n\nVera moved to the end of the bench. ‘Shall we leave a place?’ Sonya sat beside her. ‘Yes. Tomorrow I'll get here first.’") if game.state.flag("events_final_together") else game.t("На дальнем берегу один за другим погасли огни. Соня дочитала список до конца и сложила его по старым сгибам.\n\n«Я боялась, что дома меня уже не ждут». Вера подала ей сумку. «Пойдём вместе до двери». Соня взяла сумку, а список оставила Вере.","The lights across the water went out one by one. Sonya read the register to the end and folded it along the old creases.\n\n‘I was afraid no one at home would be waiting.’ Vera handed over her bag. ‘I'll walk with you to the door.’ Sonya took the bag and left Vera the register.")
 	if game.investigations.decided("keep_trace"):
 		ending+="\n"+game.t("Свидетельство осталось на берегу рядом с семейными метками.","The witness record stayed at the shore beside the family tags.")
 	elif game.investigations.decided("carry_trace"):
@@ -233,11 +236,15 @@ func finish():
 		ending+="\n"+game.t("Лев записал ответ с дальнего берега.","Lev recorded the reply from the far shore.")
 	elif game.investigations.decided("roll_private"):
 		ending+="\n"+game.t("Имена остались в конверте у Нади.","The names stayed in Nadia's envelope.")
-	var actions=[game.choice("journal","Итоги путешествия","Journey results",journal),game.choice("menu","В главное меню","Main menu",func():game._save(false);game._main_menu())]
+	var actions=[game.choice("journal","Итоги путешествия","Journey results",journal),game.choice("credits","Титры","Credits",credits),game.choice("menu","В главное меню","Main menu",func():game._save(false);game._main_menu())]
 	if game.state.flag("case_chapters"):
 		actions.insert(1,game.choice("walk","Вернуться в мир","Return to the area",game._close))
 	game._dialog("",game.t("Последний берег","The final shore"),ending,actions,true)
 	game._save(false)
+func credits():
+	var text = game.t("После тишины · 0.9.0 Pre-Release\n\nИстория, мир, графика и звук — команда After Silence.\n\nОснова Little Adventure — Michael Bertocchi.\nДвижок — Godot Engine и его авторы.\nЛистья просеки — Pixel-Boy и AAA.\n\nСведения об остальных материалах и лицензиях приложены к сборке.","After Silence · 0.9.0 Pre-Release\n\nStory, world, art and sound by the After Silence contributors.\n\nLittle Adventure foundation by Michael Bertocchi.\nPowered by Godot Engine and its contributors.\nGlade leaves by Pixel-Boy and AAA.\n\nSee the release package for other assets and licenses.")
+	game._dialog("",game.t("Титры","Credits"),text,[game.choice("back","Вернуться к финалу","Back to the ending",finish),game.choice("menu","В главное меню","Main menu",game._main_menu)],false)
+
 func journal():
 	var lines=[]
 	if index<events.size(): lines.append(pair(events[index].title)+"\n"+pair(events[index].context))

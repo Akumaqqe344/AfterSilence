@@ -73,8 +73,8 @@ func update_board(message: String = ""):
 			face.blit_rect(atlas_image, Rect2i(x + dials[i] * 112, 8, 23, 24), Vector2i(x, 8))
 		art.texture = ImageTexture.create_from_image(face)
 	if winch:
-		buttons[0].text = translate("Тормоз ✓", "Brake ✓") if dials[0] == 0 else translate("Отпустить", "Released")
-		buttons[1].text = translate("Выбрать канат", "Take up slack") if dials[1] == 0 else translate("Канат натянут", "Line taut")
+		buttons[0].text = translate("Тормоз держит", "Brake set") if dials[0] == 0 else translate("Тормоз свободен", "Brake released")
+		buttons[1].text = translate("Выбрать слабину", "Take up slack") if dials[1] == 0 else translate("Канат натянут", "Line taut")
 		buttons[2].text = translate("Отметка %d ↻", "Mark %d ↻") % (dials[2] + 1)
 		buttons[3].text = translate("Зафиксировать", "Set brake")
 	else:
@@ -116,6 +116,4 @@ func act(index: int):
 		caption.text = translate("Механизм сработал.", "The mechanism engaged.")
 		for button in buttons:
 			button.disabled = true
-		# Leave a readable confirmation before restoring world control.
-		if not reduced: await get_tree().create_timer(.28, false).timeout
 		solved.emit()

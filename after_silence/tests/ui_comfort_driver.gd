@@ -57,6 +57,7 @@ func dialog_bounds(label: String, all_visible: bool=false):
 		if all_visible: check(game.card.get_global_rect().encloses(button.get_global_rect()),label+" visible "+button.text)
 
 func run():
+	var initial_window = DisplayServer.window_get_size()
 	var run_id=str(Time.get_ticks_usec())
 	game.event_saves.path="user://qa_ui_story_"+run_id+".json"
 	game.comfort.path="user://qa_ui_comfort_"+run_id+".cfg"
@@ -188,6 +189,27 @@ func run():
 		DisplayServer.window_set_size(Vector2i(1600,900))
 		await capture("13-large-window")
 		dialog_bounds("large window",true)
+	game.in_menu=false
+	game.state.set_flag("catalog",false)
+	game.state.set_flag("clock_solved",false)
+	game.state.set_flag("boss_relay_defeated")
+	game.state.set_flag("forest_power",false)
+	game._catalog()
+	await settle()
+	dialog_bounds("catalogue controls",true)
+	var board = game.column.get_node("ArchiveBoard")
+	await click(board.tools[0])
+	await click(board.slots[0])
+	check(board.values[0]==0,"catalogue pockets can be operated with the mouse")
+	game._clock()
+	await settle()
+	dialog_bounds("clock controls",true)
+	game._relay()
+	await settle()
+	dialog_bounds("relay controls",true)
+	game.events_controller.credits()
+	await settle()
+	dialog_bounds("credits controls",true)
 	game.comfort.reduce_motion=true
 	game._main_menu()
 	await click(game.buttons.events_new)
@@ -195,7 +217,7 @@ func run():
 	check(not game.in_menu and not game.departing_home,"reduced motion starts immediately after confirmation")
 	game.comfort.large_text=false;game.comfort.reduce_motion=false;game.comfort.instant_text=false
 	game.state.language="ru";game._save_comfort()
-	var report={"checks":checks,"failures":failures,"screenshots":images,"automated":true,"version":ProjectSettings.get_setting("application/config/version")}
+	var report={"initial_window":[initial_window.x,initial_window.y],"window_size":[DisplayServer.window_get_size().x,DisplayServer.window_get_size().y],"checks":checks,"failures":failures,"screenshots":images,"automated":true,"version":ProjectSettings.get_setting("application/config/version")}
 	var file=FileAccess.open(output.path_join("report.json"),FileAccess.WRITE)
 	if file: file.store_string(JSON.stringify(report,"\t"));file.close()
 	print("UI COMFORT QA: ",checks," checks, ",failures.size()," failures")

@@ -31,6 +31,7 @@ func mount(world):
 				world.boundary(area)
 	match world.zone:
 		"closed_post":
+			room_light(world, Vector2(324,175), Color("e0aa78"), .23)
 			add_motion(Vector2(324, 168), 4, 6)
 			add_motion(Vector2(486, 343), 3, 5)
 		"signal_cellar":
@@ -38,12 +39,18 @@ func mount(world):
 			for at in [Vector2(150, 163), Vector2(489, 163)]:
 				add_motion(at, 3, 6)
 		"listening_archive":
+			room_light(world, Vector2(318,164), Color("bc9ab6"), .24)
 			add_motion(Vector2(323, 226), 2, 6)
 			add_motion(Vector2(313, 135), 4, 5)
 		"tide_station":
 			mount_landing(world)
 		"bracken_clearing":
 			mount_glade(world)
+
+func room_light(world, at: Vector2, shade: Color, energy: float):
+	var lamp: PointLight2D = world.add_light(at)
+	lamp.color = shade
+	lamp.energy = energy
 
 func add_motion(point: Vector2, row: int, speed: float):
 	var frames = SpriteFrames.new()

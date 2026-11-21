@@ -20,7 +20,6 @@ var entries: Dictionary={}
 var steps: Dictionary={}
 var owners: Dictionary={}
 var tracked=""
-var orders: Dictionary={}
 var placed: Dictionary={}
 var installed_world: Node2D
 
@@ -300,15 +299,15 @@ func _question(step: Dictionary, wrong: bool=false):
 	game._dialog("",text(step.title),description,actions,false)
 
 func _sequence(step: Dictionary, wrong: bool=false):
-	var prefix: Array=orders.get(step.id,[])
-	orders[step.id]=prefix
+	var prefix: Array=game.state.case_orders.get(step.id,[])
+	game.state.case_orders[step.id]=prefix
 	var actions=[]
 	for i in step.options.size():
 		if i in prefix: continue
 		var option: Array=step.options[i]
 		actions.append(game.choice("order_"+str(i),option[0],option[1],_add_order.bind(step,i)))
 	if not prefix.is_empty():
-		actions.append(game.choice("erase","Сбросить порядок","Clear the order",func():orders.erase(step.id);_sequence(step)))
+		actions.append(game.choice("erase","Сбросить порядок","Clear the order",func():game.state.case_orders.erase(step.id);game._save(false);_sequence(step)))
 	actions.append(game.choice("review","Сверить записи","Review the clues",details.bind(owners[step.id])))
 	actions.append(game.choice("back","Отойти","Step back",game._close))
 	var names=PackedStringArray()
@@ -319,18 +318,22 @@ func _sequence(step: Dictionary, wrong: bool=false):
 	game._dialog("",text(step.title),description,actions,false)
 
 func _add_order(step: Dictionary,index: int):
-	var prefix: Array=orders.get(step.id,[])
+	var prefix: Array=game.state.case_orders.get(step.id,[])
 	if index in prefix: return
 	prefix.append(index)
 	if prefix.size()<step.order.size():
+		game.state.case_orders[step.id] = prefix
+		game._save(false)
 		_sequence(step)
 		return
 	var correct=true
 	for i in prefix.size():
 		if prefix[i]!=int(step.order[i]): correct=false
-	orders.erase(step.id)
+	game.state.case_orders.erase(step.id)
 	if correct: _resolve_step(step)
-	else: _sequence(step,true)
+	else:
+		game._save(false)
+		_sequence(step,true)
 
 func _survey(step: Dictionary,angle: int=-1):
 	var names=[["Север","North"],["Восток","East"],["Юг","South"],["Запад","West"]]
@@ -409,7 +412,14 @@ func _witness(step: Dictionary):
 			_resolve_step(step)
 			game._dialog("", game.named("sonya"), text(option.result), [game.choice("close","Вернуться на площадь","Return to the square",game._close)], false)))
 	actions.append(game.choice("back","Отойти","Step back",game._close))
-	game._dialog("", text(step.title), text(step.body), actions, false)
+	var handover = game.t("Соня разгладила лист. «В описи моё имя стояло рядом со временем. Если мы зачитаем всё подряд, люди решат, что это одно и то же». Вера разложила расписание и список имён на разные края стола.", "Sonya flattened the sheet. ‘In the register my name was next to the time. Read it all out together and people will think they're one piece of evidence.’ Vera put the timetable and the list of names on opposite ends of the table.")
+	if decided("archive_joint"):
+		handover += "\n\n" + game.t("У Мары подписаны оба времени. Их можно назвать вслух.", "Mara signed both times. They can be read aloud.")
+	else:
+		handover += "\n\n" + game.t("Мара запечатала подписи. На площади можно назвать место встречи.", "Mara sealed the signatures. The meeting place can still be announced.")
+	if decided("dispatch_named") and decided("pier_line"):
+		handover += "\n" + game.t("Приёмник Льва слышит поднятый причал.", "Lev's receiver can hear the raised landing.")
+	game._dialog("", text(step.title), handover, actions, false)
 
 func _resolve_step(step: Dictionary):
 	if not seen(step.id):
@@ -446,6 +456,8 @@ func _complete(case: Dictionary,branch: Dictionary={}):
 	if not branch.is_empty():
 		game.state.set_flag("case_choice_"+branch.id)
 		record=text(branch.result)
+		if case.id == "acoustic_archive":
+			record += "\n\n" + game.t("Мара придержала лист, когда Вера хотела его сложить. «Дай высохнуть. Соня помнит, кто тогда откликнулся. Возьми ей копию времени, а имена пусть пока полежат здесь».", "Mara steadied the page as Vera went to fold it. ‘Let it dry. Sonya remembers who answered. Bring her a copy of the times. The names can stay here for now.’")
 	game.state.set_flag("case_done_"+case.id)
 	if not case.owner.is_empty(): game.npcs.change_relation(case.owner,1)
 	if case.before.is_empty(): game.state.tokens=mini(999,game.state.tokens+2)

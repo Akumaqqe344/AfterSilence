@@ -28,7 +28,6 @@ const PixelArt=preload("res://after_silence/core/ppae_art.gd")
 const JourneyMenuButton=preload("res://after_silence/ui/menu_button.gd")
 var comfort=preload("res://after_silence/ui/comfort_preferences.gd").new()
 var modal_back: Callable
-var settings_volume: Label
 var state=State.new()
 var saves=Saves.new()
 var archive_saves: RefCounted
@@ -85,10 +84,8 @@ var departing_home=false
 var type_progress=0.0
 var autosave_age=0.0
 var shift_cooldown=0.0
-var catalog_sequence: Array=[]
-var clock_hour=0
-var clock_minute=0
-var relay_mask=0
+const ArchivePanel = preload("res://after_silence/ui/archive_board.gd")
+const ArchiveModel = preload("res://after_silence/core/archive_trials.gd")
 var selected_evidence=""
 var dirty=false
 var loading_save=false
@@ -200,6 +197,7 @@ func _setup_services():
 	if not is_instance_valid(audio):
 		audio=Audio.new()
 		add_child(audio)
+	audio.set_mix(comfort.music_volume,comfort.effects_volume)
 func _mark_dirty():
 	dirty=true
 	for id in Achievements.evaluate(state):
@@ -501,7 +499,6 @@ func _new_event_game(expanded: bool=false, expeditions: bool=false):
 	state.set_flag("case_chapters",expanded)
 	state.set_flag("expedition_0330",expanded and expeditions)
 	investigations.tracked=""
-	investigations.orders.clear()
 	state.set_flag("nadia_met");state.set_flag("catalog");state.set_flag("clock_solved")
 	in_menu=false;modal=false;shade.hide();adventure.expanded=false
 	if event_window.active: event_window.close()
@@ -566,12 +563,14 @@ func _load_game():
 	state.event_state=event_checkpoint
 	if state.flag("event_campaign"):
 		investigations.tracked=""
-		investigations.orders.clear()
 		events_controller.start(true)
 		investigations.install()
 	elif state.flag("rift_mode") and not state.flag("rift_finished"): rift.start(self)
 	loading_save=false
+	var recovered = not saves.recovered_from.is_empty()
 	_save(false)
+	if recovered:
+		_notify(t("История восстановлена из резервного файла.","Your story was recovered from a backup file."))
 
 func _save(notify: bool=true):
 	if loading_save or in_menu or not is_instance_valid(player): return
@@ -707,7 +706,8 @@ func _physics_process(dt):
 	if not is_instance_valid(player): return
 	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active and not rift.active and not adventure.expanded and not board_open
 	player.enabled=enabled
-	audio.set_listening(enabled and state.flag("event_campaign"))
+	audio.set_listening(not in_menu and not rift.active)
+	audio.duck_score = modal or board_open
 	if is_instance_valid(enemy):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
 		enemy.visible=state.flag("sonya_met") and not state.flag("returned")
@@ -1077,89 +1077,83 @@ func _shift():
 	shade.hide()
 	_travel(state.zone,player.position)
 func _catalog():
-	if state.flag("catalog"): _clue("ledger");return
-	var labels=[["Дождь","Rain"],["Колокол","Bell"],["Тишина","Silence"]]
-	var options=[]
-	for i in range(3): options.append(choice("book_"+str(i),labels[i][0],labels[i][1],func():_catalog_select(i)))
-	options.append(choice("reset","Сбросить порядок","Reset order",func():catalog_sequence.clear();_catalog()))
-	options.append(choice("close","Отойти","Step away",_close))
-	var sequence=PackedStringArray()
-	for index in catalog_sequence: sequence.append(Story.pair(labels[index],state.language))
-	_dialog("",t("Каталог эвакуации","Evacuation catalogue"),t("Три защёлки откликаются на считалку с афиши. Выберите книги по порядку. Сейчас: ","Three latches follow the rhyme on the poster. Choose books in order. Current: ")+" → ".join(sequence),options,false)
-	_style_archive_puzzle(8,["book_0","book_1","book_2"])
-func _catalog_select(index: int):
-	catalog_sequence.append(index)
-	if catalog_sequence.size()==3:
-		if catalog_sequence==[0,1,2]:
+	if state.flag("catalog"):
+		_clue("ledger")
+		return
+	var description = t("Вложите карточки в папку в порядке учебной тревоги. На площади сохранилась афиша с этой считалкой.", "File the cards in the order of the drill. The square still has the poster with its rhyme.")
+	if "poster" in state.evidence:
+		description += "\n" + t("Строка с афиши: «Дождь. Колокол. Тишина».", "The poster reads “Rain. Bell. Silence.”")
+	_open_archive_board("catalog",t("Каталог эвакуации","Evacuation catalogue"),description)
+
+func _clock():
+	if state.flag("clock_solved"):
+		_clue("clock")
+		return
+	var linked = "date" in state.links
+	var description = t("Свяжите афишу и часы в журнале. Без этого времени на циферблате будет недостаточно.", "Connect the poster and clock in the journal. The time alone won't establish what happened.")
+	if linked:
+		description = t("Афиша называет 02:17. Часы остановили при отключении сигнала. Введите время, которое подтверждают оба свидетельства.", "The poster gives 02:17. The clock stopped at the signal cut. Enter the time supported by both records.")
+	_open_archive_board("clock",t("Остановленные часы","The stopped clock"),description,[choice("journal","Открыть журнал","Open the journal",_journal)])
+
+func _relay():
+	if state.flag("forest_power"):
+		_notify(t("Насос работает тихо.","The pump runs quietly."))
+		return
+	if not state.flag("boss_relay_defeated"):
+		_begin_boss("relay")
+		return
+	_open_archive_board("relay",t("Аварийное реле","Emergency relay"),t("Соедините источник слева с обеими ветвями насоса. Колокол оставьте без питания. Проверка не расходует предохранитель.","Connect the supply at left to both pump branches. Leave the bell unpowered. Testing uses no fuse."))
+
+func _open_archive_board(kind: String, heading: String, description: String, actions: Array = []):
+	actions.append(choice("close","Отойти","Step away",_close))
+	_dialog("",heading,description,actions,false)
+	var board = ArchivePanel.new()
+	board.kind = kind
+	board.game = self
+	board.values = ArchiveModel.checkpoint(kind,state.archive_boards.get(kind))
+	column.add_child(board)
+	column.move_child(board,2)
+	board.changed.connect(func(values: Array):
+		state.archive_boards[kind] = values
+		audio.trial_move("railway" if kind=="relay" else "letter_press",true,state.volume)
+		_save(false))
+	board.checked.connect(func(): audio.trial_move("railway",ArchiveModel.solved(kind,board.values),state.volume))
+	board.confirmed.connect(_confirm_archive_board.bind(kind,board))
+	for control in buttons.values():
+		control.focus_next = NodePath()
+		control.focus_previous = NodePath()
+	if not board.tools.is_empty(): board.tools.front().grab_focus()
+
+func _confirm_archive_board(kind: String, board):
+	var accepted = ArchiveModel.solved(kind,board.values)
+	var feedback = t("Проверьте порядок по афише.","Compare the order with the poster.")
+	if kind == "clock":
+		accepted = accepted and "date" in state.links
+		feedback = t("Сначала свяжите афишу и часы в журнале.","Connect the poster and clock in the journal first.") if not "date" in state.links else t("Сверьте часы и минуты с записью.","Check both hours and minutes against the record.")
+	elif kind == "relay":
+		feedback = t("Нужны обе ветви насоса при отключённом колоколе.","Connect both pump branches with the bell unpowered.")
+		if accepted and not inventory.install_fuse("forest_power"):
+			accepted = false
+			feedback = t("Нужен предохранитель Льва или деталь из библиотечного светильника.","You need Lev's fuse or the one from the library light.")
+	if not accepted:
+		board.message(feedback,false)
+		audio.trial_move("railway",false,state.volume)
+		return
+	state.archive_boards.erase(kind)
+	audio.scene_cue("memory",state.volume)
+	match kind:
+		"catalog":
 			state.set_flag("catalog")
 			state.add_clue("ledger")
 			state.give("lens")
 			_clue("ledger")
-		else:
-			state.pressure=mini(5,state.pressure+1)
-			catalog_sequence.clear()
-			_notify(t("Защёлки вернулись на место. Вспомните афишу.","The latches reset. Remember the poster."))
-			_catalog()
-	else:
-		_catalog()
-		buttons["book_"+str(index)].grab_focus()
-func _clock():
-	if state.flag("clock_solved"): _clue("clock");return
-	_dialog("",t("Восстановить момент","Restore the moment"),t("Сначала свяжите афишу и часы в журнале. Затем выставьте время.\n","First connect the poster and clock in the journal, then set the time.\n")+("%02d:%02d"%[clock_hour,clock_minute]),[choice("hour","Час +1","Hour +1",_adjust_clock.bind(1,0,"hour")),choice("minute","Минута +1","Minute +1",_adjust_clock.bind(0,1,"minute")),choice("five","Минуты +5","Minutes +5",_adjust_clock.bind(0,5,"five")),choice("set","Зафиксировать","Set",_set_clock),choice("close","Назад","Back",_close)],false)
-	_style_archive_puzzle(15,["hour","minute","five"])
-func _adjust_clock(hours: int,minutes: int,id: String) -> void:
-	clock_hour=(clock_hour+hours)%24
-	clock_minute=(clock_minute+minutes)%60
-	_clock()
-	buttons[id].grab_focus()
-func _set_clock():
-	if clock_hour==2 and clock_minute==17 and "date" in state.links:
-		state.set_flag("clock_solved")
-		_dialog("clock_restored",t("02:17","02:17"),t("Колокол отзывается одним ударом. Лесная дорога больше не замыкается на площадь. Запись говорит об отключении сигнала, а не о моменте смерти.","A bell rings once. The forest road no longer loops back to the square. The record marks a signal cut, not a death."),[choice("close","Продолжить","Continue",_close)])
-	else:
-		state.pressure=mini(5,state.pressure+1)
-		_notify(t("Механизм не совпал со свидетельствами.","The mechanism does not match the evidence."))
-		_clock()
-func _relay():
-	if state.flag("forest_power"): _notify(t("Насос работает тихо.","The pump runs quietly."));return
-	if not state.flag("boss_relay_defeated"): _begin_boss("relay");return
+		"clock":
+			state.set_flag("clock_solved")
+			_dialog("clock_restored","02:17",t("Колокол отзывается одним ударом. Лесная дорога открылась. Запись отмечает отключение сигнала. В описи этот момент ошибочно приняли за время гибели.","A bell rings once. The forest road is open. The record marks the signal cut. The register mistook that moment for a time of death."),[choice("close","Продолжить","Continue",_close)])
+		"relay":
+			_dialog("power",t("Тихий запуск","Quiet start"),t("Насос включился. Колокол молчит. В отголоске кто-то выходит из восточного укрытия.","The pump starts. The bell stays quiet. In the echo, someone leaves the eastern shelter."),[choice("close","Продолжить","Continue",_close)])
+	_save(false)
 
-	var options=[]
-	for i in range(3): options.append(choice("lever_"+str(i),t("Рычаг ","Lever ")+str(i+1)+(" ●" if relay_mask&(1<<i) else " ○"),"Lever "+str(i+1)+(" ON" if relay_mask&(1<<i) else " OFF"),_toggle_relay_lever.bind(i)))
-	options.append(choice("power","Вставить предохранитель и подать питание","Insert fuse and power on",_power_relay))
-	options.append(choice("close","Назад","Back",_close))
-	_dialog("",t("Аварийное реле","Emergency relay"),t("Средний контур питает колокол. Не поднимайте тревогу. Схема осталась в библиотеке.","The middle circuit powers the bell. Do not raise the alarm. The diagram is in the library."),options,false)
-	_style_archive_puzzle(4,["lever_0","lever_1","lever_2"])
-
-func _style_archive_puzzle(icon_id: int, choices: Array) -> void:
-	var artwork=preload("res://after_silence/ui/trial_stage_art.gd")
-	var header: Control=column.get_child(0)
-	var badge=TextureRect.new()
-	badge.texture=artwork.icon(icon_id)
-	badge.texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
-	badge.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	header.add_child(badge)
-	badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	badge.offset_left=-26
-	badge.offset_right=-2
-	for i in choices.size():
-		var input_button: Button=buttons[choices[i]]
-		artwork.button(input_button)
-		input_button.icon=artwork.icon(1 if icon_id==4 and (relay_mask&(1<<i))!=0 else icon_id)
-		input_button.icon_alignment=HORIZONTAL_ALIGNMENT_RIGHT
-func _toggle_relay_lever(index: int) -> void:
-	relay_mask=relay_mask^(1<<index)
-	_relay()
-	buttons["lever_"+str(index)].grab_focus()
-func _power_relay():
-	if relay_mask!=5:
-		state.pressure=mini(5,state.pressure+1)
-		_notify(t("Сработал колокол. Первый и третий контуры питают насос.","The bell rang. The first and third circuits power the pump."))
-		if is_instance_valid(enemy): enemy.hear(player.position,true)
-		_relay()
-	elif inventory.install_fuse("forest_power"):
-		_dialog("power",t("Тихий запуск","Quiet start"),t("Насос ожил. В отголоске на востоке кто-то выходит из убежища.","The pump awakens. In the echo, someone leaves the eastern shelter."),[choice("close","Продолжить","Continue",_close)])
-	else: _notify(t("Нет предохранителя: спросите Льва или извлеките его из света библиотеки.","No fuse: ask Lev or remove it from the library light."))
 func _light_socket():
 	var installed=state.flag("library_light")
 	_dialog("",t("Свет библиотеки","Library light"),t("Это гнездо и лесное реле используют одну деталь. Свет помогает читать обычные страницы, но не проявляет чернила отголоска.","This socket and the forest relay use the same part. The light helps with ordinary pages, but cannot reveal echo ink."),[choice("fuse","Извлечь предохранитель" if installed else "Поставить предохранитель","Remove fuse" if installed else "Install fuse",func():
@@ -1249,27 +1243,13 @@ func _settings():
 		else: _pause())]
 	if in_menu: actions.push_front(choice("archive","Архив","Archive",_archive_menu))
 	_dialog("",t("Настройки","Settings"),"",actions,false)
-	var row=HBoxContainer.new()
-	row.custom_minimum_size.y=28
-	settings_volume=Label.new()
-	settings_volume.custom_minimum_size.x=116
-	settings_volume.text=t("Звук","Sound")+" · %d%%"%roundi(state.volume*100)
-	row.add_child(settings_volume)
-	var slider=HSlider.new()
-	slider.name="VolumeSlider"
-	slider.min_value=0;slider.max_value=100;slider.step=5
-	slider.value=roundi(state.volume*100)
-	slider.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	slider.custom_minimum_size.y=28
-	slider.tooltip_text=t("Громкость · стрелки влево / вправо","Volume · left / right arrows")
-	slider.value_changed.connect(func(value):
-		state.volume=value/100.0
-		audio.set_scene(state.echo,state.volume,state.zone)
-		settings_volume.text=t("Звук","Sound")+" · %d%%"%roundi(value)
-		_save_comfort())
-	row.add_child(slider)
-	column.add_child(row)
-	column.move_child(row,2)
+	var mixer = HBoxContainer.new()
+	mixer.add_theme_constant_override("separation",10)
+	column.add_child(mixer)
+	column.move_child(mixer,2)
+	var slider = _add_mix_slider(mixer,"VolumeSlider",t("Общая","Master"),"volume")
+	_add_mix_slider(mixer,"MusicSlider",t("Музыка","Music"),"music_volume")
+	_add_mix_slider(mixer,"EffectsSlider",t("Эффекты","Effects"),"effects_volume")
 	var grid=GridContainer.new()
 	grid.name="ComfortOptions"
 	grid.columns=2
@@ -1300,6 +1280,36 @@ func _settings():
 		button.focus_neighbor_top=NodePath();button.focus_neighbor_bottom=NodePath()
 		button.focus_previous=NodePath();button.focus_next=NodePath()
 	slider.grab_focus()
+
+func _add_mix_slider(mixer: HBoxContainer, node_name: String, caption: String, key: String) -> HSlider:
+	var group = VBoxContainer.new()
+	group.add_theme_constant_override("separation",1)
+	group.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mixer.add_child(group)
+	var label = Label.new()
+	var amount = state.volume if key=="volume" else comfort.get(key)
+	label.text = caption + " · %d%%" % roundi(amount*100)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	group.add_child(label)
+	var slider = HSlider.new()
+	slider.name = node_name
+	slider.tooltip_text = caption
+	slider.max_value = 100
+	slider.step = 5
+	slider.value = roundi(amount*100)
+	slider.custom_minimum_size.y = 17
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.value_changed.connect(func(value: float):
+		if key=="volume":
+			state.volume=value/100.0
+			audio.set_scene(state.echo,state.volume,state.zone)
+		else:
+			comfort.set(key,value/100.0)
+			audio.set_mix(comfort.music_volume,comfort.effects_volume)
+		label.text = caption + " · %d%%" % roundi(value)
+		_save_comfort())
+	group.add_child(slider)
+	return slider
 
 func _save_comfort():
 	comfort.language=state.language;comfort.volume=state.volume
