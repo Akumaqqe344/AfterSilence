@@ -84,7 +84,9 @@ func _water_glints():
 			var at=Vector2(seed_point)*54+Vector2(seed_value%49,(seed_value*19)%50)
 			var length=6+seed_value%10
 			at.x+=roundf(phase*11)
-			if Water.depth(zone,at)<9 or Water.depth(zone,at+Vector2(length,0))<9: continue
+			var tip=at+Vector2(length,0)
+			if not Water.blocked(zone,at) or not Water.blocked(zone,tip): continue
+			if minf(Water.depth(zone,at),Water.depth(zone,tip))<9: continue
 			var p=(at-position).round()
 			var alpha=sin(phase*PI)*.48
 			draw_rect(Rect2(p,Vector2(length,1)),Color(.78,.86,.73,alpha))

@@ -1,5 +1,6 @@
 extends Node2D
 const Prop = preload("res://after_silence/world/prop.gd")
+const Landmarks=preload("res://after_silence/world/district_landmarks.gd")
 const Ground = preload("res://after_silence/world/ground_detail.gd")
 const Homes = preload("res://after_silence/world/homes.gd")
 const Art=preload("res://after_silence/core/art_catalog.gd")
@@ -62,6 +63,7 @@ func build(id: String, distorted: bool):
 		# A walkable loop keeps the central well out of the only approach road.
 		var corners=[Vector2(560,380),Vector2(640,380),Vector2(640,460),Vector2(560,460)]
 		for i in range(4): paths.append([corners[i],corners[(i+1)%4],18.0])
+	Landmarks.add_paths(self)
 	terrain = TileMapLayer.new()
 	terrain.tile_set = make_tiles()
 	add_child(terrain)
@@ -95,6 +97,7 @@ func build(id: String, distorted: bool):
 	elif id in ["orchard","harbor"]: build_district()
 	elif id=="shop": preload("res://after_silence/world/village_shop.gd").build(self)
 	else: Homes.build(self)
+	Landmarks.build(self)
 	preload("res://after_silence/world/landscape.gd").build(self)
 	decorate()
 	if id in ["town","orchard","harbor"]:

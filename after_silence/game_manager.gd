@@ -9,6 +9,7 @@ const NPCs=preload("res://after_silence/core/npc_state_controller.gd")
 const Audio=preload("res://after_silence/core/audio_manager.gd")
 const Transitions=preload("res://after_silence/core/scene_transition_manager.gd")
 const World=preload("res://after_silence/world/world_view.gd")
+const Landmarks=preload("res://after_silence/world/district_landmarks.gd")
 const Actor=preload("res://after_silence/world/pechatai_actor.gd")
 const Enemy=preload("res://after_silence/world/pursuer.gd")
 const Story=preload("res://after_silence/story.gd")
@@ -742,6 +743,9 @@ func can_interact(id: String) -> bool:
 func _object_name(id: String) -> String:
 	if state.flag("event_campaign") and events_controller.owns(id):
 		return events_controller.pair(events_controller.events[events_controller.index].title)
+	if id.begins_with("landmark_"):
+		var site: Dictionary=Landmarks.SITES.get(id.trim_prefix("landmark_"),{})
+		if not site.is_empty(): return Story.pair(site.name,state.language)
 	if actors.has(id): return named(id)
 	if id=="village_hints": return adventure.label(id)
 	if id.begins_with("hamlet_house_"): return adventure.label(id)
@@ -835,6 +839,14 @@ func _quest_help():
 	if state.flag("event_campaign"): journey.open();return
 	_dialog("",t("Куда идти?","Where to go?"),shop.hint()+"\n"+t("Золотая отметка на карте — следующее событие. E — действие.","The gold map marker is the next event. E: interact."),[choice("map","Показать карту","Show map",func():_close();adventure.expanded=true),choice("close","Понятно","Got it",_close)],false)
 func interact(id: String):
+	if id.begins_with("landmark_"):
+		var site: Dictionary=Landmarks.SITES.get(id.trim_prefix("landmark_"),{})
+		if not site.is_empty() and site.zone==state.zone and player.position.distance_to(site.point)<55.0:
+			_notify(Story.pair(site.note,state.language))
+			if not state.flag(id):
+				state.set_flag(id)
+				_save(false)
+		return
 	if state.flag("event_campaign"):
 		var destinations={"to_library":"library","to_forest":"forest","home_lev":"home_lev","home_sonya":"home_sonya"}
 		if destinations.has(id) and not journey.zone_allowed(destinations[id]):

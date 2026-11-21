@@ -1,4 +1,6 @@
 extends Node
+const Landmarks=preload("res://after_silence/world/district_landmarks.gd")
+const Water=preload("res://after_silence/world/watercourse.gd")
 var game
 var checks=0
 var failures=[]
@@ -61,6 +63,26 @@ func run():
 				check(safe,zone+" capsule clearance "+entry[2]+str(echo))
 			for id in identities: check(game.actors[id].get_instance_id()==identities[id],"persistent resident "+zone+id)
 	game.state.echo=false
+	for zone in ["town","orchard","forest","harbor"]:
+		game._build_world(zone,Vector2(600,600))
+		var nav=game.npcs.navigation
+		var geometry=game.npcs.nav(zone)
+		for id in Landmarks.for_zone(zone):
+			var point: Vector2=Landmarks.SITES[id].point
+			check(nav.clear_segment(geometry,point,point),"free landmark "+id)
+			check(not nav.path(geometry,game.player.position,point).is_empty(),"reachable landmark "+id)
+			game.player.position=point
+			game.interact("landmark_"+id)
+			check(game.state.flag("landmark_"+id),"discovered landmark "+id)
+		if zone=="harbor":
+			var end: Vector2=Landmarks.SITES.pier.point
+			check(Water.depth(zone,end)>0 and nav.clear_segment(geometry,Vector2(980,end.y),end),"walkable deck over water")
+			check(not nav.clear_segment(geometry,end,end+Vector2(65,0)),"deep water blocks beyond pier")
+			await get_tree().physics_frame
+			await get_tree().physics_frame
+			var deck_start=Vector2(980,end.y)
+			check(not game.player.test_move(Transform2D(0,deck_start),end-deck_start),"live capsule crosses the deck")
+			check(game.player.test_move(Transform2D(0,end),Vector2(65,0)),"live capsule cannot walk off the pier")
 	game._build_world("town",Vector2(600,645))
 	var lev=game.actors.lev
 	var prior_motion: bool=game.comfort.reduce_motion
@@ -89,9 +111,20 @@ func run():
 		var texture=preload("res://after_silence/world/surface_textures.gd").atlas(kind)
 		check(texture.get_width()==(80 if kind=="water" else 320),"new material "+kind)
 		check(texture==preload("res://after_silence/world/surface_textures.gd").atlas(kind),"cached material "+kind)
-	for sample in [["town",Vector2(260,340),"01-home"],["town",Vector2(960,780),"02-workshop-path"],["orchard",Vector2(600,400),"03-orchard"],["harbor",Vector2(600,520),"04-harbor"],["home_nadia",Vector2(320,320),"05-interior"],["library",Vector2(480,400),"06-library"],["forest",Vector2(700,600),"07-forest"]]:
+	game.ui.hide()
+	for sample in [["town",Vector2(260,340),"01-home"],["town",Vector2(623,587),"02-market"],["orchard",Vector2(600,628),"03-orchard"],["harbor",Vector2(842,649),"04-harbor"],["home_nadia",Vector2(320,320),"05-interior"],["library",Vector2(480,400),"06-library"],["forest",Vector2(838,551),"07-forest"],["town",Vector2(1040,114),"08-pond"],["harbor",Vector2(1070,752),"09-pier"]]:
 		game._build_world(sample[0],sample[1]);game.camera.position_smoothing_enabled=false;game.camera.reset_smoothing()
 		await screenshot(sample[2])
+	game.ui.show()
+	game.toast.text=""
+	game.comfort.reduce_motion=false
+	game._district_map()
+	await get_tree().create_timer(.43).timeout
+	var atlas: Control=game.column.get_node("DistrictMap")
+	var title: Control=game.column.get_child(0)
+	check(atlas.get_global_rect().position.y>=title.get_global_rect().end.y,"animated map stays below its title")
+	await screenshot("10-harbor-map")
+	game._close()
 	var file=FileAccess.open(output.path_join("report.json"),FileAccess.WRITE)
 	if file: file.store_string(JSON.stringify({"checks":checks,"failures":failures,"version":ProjectSettings.get_setting("application/config/version"),"diagnostic_fixtures":true},"\t"));file.close()
 	print("PIXEL WORLD QA: ",checks," checks, ",failures.size()," failures")

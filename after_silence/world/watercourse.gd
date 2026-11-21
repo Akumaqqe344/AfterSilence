@@ -1,5 +1,6 @@
 extends RefCounted
 # Shared world-space water geometry for visuals, props and collision.
+const PIER=Rect2(980,724,156,56)
 static func river_y(x: float) -> float:
 	return 1028.0+sin((x-600.0)*.0055)*30.0+sin((x-600.0)*.014)*9.0
 static func bridge_at(p: Vector2) -> bool:
@@ -15,4 +16,7 @@ static func depth(zone: String,p: Vector2) -> float:
 		return (1.0-((p-Vector2(1280,1000))/Vector2(330,430)).length())*260.0+sin(p.y*.025)*4.0
 	return -10000.0
 static func blocked(zone: String,p: Vector2) -> bool:
-	return depth(zone,p)>0 and not (zone=="town" and bridge_at(p))
+	return depth(zone,p)>0 and not crossing_at(zone,p)
+
+static func crossing_at(zone: String,p: Vector2) -> bool:
+	return (zone=="town" and bridge_at(p)) or (zone=="harbor" and PIER.has_point(p))

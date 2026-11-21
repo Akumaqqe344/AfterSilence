@@ -1,7 +1,10 @@
 extends Control
 
 const Water=preload("res://after_silence/world/watercourse.gd")
+const Landmarks=preload("res://after_silence/world/district_landmarks.gd")
 const LAND=Color("c3c19d")
+const PAPER_GRID=Color("7b867029")
+const SITE_INK=Color("766046")
 const ROAD=Color("e5d1a5")
 const FOREST=Color("859674")
 const BLUE=Color("557779")
@@ -24,7 +27,8 @@ func _ready():
 				target={"point":spot.position,"label":game.t("Огонёк","Light")}
 				break
 	if not game.comfort.reduce_motion:
-		game.ComfortMotion.enter(self,game.comfort,Vector2.ZERO,.42)
+		modulate.a=.25
+		create_tween().tween_property(self,"modulate:a",1.0,.32).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 func district_name() -> String:
 	var zone: String=game.world.zone
@@ -47,6 +51,7 @@ func _draw():
 	bounds=Rect2(available.get_center()-world.dimensions*scale_factor*.5,world.dimensions*scale_factor)
 	draw_rect(bounds,LAND)
 	_draw_terrain(world)
+	_draw_sites(world.zone)
 	for prop in world.sorter.get_children():
 		if not prop.has_meta("building"): continue
 		var p=project_point(prop.position)
@@ -68,12 +73,24 @@ func _draw():
 		_goal_marker(side)
 		draw_string(font,side+Vector2(13,4),game.t("Текущая цель","Current goal"),HORIZONTAL_ALIGNMENT_LEFT,-1,12,game.ComfortTheme.PEACH)
 		draw_string(font,side+Vector2(13,21),target.label,HORIZONTAL_ALIGNMENT_LEFT,maxf(1,size.x-side.x-13),11,game.ComfortTheme.MUTED)
+	side.y+=31 if target.is_empty() else 47
+	for id in Landmarks.for_zone(world.zone):
+		_site_pin(side,game.state.flag("landmark_"+id))
+		var label=game.journey.pair(Landmarks.SITES[id].name)
+		draw_string(font,side+Vector2(13,4),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(1,size.x-side.x-13),11,game.ComfortTheme.TEXT)
+		side.y+=23
 
 func _draw_terrain(world):
 	if world.paths.is_empty():
 		for obstacle in world.obstacles:
 			draw_rect(Rect2(project_point(obstacle.position),obstacle.size*scale_factor),Color("9a846b"))
 		return
+	for x in range(24,int(bounds.size.x),24):
+		var edge=bounds.position+Vector2(x,0)
+		draw_line(edge,edge+Vector2(0,bounds.size.y),PAPER_GRID,1)
+	for y in range(24,int(bounds.size.y),24):
+		var edge=bounds.position+Vector2(0,y)
+		draw_line(edge,edge+Vector2(bounds.size.x,0),PAPER_GRID,1)
 	for prop in world.sorter.get_children():
 		if not prop.get("kind") in ["tree","flowers"]: continue
 		var p=project_point(prop.position)
@@ -81,6 +98,9 @@ func _draw_terrain(world):
 			draw_circle(p,2 if prop.kind=="tree" else 1,FOREST)
 	for path in world.paths:
 		draw_line(project_point(path[0]),project_point(path[1]),ROAD,maxf(2,path[2]*scale_factor*2))
+	for feature in Landmarks.FEATURES.get(world.zone,[]):
+		var area: Rect2=feature[1]
+		draw_rect(Rect2(project_point(area.position),area.size*scale_factor),Color("a89772"))
 	if world.zone not in ["town","harbor"]: return
 	var limit=Vector2i(world.dimensions)
 	for y in range(0,limit.y,12):
@@ -96,6 +116,20 @@ func _draw_terrain(world):
 		for x in [600,1450]:
 			var p=Vector2(x,Water.river_y(x))
 			draw_line(project_point(p-Vector2(0,37)),project_point(p+Vector2(0,37)),ROAD,3)
+	if world.zone=="harbor":
+		var dock=Rect2(project_point(Water.PIER.position),Water.PIER.size*scale_factor)
+		draw_rect(dock,Color("a98058"))
+		draw_rect(dock,Color("684d39"),false,1)
+
+func _draw_sites(zone: String):
+	for id in Landmarks.for_zone(zone):
+		_site_pin(project_point(Landmarks.SITES[id].point),game.state.flag("landmark_"+id))
+
+func _site_pin(at: Vector2,inspected: bool):
+	var mark=Rect2(at.round()-Vector2(4,4),Vector2(8,8))
+	draw_rect(mark,Color("ebd5a4"))
+	draw_rect(mark.grow(-1),Color("7d8b59") if inspected else SITE_INK)
+	draw_rect(Rect2(mark.position+Vector2(3,3),Vector2(2,2)),Color("f9dfad"))
 
 func project_point(point: Vector2) -> Vector2:
 	return bounds.position+point*scale_factor
