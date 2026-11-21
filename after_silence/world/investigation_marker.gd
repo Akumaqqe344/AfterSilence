@@ -1,5 +1,7 @@
 extends Node2D
 const ATLAS=preload("res://after_silence/assets/investigations0320/clues.png")
+const EXTRA_ATLAS = preload("res://after_silence/assets/expeditions0330/props.png")
+const EXTRA_ITEMS = ["lock", "reel", "letter", "bell", "winch", "radio"]
 const ITEMS=["notice","ribbon","clock","lamp","door","papers","stamp","desk","gear","rope","gauge","cup","flag","whistle","ticket","post","stone","scope"]
 var kind="notice"
 var ready_to_read=false
@@ -19,12 +21,16 @@ func _process(delta: float):
 	queue_redraw()
 
 func _draw():
+	var sheet = ATLAS
 	var index=ITEMS.find(kind)
+	if index<0:
+		sheet = EXTRA_ATLAS
+		index = EXTRA_ITEMS.find(kind)
 	if index<0: return
 	var crop=Rect2((index%6)*24,floori(index/6.0)*24,24,24)
 	var tint=Color.WHITE if ready_to_read else Color("c1bdc4")
 	draw_rect(Rect2(-11,-2,22,4),Color("28222a73"))
-	draw_texture_rect_region(ATLAS,Rect2(-item_size.x/2,-item_size.y+2,item_size.x,item_size.y),crop,tint,false,true)
+	draw_texture_rect_region(sheet,Rect2(-item_size.x/2,-item_size.y+2,item_size.x,item_size.y),crop,tint,false,true)
 	if ready_to_read:
 		var top=roundf(-item_size.y-6+sin(age*2.7)*1.2)
 		draw_rect(Rect2(-2,top,4,4),Color("eacb98"),false,1)

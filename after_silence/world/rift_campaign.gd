@@ -13,6 +13,8 @@ const ARENA=Rect2(64,111,512,207)
 const Guardian=preload("res://after_silence/world/pixel_guardian.gd")
 const Stage=preload("res://after_silence/ui/trial_stage_art.gd")
 const Art=preload("res://after_silence/core/ppae_art.gd")
+const TrialMotion = preload("res://after_silence/ui/trial_motion.gd")
+var response_art: Control
 const TABLES=["footprints","echo_tuning","reality","signal_grid","balance","pairs","reality","seeds","railway","lights","shelves","reality"]
 static var STOPS: Array=Catalog.points()
 static var SHORT: Array=Catalog.summaries()
@@ -341,6 +343,7 @@ func rhythm_input(code: int) -> void:
 		if threshold-beat_age<=.16 and code==rhythm_key(): rhythm_buffer=code
 		return
 	if code==rhythm_key():
+		game.audio.trial_move("echo_tuning", true, game.state.volume)
 		response=game.t("В ритме","On beat")
 		beat+=1
 		if beat>=8: succeed();return
@@ -374,6 +377,7 @@ func incoming_lane() -> int:
 	return pattern[mini(wave,pattern.size()-1)]
 
 func damage() -> void:
+	game.audio.trial_move(TABLES[index], false, game.state.volume)
 	health-=1
 	if easy_mode:
 		health=maxi(1,health)
@@ -387,6 +391,11 @@ func cell_rect(cell: int) -> Rect2:
 
 func board_input(cell: int):
 	if phase!="play" or cell<0 or cell>=board.size(): return
+	if not is_instance_valid(response_art):
+		response_art = TrialMotion.new()
+		response_art.game = game
+		add_child(response_art)
+	var accepted = true
 	match play_mode():
 		"memory":
 			if reveal_time>0 or cell in matched or cell in picked: return
@@ -395,14 +404,19 @@ func board_input(cell: int):
 				if board[picked[0]]==board[picked[1]]:
 					matched.append_array(picked);picked.clear()
 					if matched.size()==8: succeed()
-				else: reveal_time=1.0
+				else:
+					reveal_time=1.0
+					accepted = false
 		"circuit":
 			board[cell]=(board[cell]+1)%4
 			if board.all(func(turn): return turn%2==0): succeed()
 		"herbs":
-			if cell%2==0: board[cell]=1
+			accepted = cell%2==0
+			if accepted: board[cell]=1
 			if board[0]+board[2]+board[4]==3: succeed()
-	game.audio.ping(game.state.volume)
+	if phase == "play":
+		game.audio.trial_move(TABLES[index], accepted, game.state.volume)
+		response_art.stamp(cell_rect(cell).get_center(), TABLES[index], accepted)
 	queue_redraw()
 
 func draw_board():
@@ -427,6 +441,7 @@ func draw_board():
 			else: Stage.stamp(self,7,center,Vector2(30,30),Color("bce3ac"))
 
 func fail() -> void:
+	game.audio.scene_cue("boss", game.state.volume)
 	phase="fail"
 	clear_actions()
 	brief_label.text="Разлом отбросил Веру. Попробуй ещё раз: рисунок опасности повторяется." if game.state.language=="ru" else "The rift pushed Vera back. Try again: the danger follows a pattern."
@@ -437,6 +452,7 @@ func fail() -> void:
 
 func succeed() -> void:
 	if phase!="play": return
+	game.audio.scene_cue("memory", game.state.volume)
 	phase="decision"
 	show_decision()
 

@@ -155,14 +155,20 @@ func play(id: int):
 	highlighted=-1
 	var at=action_buttons[id].get_rect().get_center()
 	if model.perform(id):
-		game.audio.ping(game.state.volume)
+		game.audio.trial_move(model.kind, true, game.state.volume)
 		feedback.text=""
 		_refresh()
 		_animate_action(id,at)
 		if model.won(): solved.emit()
 		else: changed.emit()
 	else:
+		game.audio.trial_move(model.kind, false, game.state.volume)
+		effects.stamp(at, model.kind, false)
 		feedback.text=game.t("Попробуй другой вариант.","Try another option.")
+		match model.kind:
+			"footprints": feedback.text=game.t("Сверь форму и след на подошве.","Compare both the shape and the sole marking.")
+			"railway": feedback.text=game.t("Поезд ушёл бы на другую станцию.","The train would reach a different station.")
+			"echo_tuning": feedback.text=game.t("Совмести высоту и фазу обеих волн.","Align the height and phase of both waves.")
 		_refresh()
 
 func _animate_action(id: int,at: Vector2):
@@ -186,7 +192,7 @@ func _animate_action(id: int,at: Vector2):
 			var adjusted=Vector2(model.state[0],model.state[1])
 			echo_tween=create_tween()
 			echo_tween.tween_method(_ease_wave,displayed_echo,adjusted,.24).set_trans(Tween.TRANS_SINE)
-	effects.burst(action_buttons[id].get_rect().get_center(),tint)
+	effects.stamp(action_buttons[id].get_rect().get_center(), model.kind, true)
 
 func _advance_train(fraction: float):
 	rail_u=fraction;queue_redraw()
@@ -231,7 +237,7 @@ func _refresh():
 				tile.icon=paper_icons[i*4+model.state[i]]
 			"footprints":
 				if not model.won():
-					var trace: Array=Rules.GUEST_TRACES[model.round_index][i]
+					var trace: Array=model.trace_rows[model.round_index][i]
 					tile.icon=trace_icons[trace[0]*2+trace[1]]
 					tile.tooltip_text=_trace_label(trace)
 			"balance":
@@ -252,10 +258,10 @@ func _refresh():
 	match model.kind:
 		"footprints":
 			if not model.won():
-				var trace: Array=Rules.GUEST_CLUES[model.round_index]
+				var trace: Array=model.trace_clues[model.round_index]
 				clue.text=_trace_label(trace)
 		"railway":
-			if not model.won(): clue.text=game.t("Станция  ","Station  ")+STATION_NAMES[Rules.STATIONS[model.round_index]]
+			if not model.won(): clue.text=game.t("Станция  ","Station  ")+STATION_NAMES[model.stations[model.round_index]]
 		"balance": clue.text="%d  /  %d"%[model.weight(1),model.weight(2)]
 	queue_redraw()
 
@@ -350,7 +356,7 @@ func _draw_rails():
 		for k in range(2):
 			var end=Vector2(302,27+j*66+k*30)
 			_track(junctions[j],end,MINT if model.station()==j*2+k else rails)
-			var station_color=AMBER if not model.won() and Rules.STATIONS[model.round_index]==j*2+k else SKY
+			var station_color=AMBER if not model.won() and model.stations[model.round_index]==j*2+k else SKY
 			draw_rect(Rect2(end-Vector2(4,7),Vector2(27,14)),station_color.darkened(.65))
 			_caption(end+Vector2(4,4),STATION_NAMES[j*2+k],station_color)
 	if dispatch_to>=0:
@@ -379,7 +385,7 @@ func _draw_echo():
 	draw_style_box(Stage.plate("hud"),Rect2(17,18,346,110))
 	for i in range(10): draw_line(Vector2(24+i*36,24),Vector2(24+i*36,120),Color("44485a"))
 	for i in range(4): draw_line(Vector2(20,29+i*27),Vector2(355,29+i*27),Color("44485a"))
-	var target: Array=Rules.ECHOES[mini(model.round_index,Rules.ECHOES.size()-1)]
+	var target: Array=model.echoes[mini(model.round_index,model.echoes.size()-1)]
 	_wave(target,Color("7993b6"),4)
 	_wave([displayed_echo.x,displayed_echo.y],AMBER,2)
 	Stage.stamp(self,15,Vector2(351,138),Vector2(18,18))

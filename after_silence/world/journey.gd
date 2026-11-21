@@ -43,11 +43,14 @@ func guide_target() -> Dictionary:
 	var zone=game.state.zone
 	if zone!=place.zone:
 		var edge: Array=game.npcs.navigation.next_portal(zone,place.zone,game.state.echo)
-		if edge.is_empty() or not zone_allowed(edge[2]): return {}
-		var portal=_portal_id(zone,edge[2])
+		if edge.is_empty(): return {}
+		if not zone_allowed(edge[2]) and not game.investigations.Catalog.data.rooms.has(edge[2]): return {}
+		var portal=game.investigations.portal_for(zone,edge[2])
+		if portal.is_empty(): portal=_portal_id(zone,edge[2])
 		for spot in game.world.interactables:
 			if spot.id==portal:
-				return {"point":spot.position,"label":_portal_label(portal),"action":true,"id":portal,"range":28.0}
+				var label_text = game.investigations.label(portal) if portal.begins_with("case_") else _portal_label(portal)
+				return {"point":spot.position,"label":label_text,"action":true,"id":portal,"range":28.0}
 		return {}
 	if director.phase!="travel" and is_instance_valid(director.npc):
 		var ready=director.phase in ["ready","suspended","decision"]

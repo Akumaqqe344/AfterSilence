@@ -4,6 +4,8 @@ signal solved
 signal changed
 const Model=preload("res://after_silence/core/reality_maze.gd")
 const Stage=preload("res://after_silence/ui/trial_stage_art.gd")
+const Motion = preload("res://after_silence/ui/trial_motion.gd")
+var cue_effect: Control
 const TILES=preload("res://after_silence/assets/minigames0310/maze.png")
 const Art=preload("res://after_silence/core/ppae_art.gd")
 const CELL=28
@@ -36,6 +38,9 @@ var stride_index=0
 var guide_path: Array[Vector2i]=[]
 
 func _ready():
+	cue_effect = Motion.new()
+	cue_effect.game = game
+	add_child(cue_effect)
 	focus_mode=Control.FOCUS_ALL
 	mouse_filter=Control.MOUSE_FILTER_STOP
 	var heading=Label.new()
@@ -145,7 +150,8 @@ func _step(next: Vector2i, save_walk: bool):
 	if outcome!="walk":
 		route.clear();notes_visible=false;hint_visible=false
 		feedback.text=game.t("Комната отразилась.","The room mirrored.") if outcome=="reflect" else game.t("Проход открылся.","The passage opened.")
-		game.audio.ping(game.state.volume)
+		game.audio.trial_move("reality", outcome == "advance", game.state.volume)
+		cue_effect.stamp(ORIGIN + (Vector2(next) + Vector2(.5,.5)) * CELL, "reality", outcome == "advance")
 		if not game.comfort.reduce_motion:
 			if is_instance_valid(room_tween): room_tween.kill()
 			room_tint=.38

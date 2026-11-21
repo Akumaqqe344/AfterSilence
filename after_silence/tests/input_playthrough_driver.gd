@@ -257,7 +257,7 @@ func play_case(entry: Dictionary, ending: String) -> bool:
 					check(not director.seen(step.id),"wrong deduction leaves progress intact")
 				await choose("answer_"+str(int(step.correct)))
 			"survey":
-				await choose("look_0")
+				await choose("look_"+str((int(step.correct)+1)%4))
 				check(not game.buttons.has("aligned"),"wrong viewpoint cannot record alignment")
 				check(game.buttons["look_0"].get_parent() is HBoxContainer,"all viewpoints share a visible row")
 				await choose("look_"+str(int(step.correct)))
@@ -269,6 +269,27 @@ func play_case(entry: Dictionary, ending: String) -> bool:
 					for digit in [0,1,2]: await choose("order_"+str(digit))
 					check(not director.seen(step.id),"wrong valve sequence can be retried")
 				for digit in step.order: await choose("order_"+str(int(digit)))
+			"device":
+				var panel = game.column.get_child(2)
+				await shot(step.id+"-before")
+				await button(panel.buttons[3])
+				check(not director.seen(step.id),"wrong mechanism setting can be retried")
+				var moves = [0,1,2,3] if step.device=="winch" else [0,0,1,2,2,3]
+				for action in moves:
+					await button(panel.buttons[action])
+				if not panel.finished and not director.seen(step.id):
+					print("DEVICE BLOCK: ", step.id, " values=", panel.dials, " feedback=", panel.caption.text)
+				for frame in range(180):
+					if director.seen(step.id): break
+					await get_tree().process_frame
+				if step.device=="winch": await shot("landing-open")
+			"witness":
+				check(game.buttons.has("roll_rendezvous")==(ending=="together"),"joint archive account unlocks public testimony")
+				check(game.buttons.has("roll_relay")==(ending=="together"),"receiver and pier choices unlock remote testimony")
+				var option = "roll_rendezvous" if ending=="together" else "roll_private"
+				await shot("roll-call-choices")
+				await choose(option)
+				check(director.decided(option),"roll-call decision retained")
 			"trial":
 				check(game.event_window.active and game.event_window.side_id==step.id,"optional board opens from its hotspot "+step.id)
 				if not game.event_window.active: return false
@@ -305,10 +326,11 @@ func campaign(ending: String):
 	for i in range(game.events_controller.events.size()):
 		print("PLAYTHROUGH EVENT: ",tag," ",i+1)
 		var investigation: Dictionary=game.investigations.active_chapter()
-		if not investigation.is_empty():
+		while not investigation.is_empty():
 			print("PLAYTHROUGH CASE: ",tag," ",investigation.id)
 			if not await play_case(investigation,ending): ok=false;break
-		if not await play_event(i): ok=false;break
+			investigation=game.investigations.active_chapter()
+		if not ok or not await play_event(i): ok=false;break
 	check(ok and game.state.flag("events_finished") and game.state.flag("events_final_"+ending) and game.modal,"final screen")
 	results.append({"campaign":"events","ending":ending,"passed":ok and game.state.flag("events_finished"),"flags":game.state.flags.duplicate(),"history":game.state.history.size()})
 	timing[ending]=float(Time.get_ticks_msec()-started)/1000.0
@@ -316,7 +338,9 @@ func campaign(ending: String):
 	if ok and "--side-cases" in OS.get_cmdline_user_args() and game.buttons.has("walk"):
 		var optional_started=Time.get_ticks_msec()
 		await choose("walk")
-		for side in game.investigations.Catalog.data.sides:
+		for definition in game.investigations.Catalog.data.sides:
+			var side: Dictionary = game.investigations.entries[definition.id]
+			if not game.investigations.available(side): continue
 			print("PLAYTHROUGH SIDE CASE: ",side.id)
 			if not await play_case(side,ending): return false
 		optional_timing[ending]=float(Time.get_ticks_msec()-optional_started)/1000.0
@@ -403,6 +427,7 @@ func run():
 		game=load("res://after_silence/scenes/main.tscn").instantiate();get_tree().root.add_child(game)
 	await get_tree().process_frame
 	game.expanded_new_game="--classic-story" not in args
+	game.expedition_new_game="--expansion" in args
 	var qa_prefix="user://qa_input_"+("source" if OS.has_feature("editor") else "export")+"_"+DisplayServer.get_name()+"_"+str(Time.get_ticks_usec())+"_"
 	game.event_saves.path=qa_prefix+"events.json";game.rift_saves.path=qa_prefix+"rift.json";game.archive_saves.path=qa_prefix+"episode.json"
 	if "--archive-only" not in args:

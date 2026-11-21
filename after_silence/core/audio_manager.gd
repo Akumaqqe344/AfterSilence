@@ -42,12 +42,20 @@ func _process(dt: float):
 		ambient.stream=null
 		ambient_key=wanted
 		if not wanted.is_empty():
-			var family="surf" if zone=="harbor" else "room" if zone.begins_with("home_") or zone in ["shop","library"] else "wind"
+			var family="surf" if zone in ["harbor","tide_station"] else "room" if zone.begins_with("home_") or zone in ["shop","library","closed_post","records_annex","signal_cellar","listening_archive","pump_chamber"] else "wind"
 			ambient.stream=_sample(family,1 if echo_mode else 0)
 			ambient.play()
 
 func ping(volume: float):
 	_play_ui("click",volume*.20)
+
+func trial_move(mode: String, accepted: bool, volume: float):
+	const CUES = {
+		"letter_press":"paper", "footprints":"paper", "balance":"ratchet", "signal_grid":"chime",
+		"railway":"ratchet", "echo_tuning":"chime", "tubes":"drop", "pairs":"paper",
+		"seeds":"drop", "lights":"chime", "shelves":"ratchet", "reality":"chime"
+	}
+	_play_ui(CUES.get(mode,"click") if accepted else "blocked", volume * .23)
 
 func touch(at: Vector2,volume: float):
 	_play_world("touch",at,volume*.18)
@@ -135,6 +143,11 @@ func _sample(kind: String,variant: int) -> AudioStreamWAV:
 			var envelope=minf(1.0,time/.006)*pow(1.0-time/length,2.6)
 			match kind:
 				"click": value=sin(TAU*528.0*time)*.23+sin(TAU*792.0*time)*.06
+				"paper": value=noise * .12 + low * .46
+				"ratchet": value=low * .31 + sin(TAU * 162.0 * time) * .28
+				"chime": value=sin(TAU * 659.0 * time) * .20 + sin(TAU * 980.0 * time) * .08
+				"drop": value=sin(TAU * (455.0 + time * 1150.0) * time) * .30
+				"blocked": value=sin(TAU * (196.0 - time * 200.0) * time) * .17 + low * .15
 				"touch": value=low*.32+sin(TAU*324.0*pitch*time)*.15
 				"wood": value=low*.37+sin(TAU*118.0*pitch*time)*.31
 				"stone": value=noise*.25+low*.45+sin(TAU*186.0*pitch*time)*.11

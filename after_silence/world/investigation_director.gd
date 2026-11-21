@@ -3,10 +3,17 @@ const Catalog=preload("res://after_silence/core/investigation_catalog.gd")
 const Marker=preload("res://after_silence/world/investigation_marker.gd")
 const Activity=preload("res://after_silence/world/npc_event_activity.gd")
 const Survey=preload("res://after_silence/ui/investigation_survey.gd")
+const Device = preload("res://after_silence/ui/expedition_device.gd")
+const EXTRA_STEPS = preload("res://after_silence/core/expedition_side_stories.gd")
+const REACTIONS = preload("res://after_silence/core/expedition_reactions.gd")
 const CASE_PREFIX="case_"
 const EXIT="case_exit"
 const ALLEY="case_bindery_stair"
 const BYPASS="case_dry_bypass"
+const SHORTCUTS = {
+	"case_glade_return": {"zone":"bracken_clearing", "at":Vector2(343,117), "dest":"forest", "arrival":Vector2(728,840), "flag":"bracken_public", "title":["Сухая тропа к выходу","Dry path to the exit"]},
+	"case_tide_return": {"zone":"tide_station", "at":Vector2(342,121), "dest":"harbor", "arrival":Vector2(789,605), "flag":"pier_line", "title":["Дальний сход на пристань","Far steps to the pier"]}
+}
 
 var game
 var entries: Dictionary={}
@@ -19,7 +26,9 @@ var installed_world: Node2D
 
 func _init(owner):
 	game=owner
-	for case in Catalog.data.chapters+Catalog.data.sides:
+	for base in Catalog.data.chapters+Catalog.data.sides:
+		var case = base.duplicate(true)
+		case.steps.append_array(EXTRA_STEPS.followups(case.id))
 		entries[case.id]=case
 		for step in case.steps:
 			steps[step.id]=step
@@ -46,8 +55,9 @@ func active_chapter() -> Dictionary:
 	var director=game.events_controller
 	if director.index>=director.events.size(): return {}
 	var event_id: String=director.events[director.index].id
-	for case in Catalog.data.chapters:
-		if case.before==event_id and not done(case.id):
+	for definition in Catalog.data.chapters:
+		var case: Dictionary = entries[definition.id]
+		if case.before==event_id and not done(case.id) and has_expansion(case):
 			return case
 	return {}
 
@@ -55,8 +65,11 @@ func barrier(event_id: String) -> bool:
 	var case=active_chapter()
 	return not case.is_empty() and case.before==event_id
 
+func has_expansion(entry: Dictionary) -> bool:
+	return not entry.get("expansion", false) or game.state.flag("expedition_0330")
+
 func available(case: Dictionary) -> bool:
-	if not enabled(): return false
+	if not enabled() or not has_expansion(case): return false
 	if done(case.id): return true
 	if not case.before.is_empty():
 		return active_chapter().get("id","")==case.id
@@ -65,6 +78,7 @@ func available(case: Dictionary) -> bool:
 func visible_steps(case: Dictionary) -> Array:
 	var result=[]
 	for step in case.steps:
+		if not has_expansion(step): continue
 		if step.has("if_branch") and not decided(step.if_branch): continue
 		if step.has("unless_branch") and decided(step.unless_branch): continue
 		result.append(step)
@@ -75,6 +89,9 @@ func next_step(case: Dictionary) -> Dictionary:
 	for step in relevant:
 		if not seen(step.id): return step
 	return relevant.back() if not relevant.is_empty() else {}
+
+func ready_step(step: Dictionary, first: Dictionary) -> bool:
+	return step.id == first.get("id", "") or (step.has("group") and step.group == first.get("group", ""))
 
 func _clear_markers() -> void:
 	for id in placed:
@@ -105,7 +122,7 @@ func install() -> void:
 			if step.zone!=zone: continue
 			if done(case.id) and step.kind!="door": continue
 			if seen(step.id) and step.kind!="door" and first.get("id","")!=step.id: continue
-			var ready: bool=step.id==first.get("id","") and not done(case.id)
+			var ready: bool=ready_step(step,first) and not seen(step.id) and not done(case.id)
 			_place(Catalog.spot(step.id),Catalog.point(step.at),step.art,ready,42)
 	if zone=="town":
 		if decided("ring_together"): _place("case_reward_lamp",Vector2(639,601),"lamp",false,42)
@@ -116,6 +133,14 @@ func install() -> void:
 		_place("case_reward_forest",Vector2(743,859),"post",false,43)
 	if zone=="harbor" and decided("keep_trace"):
 		_place("case_reward_shore",Vector2(804,701),"flag",false,39)
+	for id in SHORTCUTS:
+		var route: Dictionary = SHORTCUTS[id]
+		if zone == route.zone and decided(route.flag):
+			_place(id, route.at, "flag", false, 34)
+	for id in REACTIONS.OBJECTS:
+		var object: Dictionary = REACTIONS.OBJECTS[id]
+		if zone == object.zone and game.state.flag(object.flag):
+			_place(id, object.point, object.art, false, 38)
 
 func _place(id: String, point: Vector2, art: String, ready: bool, extent: float):
 	var place: Vector2=game.world.recover(point)
@@ -143,6 +168,8 @@ func hit(at: Vector2) -> String:
 	return best
 
 func label(id: String) -> String:
+	if REACTIONS.OBJECTS.has(id): return text(REACTIONS.OBJECTS[id].title)
+	if SHORTCUTS.has(id): return text(SHORTCUTS[id].title)
 	var step: Dictionary=steps.get(id.trim_prefix(CASE_PREFIX),{})
 	if not step.is_empty(): return text(step.title)
 	if id==EXIT: return game.t("Выйти","Leave")
@@ -206,13 +233,18 @@ func interact(id: String) -> bool:
 		game.state.set_flag("case_used_dry_bypass")
 		game._travel("harbor",Vector2(776,691))
 		return true
+	if SHORTCUTS.has(id):
+		var route: Dictionary = SHORTCUTS[id]
+		game.state.set_flag("used_" + id)
+		game._travel(route.dest, route.arrival)
+		return true
 	if not steps.has(id.trim_prefix(CASE_PREFIX)):
 		_reward(id)
 		return true
 	var step: Dictionary=steps[id.trim_prefix(CASE_PREFIX)]
 	var case: Dictionary=entries[owners[step.id]]
 	var first=next_step(case)
-	if not seen(step.id) and first.get("id","")!=step.id:
+	if not seen(step.id) and not ready_step(step, first):
 		game._notify(game.t("Сначала: ","First: ")+text(first.title))
 		return true
 	game.player.inspect_time=.6
@@ -232,12 +264,22 @@ func interact(id: String) -> bool:
 			if seen(step.id): _resolution(case)
 			else: _survey(step)
 		"trial": open_trial(step.id)
+		"device":
+			if seen(step.id): _resolution(case)
+			else: _device(step)
+		"witness":
+			if seen(step.id): _resolution(case)
+			else: _witness(step)
 		_:
 			var actions=[]
 			if step.kind=="listen":
 				actions.append(game.choice("listen","Прослушать сигнал","Replay the signal",func():game.audio.case_signal(step.tones,game.state.volume)))
 			if seen(step.id):
 				actions.append(game.choice("remember","Вернуться к делу","Return to the case",func():_resolution(case)))
+			elif step.id == "roll_signal":
+				actions.append(game.choice("remember","Поднять фонарь","Raise the lantern",func():
+					game.audio.case_signal([392, 523, 392], game.state.volume)
+					_resolve_step(step)))
 			else:
 				actions.append(game.choice("remember","Записать улику","Record the clue",func():_resolve_step(step)))
 			actions.append(game.choice("back","Отойти","Step back",game._close))
@@ -338,10 +380,43 @@ func open_trial(id: String, fresh: bool=false):
 		_resolve_step(step)
 		game.event_window.present_victory())
 
+func _device(step: Dictionary):
+	var panel = Device.new()
+	var state: Array = game.state.case_trials.get(step.id, [])
+	panel.configure(step, state, game.state.language == "ru", game.comfort.reduce_motion)
+	game._dialog("", text(step.title), text(step.body), [game.choice("back","Отойти от механизма","Step away",game._close)], false)
+	game.column.add_child(panel)
+	game.column.move_child(panel, 2)
+	panel.changed.connect(func(values: Array, accepted: bool):
+		game.state.case_trials[step.id] = values
+		if accepted:
+			game.audio.ping(game.state.volume)
+		else:
+			game.audio.touch(game.player.position, game.state.volume)
+		game._save(false))
+	panel.solved.connect(func():
+		game.state.case_trials.erase(step.id)
+		_resolve_step(step))
+	game._wire_dialog_focus()
+	panel.focus_first()
+
+func _witness(step: Dictionary):
+	var actions = []
+	for option in step.options:
+		if not REACTIONS.matches(game.state, option.get("requires", [])): continue
+		actions.append(game.choice(option.id, option.title[0], option.title[1], func():
+			game.state.set_flag("case_choice_" + option.id)
+			_resolve_step(step)
+			game._dialog("", game.named("sonya"), text(option.result), [game.choice("close","Вернуться на площадь","Return to the square",game._close)], false)))
+	actions.append(game.choice("back","Отойти","Step back",game._close))
+	game._dialog("", text(step.title), text(step.body), actions, false)
+
 func _resolve_step(step: Dictionary):
 	if not seen(step.id):
 		game.state.set_flag("case_read_"+step.id)
 		game.audio.ping(game.state.volume)
+		if step.id in ["tide_winch", "bracken_lens"]:
+			game._build_world(game.state.zone, game.player.position)
 	_resolution(entries[owners[step.id]])
 	game._save(false)
 
@@ -385,7 +460,8 @@ func journal():
 	var case=active_chapter()
 	if not case.is_empty():
 		actions.append(game.choice("chapter",text(case.title),text(case.title),details.bind(case.id)))
-	for side in Catalog.data.sides:
+	for definition in Catalog.data.sides:
+		var side: Dictionary = entries[definition.id]
 		if not available(side): continue
 		var title=("✓ " if done(side.id) else "◇ ")+text(side.title)
 		actions.append(game.choice(side.id,title,title,details.bind(side.id)))
@@ -420,7 +496,16 @@ func followup(npc: String) -> bool:
 		return true
 	var director=game.events_controller
 	if director.owns(npc): return false
-	for side in Catalog.data.sides:
+	for response in REACTIONS.NPCS.get(npc, []):
+		var key = "heard_" + String(response.flag)
+		if game.state.flag(response.flag) and not game.state.flag(key):
+			game.state.set_flag(key)
+			game._save(false)
+			if game.actors.has(npc): game.actors[npc].inspect_time = .6
+			game._dialog("", game.named(npc) + " · " + text(response.title), text(response.body), [game.choice("close","Продолжить","Continue",game._close)], false)
+			return true
+	for definition in Catalog.data.sides:
+		var side: Dictionary = entries[definition.id]
 		if side.owner!=npc or not available(side): continue
 		var key="case_npc_"+side.id+("_done" if done(side.id) else "_intro")
 		if game.state.flag(key): continue
@@ -431,6 +516,10 @@ func followup(npc: String) -> bool:
 	return false
 
 func _reward(id: String):
+	if REACTIONS.OBJECTS.has(id):
+		var object: Dictionary = REACTIONS.OBJECTS[id]
+		game._dialog("", text(object.title), text(object.body), [game.choice("close","Продолжить","Continue",game._close)], false)
+		return
 	var descriptions={
 		"case_reward_lamp":["Фонарь горит ровно. Сюда приходят ждать друг друга.","The lantern burns steadily. People come here to wait for one another."],
 		"case_reward_extract":["Мара вывесила две даты. Имени свидетеля на листе нет.","Mara posted both dates. The witness's name stays off the sheet."],

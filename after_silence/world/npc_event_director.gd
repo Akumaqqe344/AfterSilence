@@ -158,8 +158,12 @@ func refresh_mementos():
 		game.world.sorter.add_child(prop)
 func make_activity(checkpoint: Dictionary={}):
 	var definition: Dictionary=events[index].duplicate()
-	if definition.id=="crowd" and game.investigations.decided("quiet_call"):
+	if not checkpoint.is_empty():
+		definition.variant = checkpoint.get("variant", "")
+	elif definition.id=="crowd" and game.investigations.decided("quiet_call"):
 		definition.variant="quiet_plaza"
+	elif game.state.flag("expedition_0330"):
+		definition.variant = "field_notes"
 	activity=Activity.new(definition)
 	if checkpoint.get("mode","")==activity.mode: activity.restore(checkpoint)
 	npc.get_meta("caption").hide()
@@ -223,6 +227,12 @@ func finish():
 		ending+="\n"+game.t("Свидетельство осталось на берегу рядом с семейными метками.","The witness record stayed at the shore beside the family tags.")
 	elif game.investigations.decided("carry_trace"):
 		ending+="\n"+game.t("К утру Вера принесла свидетельство на площадь.","By morning Vera brought the record to the square.")
+	if game.investigations.decided("roll_rendezvous"):
+		ending+="\n"+game.t("В обеих эпохах прозвучали оба времени встречи.","Both meeting times were heard in both eras.")
+	elif game.investigations.decided("roll_relay"):
+		ending+="\n"+game.t("Лев записал ответ с дальнего берега.","Lev recorded the reply from the far shore.")
+	elif game.investigations.decided("roll_private"):
+		ending+="\n"+game.t("Имена остались в конверте у Нади.","The names stayed in Nadia's envelope.")
 	var actions=[game.choice("journal","Итоги путешествия","Journey results",journal),game.choice("menu","В главное меню","Main menu",func():game._save(false);game._main_menu())]
 	if game.state.flag("case_chapters"):
 		actions.insert(1,game.choice("walk","Вернуться в мир","Return to the area",game._close))

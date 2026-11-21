@@ -12,17 +12,17 @@ var variant: String=""
 func _init(event: Dictionary):
 	mode=event.mode
 	variant=event.get("variant","")
-	if mode=="reality": reality=Reality.new(event.id)
+	if mode=="reality": reality=Reality.new(event.id,variant)
 	elif mode in Trials.ACTIONS: trial=Trials.new(mode,variant)
-	else: puzzle=Puzzle.new(mode)
+	else: puzzle=Puzzle.new(mode,variant)
 
 func checkpoint() -> Dictionary:
-	if reality!=null: return {"mode":mode,"reality":reality.capture()}
-	if trial!=null:
-		var data={"mode":mode,"moves":trial.capture()}
-		if not variant.is_empty(): data.variant=variant
-		return data
-	return {"mode":mode,"moves":puzzle.checkpoint()}
+	var data = {"mode":mode}
+	if not variant.is_empty(): data.variant = variant
+	if reality!=null: data.reality = reality.capture()
+	elif trial!=null: data.moves = trial.capture()
+	else: data.moves = puzzle.checkpoint()
+	return data
 
 func restore(data: Dictionary):
 	if reality!=null: reality.restore(data.get("reality"))

@@ -38,6 +38,7 @@ var events_controller
 var journey=preload("res://after_silence/world/journey.gd").new(self)
 var investigations=preload("res://after_silence/world/investigation_director.gd").new(self)
 var expanded_new_game=true
+var expedition_new_game=true
 var event_window
 var route_guide: Control
 var story_hud: Control
@@ -486,11 +487,11 @@ func _depart_home():
 		card.hide()
 		await modal_backdrop.play_departure()
 		departing_home=false
-	_new_event_game(expanded_new_game)
+	_new_event_game(expanded_new_game, expedition_new_game)
 func _archive_menu():
 	in_menu=true
 	_dialog("",t("Архив","Archive"),"",[choice("load","Продолжить разлом","Continue rift",_continue_rift),choice("rift","Начать разлом заново","Restart rift",_new_rift_game),choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_settings)],false)
-func _new_event_game(expanded: bool=false):
+func _new_event_game(expanded: bool=false, expeditions: bool=false):
 	var lang=state.language
 	var volume=state.volume
 	state=State.new();state.language=lang;state.volume=volume
@@ -498,6 +499,7 @@ func _new_event_game(expanded: bool=false):
 	_setup_services()
 	state.set_flag("event_campaign");state.set_flag("rift_mode")
 	state.set_flag("case_chapters",expanded)
+	state.set_flag("expedition_0330",expanded and expeditions)
 	investigations.tracked=""
 	investigations.orders.clear()
 	state.set_flag("nadia_met");state.set_flag("catalog");state.set_flag("clock_solved")
@@ -592,6 +594,7 @@ func _travel(id: String,p: Vector2,persist: bool=true):
 		var destination=""
 		for place in journey.places.values():
 			if place.zone==id: destination=journey.pair(place.name);break
+		if investigations.Catalog.data.rooms.has(id): destination=investigations.locate(id)
 		if not destination.is_empty(): story_hud.announce(destination)
 	if persist: _save(false)
 	if id in Homes.IDS: _notify(Story.pair(Homes.NAMES[Homes.IDS.find(id)],state.language))
@@ -607,6 +610,7 @@ func _build_world(id: String,p: Vector2):
 		add_child(world)
 	world.story_mode=state.flag("event_campaign")
 	world.visual_comfort=comfort
+	world.expedition_route_open = (id == "tide_station" and investigations.seen("tide_winch")) or (id == "bracken_clearing" and investigations.seen("bracken_lens"))
 	world.build(id,state.echo)
 	state.zone=id
 	state.set_flag("explored_"+id)

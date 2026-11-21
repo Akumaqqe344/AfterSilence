@@ -1,6 +1,6 @@
 extends RefCounted
 signal changed
-const ZONES = ["town", "library", "forest","home_nadia","home_lev","home_pavel","home_sonya","orchard","harbor","shop","records_annex","pump_chamber"]
+const ZONES = ["town", "library", "forest","home_nadia","home_lev","home_pavel","home_sonya","orchard","harbor","shop","records_annex","pump_chamber","closed_post","signal_cellar","listening_archive","tide_station","bracken_clearing"]
 const SIZES={"town":Vector2(1792,1280),"forest":Vector2(1792,1344),"library":Vector2(960,720),"orchard":Vector2(1200,900),"harbor":Vector2(1200,900)}
 const ITEMS = ["fuse", "lens", "key", "ribbon", "bandage", "keepsake"]
 const CLUES = ["photo", "poster", "ledger", "clock", "diagram", "testimony", "signature", "medical"]
@@ -60,6 +60,17 @@ func restore(d: Dictionary) -> bool:
 			var mode: String="balance" if panel=="weights_panel" else "signal_grid"
 			var trial=Trial.new(mode,"weights" if panel=="weights_panel" else "lamps")
 			if trial.restore(raw_trials[panel]): safe_trials[panel]=trial.capture()
+		for panel in ["dispatch_lock", "tide_winch"]:
+			var values: Variant = raw_trials.get(panel, [])
+			if not values is Array or values.size() != 3: continue
+			var limit = [1, 1, 2] if panel == "tide_winch" else [2, 2, 2]
+			var valid = true
+			for i in range(values.size()):
+				var n: Variant = values[i]
+				if not (n is int or n is float) or not is_finite(float(n)) or int(n) != n or n < 0 or n > limit[i]:
+					valid = false
+					break
+			if valid: safe_trials[panel] = values.map(func(n): return int(n))
 	var saved_tokens=d.get("tokens",3)
 	if not (saved_tokens is int or saved_tokens is float) or not is_finite(float(saved_tokens)) or saved_tokens<0 or saved_tokens>999: return false
 	var schema=d.get("schema",2)

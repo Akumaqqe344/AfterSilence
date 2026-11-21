@@ -56,6 +56,12 @@ func _run():
 		elif zone=="forest": start=Vector2(700,940)
 		elif zone in ["orchard","harbor"]: start=Vector2(600,740)
 		game._build_world(zone,start)
+		if zone in ["tide_station","bracken_clearing"]:
+			var end = Vector2(319,124)
+			_check(game.world.path_between(game.player.position,end).is_empty(),"unopened gate blocks "+zone)
+			game.state.set_flag("case_read_tide_winch" if zone=="tide_station" else "case_read_bracken_lens")
+			game._build_world(zone,start)
+			_check(not game.world.path_between(game.player.position,end).is_empty(),"opened gate connects "+zone)
 		for step in maps[zone]:
 			var point: Vector2=game.world.recover(Data.point(step.at))
 			_check(game.world.walkable(point),"walkable clue "+step.id)
@@ -109,6 +115,19 @@ func _run():
 	_check(game.events_controller.activity.trial.variant=="quiet_plaza","quiet choice changes a main story board")
 	var checkpoint={"version":3,"index":7,"phase":"running","activity":game.events_controller.activity.checkpoint()}
 	_check(Progress.valid(checkpoint),"branch-specific board checkpoint is accepted")
+	game.state.set_flag("expedition_0330")
+	game.state.set_flag("case_read_tide_winch",false)
+	game.state.case_trials["tide_winch"] = [1,1,0]
+	game.state.set_flag("case_choice_dispatch_named")
+	game._build_world("tide_station",Vector2(320,335))
+	game._save(false)
+	var expedition = State.new()
+	_check(isolated.load_state(expedition) and expedition.zone=="tide_station", "new landing is a valid save zone")
+	_check(expedition.case_trials.get("tide_winch",[])==[1,1,0],"partial winch operation survives JSON restore")
+	_check(expedition.flag("case_choice_dispatch_named"),"expedition branch survives JSON restore")
+	await game._load_game()
+	_check(game.state.zone=="tide_station" and game.state.case_trials.get("tide_winch",[])==[1,1,0],"continue restores location and winch settings")
+	_check(not game.world.expedition_route_open,"reloading a partial turn leaves the route blocked")
 	print("STORY EXPANSION QA: ",checks," checks, ",failures," failures")
 	game.audio.shutdown()
 	game.queue_free()
