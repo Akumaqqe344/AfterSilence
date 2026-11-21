@@ -24,15 +24,19 @@ static func portrait(index: int) -> AtlasTexture:
 static func sheet(id: String, event: String="") -> Texture2D:
 	var key=id+":"+event
 	if cache.has(key): return cache[key]
+	var baked="res://after_silence/assets/remaster0290/npc_"+id+".png"
+	if event.is_empty() and ResourceLoader.exists(baked):
+		cache[key]=load(baked)
+		return cache[key]
 	var profile=PROFILES.get(id,PROFILES.guest)
 	var hair=Color(profile[0]);var coat=Color(profile[1]);var trim=Color(profile[2])
 	if event=="garden": coat=Color("bd9c50");trim=Color("73945b")
 	if event=="machine": coat=Color("535650");trim=Color("a9946b")
 	if event=="train": coat=Color("b28b50");trim=Color("d2c8ad")
 	if event=="shore": coat=Color("5e768f");trim=Color("a8b9bc")
-	var image=Image.create(384,384,false,Image.FORMAT_RGBA8)
+	var image=Image.create(512,384,false,Image.FORMAT_RGBA8)
 	for direction in range(4):
-		for frame in range(6):
+		for frame in range(8):
 			_paint(image,Vector2i(frame*64,direction*96),direction,frame,id,profile[3],hair,coat,trim,event)
 	cache[key]=ImageTexture.create_from_image(image)
 	return cache[key]
@@ -45,8 +49,10 @@ static func oval(image: Image,origin: Vector2i,center: Vector2i,radius: Vector2i
 static func _paint(image: Image,o: Vector2i,d: int,f: int,id: String,style: String,hair: Color,coat: Color,trim: Color,event: String):
 	var ink=Color("312b2a");var skin=Color("ce9b77");var light=Color("f3cb9c")
 	var child=id=="child"
-	var swing=[0,-2,0,2,0,0][f];var head_y=60 if child else 51
-	var top=72 if child else 64
+	var swing=[0,-2,0,2,0,0,0,-1][f]
+	var lift=1 if f==6 or f==7 and id in ["child","lev","pavel"] else 0
+	var head_y=(60 if child else 51)-lift
+	var top=(72 if child else 64)-lift
 	var side=d>=2;var back=d==1;var facing=-1 if d==2 else 1
 	# Feet move in opposite phases; the baseline remains fixed for collisions.
 	for leg in range(2):
@@ -63,6 +69,9 @@ static func _paint(image: Image,o: Vector2i,d: int,f: int,id: String,style: Stri
 	rect(image,o,37 if not side else 34,top+3,2,77-top,coat.darkened(.25))
 	rect(image,o,26,80,12,2,coat.darkened(.18))
 	rect(image,o,30,top+1,4,4,trim)
+	if not side:
+		rect(image,o,25,top+4,7,1,coat.lightened(.19))
+		rect(image,o,34,top+4,4,1,coat.darkened(.24))
 	if not back:
 		rect(image,o,32,top+5,1,76-top,coat.darkened(.25))
 		for y in range(top+5,79,4): rect(image,o,33,y,1,1,trim)
@@ -98,7 +107,9 @@ static func _paint(image: Image,o: Vector2i,d: int,f: int,id: String,style: Stri
 	if style=="child":
 		for i in range(3): rect(image,o,25+i*5,head_y-15+i%2,4,5,hair)
 	if style in ["long","braid"]:
-		for i in range(5): rect(image,o,21 if style=="long" else 41-(i%2),head_y+i*4,4,5,hair.darkened(.05 if i%2 else 0))
+		for i in range(5):
+			var end_sway=1 if f in [2,6,7] and i>2 else 0
+			rect(image,o,(21 if style=="long" else 41-(i%2))+end_sway,head_y+i*4,4,5,hair.darkened(.05 if i%2 else 0))
 	if style=="bob": rect(image,o,20,head_y,4,14,hair);rect(image,o,40,head_y,4,14,hair)
 	if style=="bun":
 		oval(image,o,Vector2i(25,head_y-12),Vector2i(5,5),hair)

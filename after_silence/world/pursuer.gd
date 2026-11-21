@@ -1,4 +1,5 @@
 extends CharacterBody2D
+const CLOAK=preload("res://after_silence/assets/remaster0290/watcher.png")
 signal caught
 var world
 var player
@@ -58,7 +59,7 @@ func _physics_process(dt):
 		caught.emit()
 	queue_redraw()
 func _draw():
-	draw_circle(Vector2(0,-13),15,Color(0.14,0.13,0.22,.35))
-	draw_colored_polygon(PackedVector2Array([Vector2(-10,0),Vector2(-8,-26),Vector2(0,-36),Vector2(8,-26),Vector2(10,0)]),Color("252b3d"))
-	draw_rect(Rect2(-6,-25,3,2),Color("ced8bf"))
-	draw_rect(Rect2(3,-25,3,2),Color("ced8bf"))
+	var moving=velocity.length_squared()>25.0
+	var frame=(int(age*(8 if behavior=="chase" else 5))%4) if moving and is_instance_valid(player) and (player.visual_comfort==null or not player.visual_comfort.reduce_motion) else 0
+	draw_rect(Rect2(-10,-4,20,5),Color("2227395a"))
+	draw_texture_rect_region(CLOAK,Rect2(-14,-41,28,42),Rect2(frame*28,0,28,42))

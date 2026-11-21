@@ -1,17 +1,37 @@
 extends Node2D
 
+const DETAILS=preload("res://after_silence/assets/remaster0290/ground_details.png")
+const PLAZA=preload("res://after_silence/assets/remaster0290/plaza.png")
 const Water=preload("res://after_silence/world/watercourse.gd")
 const STONES=[Color("a99e80"),Color("b6a586"),Color("a2987c"),Color("bba888"),Color("a9a38b")]
 const BOARDS=[Color("9e7652"),Color("ad825b"),Color("b48a63"),Color("99714e")]
 const LEAVES=[Color("75864c"),Color("9e9f54"),Color("a0a963"),Color("b6a362")]
 static var tile_cache: Dictionary={}
 var features: Array
+var zone=""
 var show_pier=false
 
 func _draw():
 	for feature in features:
 		draw_texture_rect(_texture(feature[0],Vector2i(feature[1].size)),feature[1],false)
 	if show_pier: _pier()
+	match zone:
+		"town":
+			for x in [656,711]:
+				draw_rect(Rect2(x-2,519,4,28),Color("594937"))
+				draw_rect(Rect2(x-1,520,1,23),Color("a18358"))
+				draw_rect(Rect2(x-4,545,8,3),Color("76654f"))
+		"forest":
+			_detail(Vector2(751,474),0)
+			_detail(Vector2(893,457),1)
+			_detail(Vector2(879,586),0)
+			_detail(Vector2(766,622),1)
+		"harbor":
+			_detail(Vector2(966,767),1)
+			_detail(Vector2(1109,776),2)
+
+func _detail(at: Vector2,tile: int):
+	draw_texture_rect_region(DETAILS,Rect2(at-Vector2(14,24),Vector2(28,24)),Rect2(tile*28,0,28,24))
 
 func _pier():
 	var dock=Water.PIER
@@ -36,6 +56,7 @@ static func _texture(kind: String,dimensions: Vector2i) -> Texture2D:
 	if tile_cache.has(key): return tile_cache[key]
 	var size_px=(Vector2(dimensions)/2.0).ceil()
 	var image=Image.create(int(size_px.x),int(size_px.y),false,Image.FORMAT_RGBA8)
+	var plaza: Image=PLAZA.get_image() if kind=="stone" else null
 	var width=image.get_width()
 	var height=image.get_height()
 	for y in range(height):
@@ -48,7 +69,7 @@ static func _texture(kind: String,dimensions: Vector2i) -> Texture2D:
 				if corner<width/9+trim: continue
 			var value=posmod((x*73856093)^(y*19349663),997)
 			match kind:
-				"stone": image.set_pixel(x,y,_stone(x,y,value))
+				"stone": image.set_pixel(x,y,plaza.get_pixel(x%64,y%48))
 				"soil": image.set_pixel(x,y,_soil(x,y,width,height,value))
 				"rail": image.set_pixel(x,y,_rail(x,y,height,value))
 				"plank": image.set_pixel(x,y,_plank(x,y,height,value))

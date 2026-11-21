@@ -4,6 +4,9 @@ signal solved
 signal changed
 const Model=preload("res://after_silence/core/reality_maze.gd")
 const Stage=preload("res://after_silence/ui/trial_stage_art.gd")
+const TILES=preload("res://after_silence/assets/remaster0290/maze.png")
+const WALK_ATLAS=preload("res://after_silence/assets/pechatai/player/walk.png")
+const VERA_IDLE=preload("res://after_silence/assets/remaster0290/vera_idle.png")
 const CELL=28
 const ORIGIN=Vector2(29,10)
 const COLORS=[Color("ecb184"),Color("add4b0"),Color("bbabe1")]
@@ -26,6 +29,9 @@ var display_tile=Vector2.ZERO
 var move_tween: Tween
 var room_tween: Tween
 var room_tint=0.0
+var portal_age=0.0
+var cycle=0.0
+var stride_index=0
 var guide_path: Array[Vector2i]=[]
 
 func _ready():
@@ -95,10 +101,15 @@ func _gui_input(event):
 			route.clear();accept_event();_step(model.tile+move,true)
 
 func _process(delta):
-	if game.modal or route.is_empty(): return
+	if game.modal: return
+	if not game.comfort.reduce_motion:
+		cycle=fposmod(cycle+delta,12.0)
+		portal_age+=delta
+		if portal_age>.05: portal_age=0.0;queue_redraw()
+	if route.is_empty(): return
 	walk_delay-=delta
 	if walk_delay<=0:
-		walk_delay=.06 if not game.comfort.reduce_motion else .015
+		walk_delay=.11 if not game.comfort.reduce_motion else .015
 		_step(route.pop_front(),route.is_empty())
 
 func _step(next: Vector2i, save_walk: bool):
@@ -110,7 +121,7 @@ func _step(next: Vector2i, save_walk: bool):
 	if is_instance_valid(move_tween): move_tween.kill()
 	if outcome=="walk" and not game.comfort.reduce_motion:
 		move_tween=create_tween()
-		move_tween.tween_method(_move_art,display_tile,Vector2(model.tile),.14).set_trans(Tween.TRANS_SINE)
+		move_tween.tween_method(_move_art,display_tile,Vector2(model.tile),.10).set_trans(Tween.TRANS_SINE)
 	else: display_tile=Vector2(model.tile)
 	if outcome!="walk":
 		route.clear();notes_visible=false;hint_visible=false
@@ -135,37 +146,32 @@ func _refresh():
 	queue_redraw()
 
 func _move_art(value: Vector2):
-	display_tile=value;queue_redraw()
+	display_tile=value
+	stride_index=(int(cycle*15.0))%4
+	queue_redraw()
 
 func _shade_room(value: float):
 	room_tint=value;queue_redraw()
 
 func _draw():
-	var walls=Color("40334f") if model.reflected else Color("33434f")
+	var theme_row=28 if model.reflected else 0
 	Stage.draw(self,"reality",294,204)
 	for y in range(7):
 		for x in range(9):
 			var at=Vector2i(x,y)
 			var box=Rect2(ORIGIN+Vector2(at)*CELL,Vector2.ONE*CELL)
-			if model.walkable(at):
-				var floor_color=Color("675269") if model.reflected else Color("4a6267")
-				draw_rect(box,floor_color.lightened(.045 if (x+y)%2==0 else 0))
-				draw_rect(Rect2(box.position,Vector2(CELL,1)),floor_color.lightened(.13))
-				draw_rect(Rect2(box.position+Vector2(5,22),Vector2(8,1)),floor_color.darkened(.12))
-			else:
-				draw_rect(box,walls)
-				draw_rect(Rect2(box.position+Vector2(1,2),Vector2(CELL-2,3)),walls.lightened(.16))
-				draw_rect(Rect2(box.position+Vector2(0,24),Vector2(CELL,4)),walls.darkened(.27))
-				for i in range(2): draw_rect(Rect2(box.position+Vector2(4+(x+y+i*11)%17,10+i*7),Vector2(8,1)),walls.lightened(.12))
+			var column=(x*17+y*31)%3 if model.walkable(at) else 3+(x+y)%2
+			draw_texture_rect_region(TILES,box,Rect2(column*28,theme_row,28,28))
 	for i in range(Model.PORTALS.size()):
 		var center=ORIGIN+(Vector2(Model.PORTALS[i])+Vector2(.5,.5))*CELL
-		var tint=COLORS[model.sigil(i)]
-		draw_rect(Rect2(center-Vector2(11,8),Vector2(22,20)),tint.darkened(.48))
-		draw_rect(Rect2(center-Vector2(8,11),Vector2(16,17)),tint.darkened(.48))
-		draw_rect(Rect2(center-Vector2(7,7),Vector2(14,19)),Color("222331"))
-		draw_string(get_theme_default_font(),center+Vector2(-5,5),Model.SIGILS[model.sigil(i)],HORIZONTAL_ALIGNMENT_LEFT,-1,10,tint)
+		var sigil: int=model.sigil(i)
+		var tint: Color=COLORS[sigil]
+		draw_texture_rect_region(TILES,Rect2(center-Vector2(14,14),Vector2(28,28)),Rect2((5+sigil)*28,theme_row,28,28))
+		var pulse=1.0 if game.comfort.reduce_motion else .77+.23*sin(cycle*2.5+i*1.5)
+		draw_string(get_theme_default_font(),center+Vector2(-5,5),Model.SIGILS[sigil],HORIZONTAL_ALIGNMENT_LEFT,-1,10,tint.lerp(Color.WHITE,(pulse-.50)*.17))
+		draw_rect(Rect2(center+Vector2(-8,12),Vector2(16,1)),Color(tint.r,tint.g,tint.b,pulse*.45))
 		if hint_visible and Model.PORTALS[i]==model.destination():
-			draw_rect(Rect2(center-Vector2(13,13),Vector2(26,26)),Color("f3d598"),false,2)
+			draw_rect(Rect2(center-Vector2(13,13),Vector2(26,26)),Color("f3d598"),false,1)
 	var previous=Vector2(model.tile)
 	for cell in guide_path:
 		var ray=(Vector2(cell)-previous).normalized()
@@ -173,10 +179,13 @@ func _draw():
 		draw_polyline(PackedVector2Array([at-ray*3+ray.orthogonal()*4,at+ray*3,at-ray*3-ray.orthogonal()*4]),Color("f4d895"),2)
 		previous=Vector2(cell)
 	var focus=(ORIGIN+display_tile*CELL).round()
-	draw_rect(Rect2(focus+Vector2(2,2),Vector2(CELL-4,CELL-4)),Color("a9d8bf"),false)
+	draw_rect(Rect2(focus+Vector2(4,4),Vector2(CELL-8,CELL-8)),Color("a9d8bf84"),false)
 	if is_instance_valid(resident):
 		_draw_person(resident,focus+Vector2(21,24),14,0,Color("ddd1f2"))
-	_draw_person(game.player,focus+Vector2(11,23),22,direction,Color.WHITE)
+	var walking=is_instance_valid(move_tween) and move_tween.is_running()
+	var player_source=Rect2((stride_index if walking else 0)*64+5,direction*96+10,54,84)
+	var feet=focus+Vector2(12,25)
+	draw_texture_rect_region(WALK_ATLAS if walking else VERA_IDLE,Rect2(feet-Vector2(9,24),Vector2(18,25)),player_source)
 	if room_tint>0.0:
 		draw_rect(Rect2(ORIGIN,Vector2(9,7)*CELL),Color(.40,.34,.55,room_tint))
 

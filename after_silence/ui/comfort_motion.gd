@@ -1,8 +1,8 @@
 extends RefCounted
 
 const REST=Color.WHITE
-const HOVER=Color(1.10,1.045,1.005,1.0)
-const PRESS=Color(.87,.88,.91,1.0)
+const HOVER=Color(1.13,1.075,1.025,1.0)
+const PRESS=Color(.85,.90,.88,1.0)
 
 static func wire_button(button: Button, comfort):
 	button.mouse_entered.connect(func():_button_state(button,comfort))
@@ -20,10 +20,12 @@ static func _button_state(button: Button, comfort, down: bool=false):
 	if comfort.reduce_motion or button.disabled:
 		button.self_modulate=REST
 		return
-	var target=PRESS if down else HOVER if button.is_hovered() or button.has_focus() else REST
+	var highlighted=button.is_hovered() or button.has_focus()
+	var target=PRESS if down else HOVER if highlighted else REST
+	var duration=.07 if down else .13 if highlighted else .20
 	var change=button.create_tween()
 	button.set_meta("tone_tween",change)
-	change.tween_property(button,"self_modulate",target,.085 if down else .18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	change.tween_property(button,"self_modulate",target,duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 static func enter(node: Control, comfort, offset: Vector2=Vector2.ZERO, duration: float=.24) -> Tween:
 	var destination=node.position

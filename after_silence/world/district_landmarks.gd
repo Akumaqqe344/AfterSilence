@@ -44,11 +44,17 @@ static func build(world):
 	var scenery=preload("res://after_silence/world/district_art.gd")
 	var layer=scenery.new()
 	layer.features=FEATURES[world.zone]
+	layer.zone=world.zone
 	layer.show_pier=world.zone=="harbor"
 	layer.z_index=-2
 	layer.texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
 	# The shore paints first, so the pier is visible over the same water it crosses.
 	world.add_child(layer)
+	if world.zone=="town":
+		var pennants=preload("res://after_silence/world/district_pennants.gd").new()
+		pennants.comfort=world.visual_comfort
+		pennants.position=Vector2(656,515)
+		world.add_child(pennants)
 	for item in FIXTURES[world.zone]:
 		var sprite=Fixture.new()
 		sprite.kind=item[0]

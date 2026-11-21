@@ -2,6 +2,7 @@ extends CharacterBody2D
 signal footstep(loud: bool)
 signal landed
 # Pechatai character.js: 180 / 1.65 / 1300 / 1600, normalized eight-way input.
+const VERA_IDLE=preload("res://after_silence/assets/remaster0290/vera_idle.png")
 const Appearance=preload("res://after_silence/core/npc_appearance.gd")
 const SPEED=180.0
 const ACCEL=1300.0
@@ -33,6 +34,7 @@ var portrait=Rect2(8,0,48,48)
 var visual_comfort
 var animated_idle=false
 var idle_clock=0.0
+var vera_idle_age=0.0
 var settle_age=0.0
 var sprite_step=0.0
 var last_shadow_height=-1.0
@@ -62,7 +64,7 @@ func _ready():
 		npc_anchor=Vector2(bounds.position.x+bounds.size.x*.5,bounds.end.y)
 		portrait=Rect2(bounds.position,Vector2(bounds.size.x,bounds.size.y*.52))
 	if is_player:
-		for id in ["walk","run","idle","diagonal-run","jump","jump-diagonal"]: clips[id]=load("res://after_silence/assets/pechatai/player/"+id+".png")
+		for id in ["walk","run","diagonal-run","jump","jump-diagonal"]: clips[id]=load("res://after_silence/assets/pechatai/player/"+id+".png")
 func set_appearance(texture: Texture2D, height: float):
 	sheet=texture;body_height=height
 	if not is_instance_valid(sprite): return
@@ -140,16 +142,19 @@ func _physics_process(dt):
 		if diagonal>=0 and running: clip="diagonal-run";row=diagonal
 		if not moving:
 			clip="idle"
-			var index=4+diagonal if diagonal>=0 else facing
-			frame=index%4
-			row=int(index/4)
+			row=4+diagonal if diagonal>=0 else facing
+			if visual_comfort!=null and not visual_comfort.reduce_motion:
+				vera_idle_age=fposmod(vera_idle_age+dt,4.0)
+				frame=5 if vera_idle_age>3.82 else [0,1,2,3,4,3,2,1][int(vera_idle_age*2.5)%8]
+			else: frame=0
+		else: vera_idle_age=0.0
 		if p<1:
 			clip="jump-diagonal" if diagonal>=0 else "jump"
 			row=diagonal if diagonal>=0 else facing
 			frame=0 if p<.12 else 1 if p<.25 else (3 if jump_peak>28 else 2) if p<.76 else 4 if p<.94 else 5
 			size=Vector2(96,112)
 			anchor=Vector2(48,108)
-		sprite.texture=clips[clip]
+		sprite.texture=VERA_IDLE if clip=="idle" else clips[clip]
 	sprite.region_rect=Rect2(Vector2(frame,row)*size,size)
 	sprite.position=(-anchor*.7-Vector2(0,elevation)) if is_player else -npc_anchor*sprite.scale
 	if animated_idle and not moving and visual_comfort!=null and not visual_comfort.reduce_motion:
@@ -167,7 +172,9 @@ func _physics_process(dt):
 		queue_redraw()
 func idle_frame() -> int:
 	if visual_comfort==null or visual_comfort.reduce_motion: return Appearance.REST_FRAME
-	return Appearance.BLINK_FRAME if fposmod(idle_clock,4.0)>3.84 else Appearance.REST_FRAME
+	if fposmod(idle_clock,4.0)>3.84: return Appearance.BLINK_FRAME
+	var beat=fposmod(idle_clock*(1.08 if body_height<35 else .83),2.4)
+	return 6 if beat>.55 and beat<1.1 else 7 if beat>=1.1 and beat<1.6 else Appearance.REST_FRAME
 
 func _draw():
 	var shrink=maxf(.4,1-elevation/28*.45)

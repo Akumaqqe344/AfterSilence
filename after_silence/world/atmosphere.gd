@@ -32,7 +32,7 @@ func _process(dt):
 		for lamp in lamps:
 			var at: Vector2=lamp.node.position
 			if at.distance_squared_to(position)<480000:
-				lamp.node.energy=lamp.base*(1.0+sin(age*.94+at.x*.016)*.055)
+				lamp.node.energy=snappedf(lamp.base*(1.0+sin(age*.94+at.x*.016)*.048),.008)
 			else: lamp.node.energy=lamp.base
 	for mote in motes: mote.age+=dt
 	while not motes.is_empty() and motes[0].age>.35: motes.pop_front()
@@ -62,7 +62,10 @@ func _draw():
 	for i in range(count):
 		var speed=110.0 if zone=="forest" else 7.0
 		var p=Vector2(fposmod(i*97.0-age*speed*.2,720)-360,fposmod(i*71.0+age*speed,440)-220)
-		if zone=="forest": draw_line(p,p+Vector2(-2,7),Color(.62,.76,.8,.11 if not echo else .19))
+		if zone=="forest":
+			var rain=p.round()
+			var opacity=.07+(i%3)*.03
+			draw_line(rain,rain+Vector2(-2,4+i%4),Color(.65,.76,.80,opacity*(1.55 if echo else 1.0)))
 		else: draw_rect(Rect2(p.round(),Vector2(1,1)),Color("dfceb64e"))
 	if zone in ["town","harbor"]: _water_glints()
 	for mote in motes:

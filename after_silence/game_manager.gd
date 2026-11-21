@@ -394,12 +394,17 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 				return
 			audio.ping(state.volume)
 			item.run.call())
+		if main_layout:
+			for style in ["normal","hover","pressed"]:
+				var skin=ComfortTheme.button(style!="normal",style=="pressed")
+				skin.bg_color.a=.87 if style=="normal" else .94
+				button.add_theme_stylebox_override(style,skin)
 		column.add_child(button)
 		buttons[item.id]=button
 		if item.id in ["back","close"]: modal_back=item.run
 		if item.id in ["events_new","events_load","resume","start"] and i==0:
 			var primary=ComfortTheme.button(true)
-			primary.bg_color=Color("3c503c")
+			primary.bg_color=Color("3c503ce8") if main_layout else Color("3c503c")
 			button.add_theme_stylebox_override("normal",primary)
 		ComfortMotion.wire_button(button,comfort)
 	_wire_dialog_focus()
