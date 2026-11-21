@@ -1,7 +1,6 @@
 extends RefCounted
 ## Deterministic boards. Checkpoints store accepted moves and rebuild the board.
 const EVENTS={"machine":"tubes","memory":"pairs","garden":"seeds","collision":"lights","shore":"shelves"}
-const LEGACY={"machine":"repair","memory":"rhythm","garden":"escort","collision":"route","shore":"evacuation"}
 const SIZES={"tubes":5,"pairs":12,"seeds":9,"lights":12,"shelves":12}
 const CAPACITY=3
 const MOVE_LIMIT=80

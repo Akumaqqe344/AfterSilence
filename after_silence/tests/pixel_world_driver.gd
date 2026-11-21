@@ -1,4 +1,6 @@
 extends Node
+const Landmarks=preload("res://after_silence/world/district_landmarks.gd")
+const Water=preload("res://after_silence/world/watercourse.gd")
 var game
 var checks=0
 var failures=[]
@@ -61,7 +63,39 @@ func run():
 				check(safe,zone+" capsule clearance "+entry[2]+str(echo))
 			for id in identities: check(game.actors[id].get_instance_id()==identities[id],"persistent resident "+zone+id)
 	game.state.echo=false
+	for zone in ["town","orchard","forest","harbor"]:
+		game._build_world(zone,Vector2(600,600))
+		var nav=game.npcs.navigation
+		var geometry=game.npcs.nav(zone)
+		for id in Landmarks.for_zone(zone):
+			var point: Vector2=Landmarks.SITES[id].point
+			check(nav.clear_segment(geometry,point,point),"free landmark "+id)
+			check(not nav.path(geometry,game.player.position,point).is_empty(),"reachable landmark "+id)
+			game.player.position=point
+			game.interact("landmark_"+id)
+			check(game.state.flag("landmark_"+id),"discovered landmark "+id)
+		if zone=="harbor":
+			var end: Vector2=Landmarks.SITES.pier.point
+			check(Water.depth(zone,end)>0 and nav.clear_segment(geometry,Vector2(980,end.y),end),"walkable deck over water")
+			check(not nav.clear_segment(geometry,end,end+Vector2(65,0)),"deep water blocks beyond pier")
+			await get_tree().physics_frame
+			await get_tree().physics_frame
+			var deck_start=Vector2(980,end.y)
+			check(not game.player.test_move(Transform2D(0,deck_start),end-deck_start),"live capsule crosses the deck")
+			check(game.player.test_move(Transform2D(0,end),Vector2(65,0)),"live capsule cannot walk off the pier")
 	game._build_world("town",Vector2(600,645))
+	var lev=game.actors.lev
+	var prior_motion: bool=game.comfort.reduce_motion
+	game.comfort.reduce_motion=false
+	lev.idle_clock=3.91
+	check(lev.idle_frame()==5,"resident uses a dedicated blink frame")
+	game.comfort.reduce_motion=true
+	check(lev.idle_frame()==4,"resident rests with reduced motion")
+	game.comfort.reduce_motion=prior_motion
+	var sheet: Image=lev.sheet.get_image()
+	var rest=sheet.get_region(Rect2i(256,0,64,96))
+	var blink=sheet.get_region(Rect2i(320,0,64,96))
+	check(rest.get_data()!=blink.get_data(),"rest and blink have distinct artwork")
 	for id in game.actors: game.state.residents[id].zone="library";game.npcs.attach(game,id)
 	for pair in [["lev",Vector2(560,640)],["nadia",Vector2(600,640)]]:
 		game.state.residents[pair[0]].zone="town";game.actors[pair[0]].position=pair[1];game.npcs.attach(game,pair[0])
@@ -77,12 +111,65 @@ func run():
 		var texture=preload("res://after_silence/world/surface_textures.gd").atlas(kind)
 		check(texture.get_width()==(80 if kind=="water" else 320),"new material "+kind)
 		check(texture==preload("res://after_silence/world/surface_textures.gd").atlas(kind),"cached material "+kind)
-	for sample in [["town",Vector2(260,340),"01-home"],["town",Vector2(960,780),"02-workshop-path"],["orchard",Vector2(600,400),"03-orchard"],["harbor",Vector2(600,520),"04-harbor"],["home_nadia",Vector2(320,320),"05-interior"],["library",Vector2(480,400),"06-library"],["forest",Vector2(700,600),"07-forest"]]:
+	game.ui.hide()
+	for sample in [["town",Vector2(260,340),"01-home"],["town",Vector2(623,587),"02-market"],["orchard",Vector2(600,628),"03-orchard"],["harbor",Vector2(842,649),"04-harbor"],["home_nadia",Vector2(320,320),"05-interior"],["library",Vector2(480,400),"06-library"],["forest",Vector2(838,551),"07-forest"],["town",Vector2(1040,114),"08-pond"],["harbor",Vector2(1070,752),"09-pier"]]:
 		game._build_world(sample[0],sample[1]);game.camera.position_smoothing_enabled=false;game.camera.reset_smoothing()
 		await screenshot(sample[2])
+	await verify_rooms()
+	game._build_world("harbor",Vector2(1070,752))
+	game.camera.zoom=Vector2.ONE
+	game.camera.reset_smoothing()
+	game.ui.show()
+	game.toast.text=""
+	game.comfort.reduce_motion=false
+	game._district_map()
+	await get_tree().create_timer(.43).timeout
+	var atlas: Control=game.column.get_node("DistrictMap")
+	var title: Control=game.column.get_child(0)
+	check(atlas.get_global_rect().position.y>=title.get_global_rect().end.y,"animated map stays below its title")
+	await screenshot("10-harbor-map")
+	game._close()
 	var file=FileAccess.open(output.path_join("report.json"),FileAccess.WRITE)
 	if file: file.store_string(JSON.stringify({"checks":checks,"failures":failures,"version":ProjectSettings.get_setting("application/config/version"),"diagnostic_fixtures":true},"\t"));file.close()
 	print("PIXEL WORLD QA: ",checks," checks, ",failures.size()," failures")
 	game.queue_free();await get_tree().process_frame
 	await get_tree().create_timer(1.5,true,false,true).timeout
 	get_tree().quit(0 if failures.is_empty() else 1)
+
+func verify_rooms():
+	var doorway=Vector2(320,398)
+	for id in game.Homes.IDS:
+		game._build_world(id,doorway)
+		var geometry=game.npcs.nav(id)
+		var nav=game.npcs.navigation
+		var solids: Array[Rect2]=[]
+		for furnishing in game.Homes.COMMON+game.Homes.ROOMS[id]:
+			var area: Rect2=furnishing[1]
+			check(Rect2(80,82,480,349).encloses(area),"furnishing stays inside "+id+"/"+furnishing[0])
+			if furnishing[0] in ["window","rug"]: continue
+			check(solids.all(func(other):return not other.intersects(area)),"physical furniture does not overlap "+id+"/"+furnishing[0])
+			solids.append(area)
+		check(nav.clear_segment(geometry,doorway,Vector2(320,280)),"unbroken central aisle "+id)
+		for node in game.world.sorter.get_children():
+			var hotspot: String=node.get_meta("hotspot_id","")
+			if not hotspot.begins_with("personal_"): continue
+			var area: Rect2=game.Homes.surface(id,hotspot.trim_prefix("personal_"))
+			check(area.has_point(node.position) and maxf(node.size.x,node.size.y)<=24.01,"personal prop sits on its furniture "+id+"/"+hotspot)
+		for spot in game.world.interactables:
+			var reachable=false
+			for offset in [Vector2.ZERO,Vector2(0,26),Vector2(26,0),Vector2(-26,0),Vector2(0,-26)]:
+				var point: Vector2=spot.position+offset
+				if nav.clear_segment(geometry,point,point) and not nav.path(geometry,doorway,point).is_empty():
+					reachable=true
+					break
+			check(reachable,"furniture leaves interactable reachable "+id+"/"+spot.id)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		check(not game.player.test_move(Transform2D(0,doorway),Vector2(0,-118)),"live capsule crosses indoor aisle "+id)
+		var bed: Rect2=game.Homes.ROOMS[id].filter(func(piece):return piece[0]=="bed")[0][1]
+		var from_left=Vector2(bed.end.x+22,bed.get_center().y)
+		check(game.player.test_move(Transform2D(0,from_left),Vector2(-68,0)),"live capsule collides with bed "+id)
+		game.camera.zoom=Vector2(.75,.75)
+		game.player.position=Vector2(320,290)
+		game.camera.reset_smoothing()
+		await screenshot(id)

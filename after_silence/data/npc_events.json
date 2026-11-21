@@ -5,22 +5,18 @@
       "id": "letter",
       "npc": "lev",
       "zone": "town",
-      "mode": "escort",
+      "mode": "letter_press",
       "title": [
         "Письмо Льва",
         "Lev's letter"
       ],
       "context": [
-        "Проведи Льва через меняющиеся улицы.",
-        "Escort Lev through the shifting streets."
+        "Лев нашёл обрывки письма.",
+        "Lev found the torn letter."
       ],
       "rule": [
-        "Иди рядом с Львом. Обходи красные вспышки.",
-        "Stay near Lev. Avoid red flashes."
-      ],
-      "next": [
-        "Теперь гость праздника. Открой «Путешествие»: там есть путь.",
-        "Next: Festival guest. Travel shows the route."
+        "Поворачивай обрывки, пока линии письма не сойдутся.",
+        "Rotate the fragments until the writing lines up."
       ],
       "choices": [
         [
@@ -39,32 +35,24 @@
         ]
       ],
       "location": "square",
-      "requires": "",
-      "world_action": [
-        "Подними письмо у дороги.",
-        "Pick up the letter by the road."
-      ]
+      "requires": ""
     },
     {
       "id": "guest",
       "npc": "mara",
       "zone": "library",
-      "mode": "stealth",
+      "mode": "footprints",
       "title": [
         "Гость праздника",
         "Festival guest"
       ],
       "context": [
-        "Мара заметила гостя. Проследи за ним незаметно.",
-        "Mara spotted a guest. Follow without being seen."
+        "Гость исчез. Остались следы.",
+        "The guest vanished, leaving tracks."
       ],
       "rule": [
-        "Держись за спиной. Не входи в красный сектор.",
-        "Stay behind. Avoid the red vision cone."
-      ],
-      "next": [
-        "Теперь комнаты двух времён. Открой «Путешествие»: там есть путь.",
-        "Next: Rooms of two eras. Travel shows the route."
+        "Выбирай след по форме и метке из улики.",
+        "Choose the trace with the shape and mark in the clue."
       ],
       "choices": [
         [
@@ -83,32 +71,24 @@
         ]
       ],
       "location": "square",
-      "requires": "letter",
-      "world_action": [
-        "Осмотри оставленную записку.",
-        "Inspect the note."
-      ]
+      "requires": "letter"
     },
     {
       "id": "epochs",
       "npc": "sonya",
       "zone": "town",
-      "mode": "epochs",
+      "mode": "reality",
       "title": [
         "Комнаты двух времён",
         "Rooms of two eras"
       ],
       "context": [
-        "Дом Сони меняется. Помоги найти безопасную эпоху.",
-        "Sonya's house shifts. Find a safe era."
+        "Соня помнит порядок дверей.",
+        "Sonya remembers the doors."
       ],
       "rule": [
-        "E меняет эпоху. Пройди подсвеченные комнаты.",
-        "E changes the era. Visit the highlighted rooms."
-      ],
-      "next": [
-        "Теперь сердце мастерской. Открой «Путешествие»: там есть путь.",
-        "Next: Workshop heart. Travel shows the route."
+        "Запомни знаки и пройди через двери в нужном порядке.",
+        "Remember the signs and take the doors in order."
       ],
       "choices": [
         [
@@ -127,11 +107,7 @@
         ]
       ],
       "location": "home_sonya",
-      "requires": "guest",
-      "world_action": [
-        "Проверь запись у часов.",
-        "Check the note by the clock."
-      ]
+      "requires": "guest"
     },
     {
       "id": "machine",
@@ -143,16 +119,12 @@
         "Workshop heart"
       ],
       "context": [
-        "Рассортируй охлаждающую смесь.",
-        "Sort the cooling mixture."
+        "Мастерская перегрелась.",
+        "The workshop is overheating."
       ],
       "rule": [
         "Один цвет на пробирку.",
         "One color per tube."
-      ],
-      "next": [
-        "Теперь защитники моста. Открой «Путешествие»: там есть путь.",
-        "Next: Bridge defenders. Travel shows the route."
       ],
       "choices": [
         [
@@ -171,32 +143,24 @@
         ]
       ],
       "location": "workshop",
-      "requires": "epochs",
-      "world_action": [
-        "Осмотри выключатель мастерской.",
-        "Inspect the workshop switch."
-      ]
+      "requires": "epochs"
     },
     {
       "id": "bridge",
       "npc": "pavel",
       "zone": "town",
-      "mode": "tactics",
+      "mode": "balance",
       "title": [
         "Защитники моста",
         "Bridge defenders"
       ],
       "context": [
-        "Павел готовит учение по эвакуации с Марой и гостем. Никто не должен пострадать.",
-        "Pavel prepares an evacuation exercise with Mara and the guest. Nobody should be harmed."
+        "Груз мешает пройти по мосту.",
+        "Cargo blocks the crossing."
       ],
       "rule": [
-        "Тактическое учение: идти, атаковать, защищаться и помогать. Действия тратятся по очереди.",
-        "Tactical exercise: move, attack, defend and help. Spend actions in turn."
-      ],
-      "next": [
-        "Теперь ритм доверия. Открой «Путешествие»: там есть путь.",
-        "Next: Rhythm of trust. Travel shows the route."
+        "Загрузи обе чаши одинаковым весом.",
+        "Load both sides with equal weight."
       ],
       "choices": [
         [
@@ -215,11 +179,7 @@
         ]
       ],
       "location": "bridge",
-      "requires": "machine",
-      "world_action": [
-        "Проверь знак перед учением на мосту.",
-        "Check the sign before the bridge exercise."
-      ]
+      "requires": "machine"
     },
     {
       "id": "memory",
@@ -231,16 +191,12 @@
         "Cards of trust"
       ],
       "context": [
-        "Найди пары на любимых открытках.",
-        "Find pairs in the child's favorite cards."
+        "Надя бережёт старые открытки.",
+        "Nadia keeps the old cards."
       ],
       "rule": [
         "Соедини одинаковые знаки.",
         "Pair the matching symbols."
-      ],
-      "next": [
-        "Теперь сын из будущего. Открой «Путешествие»: там есть путь.",
-        "Next: Son from tomorrow. Travel shows the route."
       ],
       "choices": [
         [
@@ -259,11 +215,7 @@
         ]
       ],
       "location": "square",
-      "requires": "bridge",
-      "world_action": [
-        "Подбери конверт с открытками.",
-        "Pick up the envelope of cards."
-      ]
+      "requires": "bridge"
     },
     {
       "id": "garden",
@@ -275,16 +227,12 @@
         "Son from tomorrow"
       ],
       "context": [
-        "Посади цветы вдоль дороги домой.",
-        "Grow flowers along the way home."
+        "Ребёнок принёс семена из будущего.",
+        "The child brought seeds from the future."
       ],
       "rule": [
         "Посади и полей все шесть грядок.",
         "Plant and water all six plots."
-      ],
-      "next": [
-        "Теперь не одна против толпы. Открой «Путешествие»: там есть путь.",
-        "Next: Not alone. Travel shows the route."
       ],
       "choices": [
         [
@@ -303,32 +251,24 @@
         ]
       ],
       "location": "garden",
-      "requires": "memory",
-      "world_action": [
-        "Забери семена у садовой метки.",
-        "Collect the seeds by the garden marker."
-      ]
+      "requires": "memory"
     },
     {
       "id": "crowd",
       "npc": "nadia",
       "zone": "town",
-      "mode": "tactics",
+      "mode": "signal_grid",
       "title": [
         "Не одна против толпы",
         "Not alone"
       ],
       "context": [
-        "Надя, Лев и гость отрабатывают защиту толпы. Сначала осмотри план.",
-        "Nadia, Lev and the guest rehearse crowd protection. Inspect the plan first."
+        "Наде нужен свет на площади.",
+        "Nadia needs light in the square."
       ],
       "rule": [
-        "Тактическое учение: идти, атаковать, защищаться и помогать. Действия тратятся по очереди.",
-        "Tactical exercise: move, attack, defend and help. Spend actions in turn."
-      ],
-      "next": [
-        "Теперь поезд без рельсов. Открой «Путешествие»: там есть путь.",
-        "Next: Train without tracks. Travel shows the route."
+        "Включи группы фонарей по числам на схеме.",
+        "Light the runs shown by the numbers on the plan."
       ],
       "choices": [
         [
@@ -347,32 +287,24 @@
         ]
       ],
       "location": "square",
-      "requires": "garden",
-      "world_action": [
-        "Проверь план защиты площади.",
-        "Check the square protection plan."
-      ]
+      "requires": "garden"
     },
     {
       "id": "train",
       "npc": "pavel",
       "zone": "town",
-      "mode": "evacuation",
+      "mode": "railway",
       "title": [
         "Поезд без рельсов",
         "Train without tracks"
       ],
       "context": [
-        "Пассажиры ждут у пристани. Помоги им выйти.",
-        "Passengers wait by the pier. Help them leave."
+        "Павел ждёт сигнала поезду.",
+        "Pavel is waiting for the train signal."
       ],
       "rule": [
-        "E рядом с жителем. Проведи троих к безопасной зоне.",
-        "E near a resident. Escort three to the safe area."
-      ],
-      "next": [
-        "Теперь столкновение городов. Открой «Путешествие»: там есть путь.",
-        "Next: Colliding towns. Travel shows the route."
+        "Переводи стрелки и отправляй вагоны к нужным станциям.",
+        "Set the switches and send each carriage to its station."
       ],
       "choices": [
         [
@@ -391,11 +323,7 @@
         ]
       ],
       "location": "station",
-      "requires": "crowd",
-      "world_action": [
-        "Прочитай список пассажиров.",
-        "Read the passenger list."
-      ]
+      "requires": "crowd"
     },
     {
       "id": "collision",
@@ -407,16 +335,12 @@
         "Colliding towns"
       ],
       "context": [
-        "Зажги три сигнала между городами.",
-        "Light three signals between the towns."
+        "В библиотеке гаснут огни.",
+        "The library lights are going out."
       ],
       "rule": [
         "Поменяй соседние огни и собери ряд из трёх.",
         "Swap neighboring lights to make a line of three."
-      ],
-      "next": [
-        "Теперь рука алины. Открой «Путешествие»: там есть путь.",
-        "Next: Alina's hand. Travel shows the route."
       ],
       "choices": [
         [
@@ -435,32 +359,24 @@
         ]
       ],
       "location": "library",
-      "requires": "train",
-      "world_action": [
-        "Сверь запись у прохода.",
-        "Check the passage record."
-      ]
+      "requires": "train"
     },
     {
       "id": "alina",
       "npc": "alina",
       "zone": "forest",
-      "mode": "dodge",
+      "mode": "echo_tuning",
       "title": [
         "Рука Алины",
         "Alina's hand"
       ],
       "context": [
-        "Алина видна в разломе. Не оставляй её одну.",
-        "Alina appears in the rift. Stay with her."
+        "В шуме слышен голос Алины.",
+        "Alina’s voice breaks through the noise."
       ],
       "rule": [
-        "Уклоняйся от полос. E рядом с Алиной после трёх атак.",
-        "Dodge the lanes. E near Alina after three attacks."
-      ],
-      "next": [
-        "Теперь последний берег. Открой «Путешествие»: там есть путь.",
-        "Next: The final shore. Travel shows the route."
+        "Совмести две волны, затем запиши эхо.",
+        "Align the two waves, then record the echo."
       ],
       "choices": [
         [
@@ -479,11 +395,7 @@
         ]
       ],
       "location": "rift",
-      "requires": "collision",
-      "world_action": [
-        "Осмотри след у разлома.",
-        "Inspect the mark by the rift."
-      ]
+      "requires": "collision"
     },
     {
       "id": "shore",
@@ -495,16 +407,12 @@
         "The final shore"
       ],
       "context": [
-        "Разложи метки для семей у воды.",
-        "Sort the tags for the families by the water."
+        "На берегу ждут семьи.",
+        "Families are waiting by the shore."
       ],
       "rule": [
         "Собери четыре тройки одинаковых меток.",
         "Make four sets of three matching tags."
-      ],
-      "next": [
-        "Берег в безопасности.",
-        "The shore is safe."
       ],
       "choices": [
         [
@@ -523,11 +431,7 @@
         ]
       ],
       "location": "shore",
-      "requires": "alina",
-      "world_action": [
-        "Проверь список у берега.",
-        "Check the shore list."
-      ]
+      "requires": "alina"
     }
   ]
 }

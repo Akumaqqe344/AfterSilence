@@ -287,23 +287,23 @@ func test_quest_steps_follow_chapter_progress():
 	assert_true(quests.steps()[0][0])
 
 func test_event_checkpoint_rejects_corruption_without_mutation():
-	var activity={"mode":"epochs","elapsed":17.0,"progress":2.0,"hp":5,"step":2,"alert":0.0,"heat":0.0,"npc":[320,310],"epoch":1}
-	state.event_state={"version":2,"index":2,"phase":"suspended","activity":activity}
+	var activity={"mode":"reality","reality":{"stage":1,"reflected":false,"tile":[4,5]}}
+	state.event_state={"version":3,"index":2,"phase":"suspended","activity":activity}
 	var data=state.to_data()
 	var copy=State.new()
 	assert_true(copy.restore(data))
-	assert_eq(copy.event_state.activity.epoch,1)
+	assert_eq(copy.event_state.activity.reality.stage,1)
 	for value in ["2",99,{},false]:
 		var corrupt=data.duplicate(true)
 		corrupt.event_state.version=value
 		assert_false(copy.restore(corrupt))
 		assert_eq(copy.to_data(),data)
-	for value in [-1,2,"past",[],{}]:
+	for value in [-1,3,"past",[],{}]:
 		var corrupt=data.duplicate(true)
-		corrupt.event_state.activity.epoch=value
+		corrupt.event_state.activity.reality.stage=value
 		var before=copy.to_data()
 		assert_false(copy.restore(corrupt))
 		assert_eq(copy.to_data(),before)
 	var old=data.duplicate(true)
-	old.event_state.erase("version");old.event_state.activity.erase("epoch")
+	old.event_state.erase("version");old.event_state.activity={"mode":"epochs"}
 	assert_true(copy.restore(old))

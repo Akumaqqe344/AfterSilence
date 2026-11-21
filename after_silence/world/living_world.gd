@@ -35,9 +35,18 @@ func remember(npc: String, event: String):
 func populate():
 	var zone=game.state.zone
 	if data.homes.has(zone):
-		game.world.spot("home_storage",Vector2(220,370),"chest")
+		game.world.spot("home_storage",Vector2(224,391),"none")
 		for obj in data.homes[zone].objects:
-			game.world.spot("personal_"+obj[0],Vector2(obj[5],obj[6]),"personal_"+obj[0])
+			var id="personal_"+str(obj[0])
+			var area: Rect2=game.Homes.surface(zone,obj[0])
+			if not area.has_area():
+				game.world.spot(id,Vector2(obj[5],obj[6]),id)
+				continue
+			var x=area.get_center().x
+			game.world.spot(id,Vector2(x,area.end.y+17),"none")
+			var detail=game.world.prop(id,Vector2(x,area.position.y+minf(24.0,area.size.y-3)))
+			detail.size*=minf(1.0,24.0/maxf(detail.size.x,detail.size.y))
+			detail.set_meta("hotspot_id",id)
 	if zone in ["town","orchard","harbor"]:
 		game.world.spot("cache_supplies",Vector2(840,580) if zone=="town" else Vector2(800,540),"chest")
 	if zone=="orchard" and game.state.flag("delivery_arrived"):
@@ -138,13 +147,17 @@ func focus(kind: String):
 	camera_tween.tween_property(game.camera,"zoom",Vector2.ONE*1.12,.45).set_trans(Tween.TRANS_SINE)
 	game.audio.scene_cue(kind,game.state.volume)
 
-func restore_camera():
+func restore_camera(duration: float=.5):
 	if is_instance_valid(camera_tween): camera_tween.kill()
 	focus_left=0
 	scene_kind=""
 	if is_instance_valid(game.camera):
-		camera_tween=create_tween()
-		camera_tween.tween_property(game.camera,"zoom",Vector2.ONE*(.65 if game.wide_camera else 1.0),.5)
+		var target=Vector2.ONE*(.65 if game.wide_camera else 1.0)
+		if game.comfort.reduce_motion or duration<=0.0:
+			game.camera.zoom=target
+		else:
+			camera_tween=create_tween()
+			camera_tween.tween_property(game.camera,"zoom",target,duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func tick(dt: float):
 	var state=game.state

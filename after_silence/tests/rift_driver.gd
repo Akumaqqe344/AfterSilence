@@ -58,8 +58,9 @@ func run() -> void:
 				game._build_world("town",Vector2(600,600))
 				check(game.world.interactables.any(func(spot): return spot.id=="rift_next"),"objective survives leaving town")
 				game._toggle_zoom()
+				await get_tree().create_timer(.26).timeout
 				await screenshot("adventure_map")
-				check(game.camera.zoom.x<1.0,"zoom out works")
+				check(is_equal_approx(game.camera.zoom.x,.65),"zoom eases to the overview")
 				game._toggle_zoom()
 			game.interact("rift_next")
 		check(r.index==i and r.phase=="intro","event %02d intro"%(i+1))

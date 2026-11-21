@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="SpriteFrames" path="res://after_silence/assets/remaster0290/lantern.tres" id="1"]
+
+[node name="Lantern" type="AnimatedSprite2D"]
+texture_filter = 1
+position = Vector2(410, 271)
+sprite_frames = ExtResource("1")
+centered = false

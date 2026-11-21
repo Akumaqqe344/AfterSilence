@@ -11,12 +11,14 @@ func after_each():
 
 func test_preferences_round_trip_without_story_save():
 	preferences.large_text=true;preferences.reduce_motion=true;preferences.instant_text=true
+	preferences.route_guide=false
 	preferences.language="en";preferences.volume=.7;preferences.fullscreen=true
 	assert_eq(preferences.save_preferences(),OK)
 	var restored=Preferences.new();restored.path=preferences.path;restored.load_preferences()
 	assert_true(restored.available)
 	assert_true(restored.large_text)
 	assert_true(restored.reduce_motion)
+	assert_false(restored.route_guide)
 	assert_true(restored.instant_text)
 	assert_true(restored.fullscreen)
 	assert_eq(restored.language,"en")
@@ -26,6 +28,7 @@ func test_missing_file_keeps_defaults():
 	preferences.load_preferences()
 	assert_false(preferences.available)
 	assert_false(preferences.large_text)
+	assert_true(preferences.route_guide)
 	assert_false(FileAccess.file_exists(preferences.path))
 
 func test_invalid_values_use_safe_bounds():

@@ -12,11 +12,25 @@ static func material(kind: String, variant: int) -> ShaderMaterial:
 		cache[key]=shader_material
 	return cache[key]
 
-static func atlas(kind: String) -> Texture2D:
-	if cache.has(kind): return cache[kind]
+static func atlas(kind: String, zone: String="") -> Texture2D:
+	var key=kind+":"+zone if kind in ["grass","floor"] else kind
+	if cache.has(key): return cache[key]
 	var extent=80 if kind=="water" else 320
 	var image=Image.create(extent,extent,false,Image.FORMAT_RGBA8)
-	var palette={"grass":["77984f","73934b","809e56","6b8e48","91a963"],"dirt":["b2976b","ae9268","b99e72","9c845e","c4ab7b"],"floor":["9d7953","a47e58","b18a60","785d47","bf966b"],"water":["4d8183","52898b","5b9292","47787d","75a7a0"]}[kind]
+	var palette={"grass":["839363","7b8b5e","8b9a6d","6e8456","a0a675"],"dirt":["aa926a","a68e66","b29a70","8e7a59","c2ab80"],"floor":["967454","9d7c5c","a98b65","775b46","b89a73"],"water":["517877","557d78","648d85","4a716a","8ca998"]}[kind]
+	if kind=="grass":
+		palette= {
+			"forest":["677e55","657b53","70875b","5b734e","8e9e68"],
+			"orchard":["8f9a60","8a955d","98a369","7e8a55","a7ae73"],
+			"harbor":["9b9a70","96956d","a4a277","8d8d65","b0ad80"]
+		}.get(zone,palette)
+	if kind=="floor":
+		palette={
+			"home_nadia":["a38765","a68863","b19672","826a50","bea27b"],
+			"home_lev":["82705c","89745d","9a8367","695644","a99173"],
+			"home_pavel":["887764","937f69","9e8d76","6c5f53","aa977e"],
+			"home_sonya":["a48266","a88870","b4977c","856b56","bea18a"]
+		}.get(zone,palette)
 	var colors=[]
 	for hex in palette: colors.append(Color(hex))
 	for y in range(extent):
@@ -24,23 +38,24 @@ static func atlas(kind: String) -> Texture2D:
 			var hash_value=posmod((x*73856093)^(y*19349663),997)
 			var color: Color=colors[0]
 			if kind=="floor":
-				var row=y/12
-				var joint=posmod(x+int(row)*23,64)
-				color=colors[1 if int(row)%2==0 else 0]
-				if y%12==0 or joint==0: color=colors[3]
-				elif y%12==1: color=colors[4]
-				elif hash_value<55 and y%3==0: color=colors[2]
+				var row=y/16
+				var joint=posmod(x+row*21,64)
+				color=colors[1 if (row+int((x+row*21)/64))%3==0 else 0]
+				if y%16==0 or joint==0: color=colors[3]
+				elif y%16==1: color=colors[4]
+				elif y%5==0 and (joint+row*3)%19<6: color=colors[2]
 			elif kind=="water":
-				var ripple=posmod(x+int(sin(y*.23)*5),20)
-				color=colors[1 if y%16<8 else 0]
-				if y%9==0 and ripple<8: color=colors[2]
-				if y%19==0 and ripple<5: color=colors[4]
+				var ripple=posmod(x+(y/6)*17,40)
+				color=colors[1 if y%13<5 else 0]
+				if y%6==0 and ripple<11: color=colors[2]
+				if y%6==1 and ripple>2 and ripple<10: color=colors[3]
+				if y%17==4 and ripple<5: color=colors[4]
 			else:
 				if hash_value<80: color=colors[1]
 				elif hash_value<130: color=colors[2]
-				if kind=="grass" and posmod((x/3)*71+(y/4)*37,31)==0:
-					color=colors[3] if y%4>1 else colors[4]
+				if kind=="grass" and hash_value==7:
+					color=colors[3]
 				if kind=="dirt" and hash_value<10: color=colors[4]
 			image.set_pixel(x,y,color)
-	cache[kind]=ImageTexture.create_from_image(image)
-	return cache[kind]
+	cache[key]=ImageTexture.create_from_image(image)
+	return cache[key]

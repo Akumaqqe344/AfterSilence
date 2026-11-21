@@ -1,4 +1,5 @@
 extends RefCounted
+const Landmarks=preload("res://after_silence/world/district_landmarks.gd")
 const Water=preload("res://after_silence/world/watercourse.gd")
 static func build(world):
 	if world.zone not in ["town","forest","orchard","harbor"]: return
@@ -26,6 +27,9 @@ static func build(world):
 			if not wet and start>=0:
 				world.boundary(Rect2(start,y,x-start,16));start=-1
 	var buildings=[]
+	for feature in Landmarks.FEATURES.get(world.zone,[]):
+		var patch: Rect2=feature[1]
+		buildings.append(patch.grow_individual(17,13,17,65 if feature[0]=="soil" else 30))
 	var stages=[]
 	if world.story_mode:
 		var places=JSON.parse_string(FileAccess.get_file_as_string("res://after_silence/data/locations.json"))

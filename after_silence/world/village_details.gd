@@ -1,32 +1,49 @@
 extends Node2D
-## Original pixel ornaments. No collision or navigation obstacles are added.
+## Small porch details are anchored in world space and follow the local wind.
+const Water=preload("res://after_silence/world/watercourse.gd")
+const Garden=preload("res://after_silence/world/garden_pixels.gd")
 var world
+var comfort
+var season=0
 var zone="town"
-var entries: Array=[]
+var sway_time=0.0
+var sway=0
+var spacing=51.0
+
 func _ready():
-	if world==null: return
+	if world==null:
+		set_process(comfort!=null)
+		return
+	set_process(false)
 	for child in world.sorter.get_children():
-		if not child.has_meta("building"): continue
+		if child.kind!="house": continue
 		var garden=get_script().new()
 		garden.zone=world.zone
-		garden.entries=[[Vector2(0,-12),child.variant]]
+		garden.comfort=world.visual_comfort
+		garden.season=child.variant
+		garden.spacing=clampf(child.size.x*.34,48.0,65.0)
 		garden.position=child.position+Vector2(0,12)
 		world.sorter.add_child(garden)
+
+func _process(delta: float):
+	var on_screen=get_viewport_rect().grow(110).has_point(get_global_transform_with_canvas().origin)
+	if not on_screen: return
+	sway_time=fposmod(sway_time+delta,TAU)
+	var next=0 if comfort.reduce_motion else roundi(sin(sway_time+(position.x+position.y)*.012))
+	if sway!=next:
+		sway=next
+		queue_redraw()
+
 func _draw():
-	for entry in entries:
-		var p: Vector2=entry[0]
-		var flowers=[Color("d5aa91"),Color("b9becd"),Color("d8c68e"),Color("acbc92")][posmod(entry[1],4)]
-		for side in [-1,1]:
-			var at=p+Vector2(side*51,6)
-			if preload("res://after_silence/world/watercourse.gd").depth(zone,position+at)>-20: continue
-			draw_rect(Rect2(at+Vector2(-12,-6),Vector2(24,10)),Color("6f5846"))
-			draw_rect(Rect2(at+Vector2(-12,-6),Vector2(24,2)),Color("ad8b63"))
-			for i in range(5):
-				var root=at+Vector2(-9+i*4,-7)
-				draw_rect(Rect2(root-Vector2(0,5),Vector2(1,6)),Color("526c40"))
-				draw_rect(Rect2(root-Vector2(1,6+(i%2)*2),Vector2(3,3)),flowers)
-				draw_rect(Rect2(root-Vector2(0,5+(i%2)*2),Vector2(1,1)),Color("e0cc95"))
-		# A narrow welcome mat sits under the stairs, with the road behind it.
-		draw_rect(Rect2(p+Vector2(-12,2),Vector2(24,9)),Color("71624b"))
-		draw_rect(Rect2(p+Vector2(-10,3),Vector2(20,1)),Color("b79c6a"))
-		for x in range(-8,10,4): draw_rect(Rect2(p+Vector2(x,5),Vector2(2,3)),Color("a18d5d"))
+	if world!=null: return
+	for side in [-1,1]:
+		var at=Vector2(side*spacing,-4)
+		if Water.depth(zone,position+at)>-20: continue
+		if (season+side)%3==0:
+			Garden.bunch(self,at+Vector2(3,2),posmod(season+side,9),sway,5)
+		else:
+			Garden.planter(self,at,posmod(season+side,9),sway)
+	for i in range(3):
+		var p=Vector2(-18+i*12,-9+absi(i-1))
+		draw_rect(Rect2(p,Vector2(12,8)),Color("746b56"))
+		draw_rect(Rect2(p+Vector2(1,0),Vector2(10,2)),Color("a49774"))

@@ -49,9 +49,7 @@ func fixture(index: int):
 	director.npc.position=director.center
 	game.npcs.capture(game)
 	director.phase="ready"
-	director.begin_preparation()
-	game.player.position=director.preparation_point()
-	check(director.complete_preparation(),"required action opens "+event.id)
+	check(director.talk(event.npc) and game.event_window.active,"NPC opens "+event.id)
 
 func run():
 	root=get_tree().root

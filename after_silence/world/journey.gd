@@ -32,6 +32,41 @@ func zone_allowed(zone: String) -> bool:
 	for id in places:
 		if places[id].zone==zone and unlocked(id): return true
 	return false
+func guide_target() -> Dictionary:
+	var director=game.events_controller
+	if not director.enabled() or director.index>=director.events.size(): return {}
+	var event=director.events[director.index]
+	var place=places[event.location]
+	var label=pair(place.name)
+	var zone=game.state.zone
+	if zone!=place.zone:
+		var edge: Array=game.npcs.navigation.next_portal(zone,place.zone,game.state.echo)
+		if edge.is_empty() or not zone_allowed(edge[2]): return {}
+		var portal=_portal_id(zone,edge[2])
+		for spot in game.world.interactables:
+			if spot.id==portal:
+				return {"point":spot.position,"label":_portal_label(portal),"action":true,"id":portal,"range":28.0}
+		return {}
+	if director.phase!="travel" and is_instance_valid(director.npc):
+		var ready=director.phase in ["ready","suspended","decision"]
+		return {"point":director.npc.position,"label":game.named(event.npc).split(" · ")[0],"action":ready,"id":event.npc,"range":52.0}
+	var point=Vector2(place.point[0],place.point[1])
+	return {"point":point,"label":label,"action":false,"id":event.location,"range":65.0}
+func _portal_id(from: String,to: String) -> String:
+	if from=="town":
+		return {"library":"to_library","forest":"to_forest","orchard":"visit_orchard","harbor":"visit_harbor","shop":"visit_shop"}.get(to,to)
+	if from in ["orchard","harbor"]: return "district_return"
+	if from in game.Homes.IDS: return "leave_home"
+	if from=="shop": return "leave_shop"
+	return "to_town"
+func _portal_label(id: String) -> String:
+	if id in game.Homes.IDS: return pair(game.Homes.NAMES[game.Homes.IDS.find(id)])
+	match id:
+		"to_library": return game.t("Вход в библиотеку","Library entrance")
+		"to_forest": return game.t("Тропа в лес","Forest trail")
+		"visit_orchard": return game.t("Дорога в сад","Orchard road")
+		"visit_harbor": return game.t("Дорога к пристани","Harbor road")
+		_: return game.t("Выход в город","Exit to town")
 func open():
 	var actions=[]
 	var selected=current()

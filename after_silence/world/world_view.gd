@@ -1,5 +1,6 @@
 extends Node2D
 const Prop = preload("res://after_silence/world/prop.gd")
+const Landmarks=preload("res://after_silence/world/district_landmarks.gd")
 const Ground = preload("res://after_silence/world/ground_detail.gd")
 const Homes = preload("res://after_silence/world/homes.gd")
 const Art=preload("res://after_silence/core/art_catalog.gd")
@@ -7,22 +8,28 @@ const PROP_ART={"lamp":"wall_lamp","street_lamp":"street_lamp","trace":"way_lamp
 var dimensions = Vector2(1280,960)
 var sorter: Node2D
 var terrain: TileMapLayer
+var terrain_collision: StaticBody2D
 var grid: AStarGrid2D
 var obstacles: Array[Rect2] = []
 var interactables: Array = []
 var zone = "town"
 var echo = false
 var story_mode=false
+var visual_comfort
 var paths: Array=[]
 var glow_texture: Texture2D
+var focused_hotspot=""
+var geometry_revision=0
 func build(id: String, distorted: bool):
 	grid=null
+	geometry_revision+=1
 	zone = id
 	echo = distorted
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
 	obstacles.clear()
+	focused_hotspot=""
 	interactables.clear()
 	dimensions = {"town":Vector2(1792,1280),"library":Vector2(960,720),"forest":Vector2(1792,1344)}.get(id,Vector2(640,480))
 	paths=[]
@@ -61,6 +68,7 @@ func build(id: String, distorted: bool):
 		# A walkable loop keeps the central well out of the only approach road.
 		var corners=[Vector2(560,380),Vector2(640,380),Vector2(640,460),Vector2(560,460)]
 		for i in range(4): paths.append([corners[i],corners[(i+1)%4],18.0])
+	Landmarks.add_paths(self)
 	terrain = TileMapLayer.new()
 	terrain.tile_set = make_tiles()
 	add_child(terrain)
@@ -76,14 +84,17 @@ func build(id: String, distorted: bool):
 	detail.zone=id
 	detail.distorted=echo
 	detail.dimensions=dimensions
-	add_child(detail)
 	if not paths.is_empty():
 		var borders=load("res://after_silence/world/path_skin.gd").new()
 		borders.world=self
 		borders.z_index=-2
 		add_child(borders)
+	add_child(detail)
 	detail.z_index=-2
 	terrain.z_index=-3
+	terrain_collision=StaticBody2D.new()
+	terrain_collision.name="TerrainCollision"
+	add_child(terrain_collision)
 	boundary(Rect2(0,0,dimensions.x,24))
 	boundary(Rect2(0,dimensions.y-24,dimensions.x,24))
 	boundary(Rect2(0,0,24,dimensions.y))
@@ -94,6 +105,7 @@ func build(id: String, distorted: bool):
 	elif id in ["orchard","harbor"]: build_district()
 	elif id=="shop": preload("res://after_silence/world/village_shop.gd").build(self)
 	else: Homes.build(self)
+	Landmarks.build(self)
 	preload("res://after_silence/world/landscape.gd").build(self)
 	decorate()
 	if id in ["town","orchard","harbor"]:
@@ -110,6 +122,7 @@ func build(id: String, distorted: bool):
 		mark_obstacle(r)
 func mark_obstacle(r: Rect2):
 	if grid==null: return
+	geometry_revision+=1
 	var a=Vector2i(r.position/16)
 	var b=Vector2i(r.end/16)
 	for y in range(maxi(0,a.y-1),mini(int(dimensions.y/16),b.y+2)):
@@ -123,7 +136,7 @@ func make_tiles() -> TileSet:
 	tiles.tile_size=Vector2i(16,16)
 	for i in range(3):
 		var source=TileSetAtlasSource.new()
-		source.texture=preload("res://after_silence/world/surface_textures.gd").atlas(["grass","dirt","floor"][i])
+		source.texture=preload("res://after_silence/world/surface_textures.gd").atlas(["grass","dirt","floor"][i],zone)
 		source.texture_region_size=Vector2i(16,16)
 		for y in range(20):
 			for x in range(20): source.create_tile(Vector2i(x,y))
@@ -137,14 +150,12 @@ func build_district():
 	prop("well",Vector2(600,420))
 func boundary(r: Rect2):
 	obstacles.append(r)
-	var body=StaticBody2D.new()
-	body.position=r.get_center()
 	var shape=CollisionShape2D.new()
+	shape.position=r.get_center()
 	var rect=RectangleShape2D.new()
 	rect.size=r.size
 	shape.shape=rect
-	body.add_child(shape)
-	add_child(body)
+	terrain_collision.add_child(shape)
 	mark_obstacle(r)
 func prop(kind: String, p: Vector2, variant: int=0):
 	if story_mode and kind in ["lamp","street_lamp","trace"]: kind="plant"
@@ -155,7 +166,8 @@ func prop(kind: String, p: Vector2, variant: int=0):
 	node.kind=kind
 	node.position=p
 	node.variant=variant
-	if Art.apply(node,kind,variant):
+	if kind=="flowers": node.size=Vector2(24,18)
+	elif Art.apply(node,kind,variant):
 		if kind=="tree" and echo: node.tint=Color("9fa5bc")
 	elif PROP_ART.has(kind):
 		node.tex=load("res://after_silence/assets/props091/"+PROP_ART[kind]+".png")
@@ -170,7 +182,7 @@ func prop(kind: String, p: Vector2, variant: int=0):
 	elif kind=="library":
 		node.tex=load("res://after_silence/assets/pechatai/world/house-2.png")
 		node.size=Vector2(176,170)
-	elif kind in ["flowers","rock","well","stone"]:
+	elif kind in ["rock","well","stone"]:
 		var file="sanctuary" if kind=="well" else "rock" if kind=="stone" else kind
 		node.tex=load("res://after_silence/assets/pechatai/world/"+file+".png")
 		node.size=Vector2(60,40) if kind in ["rock","stone"] else Vector2(100,70) if kind=="well" else Vector2(40,20)
@@ -211,11 +223,16 @@ func add_light(p: Vector2):
 	light.energy=.7 if echo else .35
 	add_child(light)
 func decorate():
-	if zone!="town" and zone!="forest": return
-	for y in range(80,int(dimensions.y)-50,64):
-		for x in range(150,int(dimensions.x)-100,92):
-			var p=Vector2(x+posmod(y,31),y+posmod(x,17))
-			if not on_path(p,18) and preload("res://after_silence/world/watercourse.gd").depth(zone,p)<-22 and posmod(x+y,11)<2: prop("flowers",p)
+	if zone not in ["town","forest","orchard","harbor"]: return
+	var water=preload("res://after_silence/world/watercourse.gd")
+	for y in range(86,int(dimensions.y)-48,67):
+		for x in range(110,int(dimensions.x)-85,91):
+			var seed_value=posmod(x*19349663^y*73856093,997)
+			var p=Vector2(x+seed_value%39-19,y+(seed_value/13)%37-18)
+			if seed_value%10>2 or on_path(p,15) or water.depth(zone,p)>-24: continue
+			if obstacles.any(func(bounds):return bounds.grow(22).has_point(p)): continue
+			if Landmarks.FEATURES.get(zone,[]).any(func(feature):return feature[1].grow(13).has_point(p)): continue
+			prop("flowers",p,seed_value%12)
 	if zone=="town":
 		prop("library",Vector2(600,145))
 		boundary(Rect2(526,72,148,73))
@@ -228,6 +245,16 @@ func spot(id: String,p: Vector2,kind: String="note"):
 	if kind!="none":
 		var node=prop(kind,p)
 		node.set_meta("hotspot_id",id)
+func focus_hotspot(id: String):
+	if id==focused_hotspot: return
+	focused_hotspot=id
+	for prop in sorter.get_children():
+		if not prop.has_meta("hotspot_id"): continue
+		var focused=prop.get_meta("hotspot_id")==id
+		if prop.focused==focused: continue
+		prop.focused=focused
+		prop.queue_redraw()
+
 func build_town():
 	for entry in Homes.exteriors("town",echo):
 		if entry[2] not in Homes.IDS: continue

@@ -6,6 +6,7 @@ var contact: Image
 var shot_index=0
 const ART=preload("res://after_silence/core/art_catalog.gd")
 const PROP=preload("res://after_silence/world/prop.gd")
+const FURNISHING=preload("res://after_silence/world/home_furnishing.gd")
 func check(value: bool,label: String):
 	checks+=1
 	if not value: failures+=1;push_error(label)
@@ -72,8 +73,15 @@ func run():
 		var rugs=0
 		var lamp_count=0
 		for prop in game.world.sorter.get_children():
+			if prop is FURNISHING:
+				check(not prop.kind.is_empty() and prop.extent.x>0 and prop.extent.y>0,zone+" designed furniture "+prop.kind)
+				if prop.kind=="rug": rugs+=1
+				continue
 			if not prop is PROP: continue
-			check(prop.tex!=null,zone+" no placeholder "+prop.kind)
+			if prop.kind=="flowers":
+				check(prop.size==Vector2(24,18) and prop.variant in range(12),zone+" authored pixel flowers")
+			else:
+				check(prop.tex!=null,zone+" no placeholder "+prop.kind)
 			check(prop.texture_filter==CanvasItem.TEXTURE_FILTER_NEAREST,zone+" nearest "+prop.kind)
 			if prop.kind=="rug": rugs+=1
 			if prop.kind=="bridge": bridges+=1
