@@ -36,3 +36,5 @@ after_silence/tools/ppae/node_modules/
 baseline-*.log
 after_silence/build/
 
+
+/tools/knowledge_vault/__pycache__/
