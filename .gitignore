@@ -24,6 +24,7 @@ data_*/
 .gut_editor_config.json
 .gut_editor_shortcuts.cfg
 *.import
+!after_silence/assets/remaster0290/menu_cottage.png.import
 export/linux/bundle.tar.gz
 export/linux/bundle/littleAdventure.pck
 export/linux/bundle/littleAdventure.x86_64
@@ -31,6 +32,9 @@ export/linux/snap/LittleAdventure.pck
 export/linux/snap/LittleAdventure.x86_64
 
 work/
+after_silence/tools/ppae/node_modules/
 baseline-*.log
 after_silence/build/
 
+
+/tools/knowledge_vault/__pycache__/

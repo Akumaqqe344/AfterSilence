@@ -1,6 +1,13 @@
 extends Node
 
 const RATE=16000
+var music: AudioStreamPlayer
+var music_level = .45
+var duck_score = false
+var effects_level = 1.0
+var music_gain = 0.0
+var music_key = ""
+var score_cache: Dictionary = {}
 var ambient: AudioStreamPlayer
 var cue: AudioStreamPlayer
 var world_voice: AudioStreamPlayer2D
@@ -14,6 +21,8 @@ var ambient_key=""
 var sequence=0
 
 func _ready():
+	music = AudioStreamPlayer.new()
+	add_child(music)
 	ambient=AudioStreamPlayer.new()
 	cue=AudioStreamPlayer.new()
 	world_voice=AudioStreamPlayer2D.new()
@@ -29,12 +38,17 @@ func set_scene(echo: bool,volume: float,location: String="town"):
 	echo_mode=echo
 	master_volume=clampf(volume,0.0,1.0)
 
+func set_mix(music_volume: float, effects_volume: float):
+	music_level = clampf(music_volume,0.0,1.0)
+	effects_level = clampf(effects_volume,0.0,1.0)
+
 func set_listening(active: bool):
 	listening=active
 
 func _process(dt: float):
-	var wanted=zone+str(echo_mode) if listening and master_volume>0 else ""
-	var target=master_volume*.16 if ambient_key==wanted and not wanted.is_empty() else 0.0
+	_update_score(dt)
+	var wanted=zone+str(echo_mode) if listening and master_volume>0 and effects_level>0 else ""
+	var target=master_volume*effects_level*.16 if ambient_key==wanted and not wanted.is_empty() else 0.0
 	ambient_gain=move_toward(ambient_gain,target,dt*.23)
 	ambient.volume_db=linear_to_db(maxf(ambient_gain,.0001))
 	if target==0.0 and ambient_gain==0.0 and ambient_key!=wanted:
@@ -42,12 +56,39 @@ func _process(dt: float):
 		ambient.stream=null
 		ambient_key=wanted
 		if not wanted.is_empty():
-			var family="surf" if zone=="harbor" else "room" if zone.begins_with("home_") or zone in ["shop","library"] else "wind"
+			var family="surf" if zone in ["harbor","tide_station"] else "room" if zone.begins_with("home_") or zone in ["shop","library","closed_post","records_annex","signal_cellar","listening_archive","pump_chamber"] else "wind"
 			ambient.stream=_sample(family,1 if echo_mode else 0)
 			ambient.play()
 
+func _update_score(dt: float):
+	var family = "inside" if zone in ["library","records_annex","listening_archive","closed_post","signal_cellar","pump_chamber"] or zone.begins_with("home_") else "shore" if zone in ["harbor","tide_station","forest","bracken_clearing"] else "courtyard"
+	var wanted = family if listening and master_volume > 0 and music_level > 0 else ""
+	var target = master_volume * music_level * (.12 if duck_score else .32) if wanted == music_key and not wanted.is_empty() else 0.0
+	music_gain = move_toward(music_gain,target,dt*.20)
+	music.volume_db = linear_to_db(maxf(.0001,music_gain))
+	if music_gain!=0.0 or wanted==music_key: return
+	music.stop()
+	music.stream = null
+	music_key = wanted
+	if wanted.is_empty(): return
+	if not score_cache.has(wanted):
+		var track: AudioStreamWAV = load("res://after_silence/assets/score090/"+wanted+".wav").duplicate()
+		track.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		track.loop_end = int(track.get_length()*track.mix_rate)
+		score_cache[wanted] = track
+	music.stream = score_cache[wanted]
+	music.play()
+
 func ping(volume: float):
 	_play_ui("click",volume*.20)
+
+func trial_move(mode: String, accepted: bool, volume: float):
+	const CUES = {
+		"letter_press":"paper", "footprints":"paper", "balance":"ratchet", "signal_grid":"chime",
+		"railway":"ratchet", "echo_tuning":"chime", "tubes":"drop", "pairs":"paper",
+		"seeds":"drop", "lights":"chime", "shelves":"ratchet", "reality":"chime"
+	}
+	_play_ui(CUES.get(mode,"click") if accepted else "blocked", volume * .23)
 
 func touch(at: Vector2,volume: float):
 	_play_world("touch",at,volume*.18)
@@ -64,13 +105,38 @@ func door(at: Vector2,volume: float):
 func scene_cue(kind: String,volume: float):
 	_play_ui("danger" if kind=="boss" else "memory",volume*.24)
 
+func case_signal(tones: Array,volume: float):
+	volume *= effects_level
+	if volume<=0 or tones.is_empty(): return
+	var key="case_signal:"+str(tones)
+	if not cache.has(key):
+		var stream=AudioStreamWAV.new()
+		stream.format=AudioStreamWAV.FORMAT_16_BITS
+		stream.mix_rate=RATE
+		var count=roundi(RATE*.32)
+		var data=PackedByteArray()
+		data.resize(count*tones.size()*2)
+		for note in tones.size():
+			for sample in count:
+				var t=float(sample)/RATE
+				var envelope=clampf(minf(t*75.0,(.23-t)*23.0),0.0,1.0)
+				var value=sin(TAU*float(tones[note])*t)*envelope*.28
+				data.encode_s16((note*count+sample)*2,roundi(value*32760))
+		stream.data=data
+		cache[key]=stream
+	cue.stream=cache[key]
+	cue.volume_db=linear_to_db(volume*.34)
+	cue.play()
+
 func _play_ui(kind: String,gain: float):
+	gain *= effects_level
 	if gain<=0: return
 	cue.stream=_sample(kind,0)
 	cue.volume_db=linear_to_db(gain)
 	cue.play()
 
 func _play_world(kind: String,at: Vector2,gain: float):
+	gain *= effects_level
 	if gain<=0: return
 	sequence=(sequence+1)%3
 	world_voice.position=at
@@ -113,6 +179,11 @@ func _sample(kind: String,variant: int) -> AudioStreamWAV:
 			var envelope=minf(1.0,time/.006)*pow(1.0-time/length,2.6)
 			match kind:
 				"click": value=sin(TAU*528.0*time)*.23+sin(TAU*792.0*time)*.06
+				"paper": value=noise * .12 + low * .46
+				"ratchet": value=low * .31 + sin(TAU * 162.0 * time) * .28
+				"chime": value=sin(TAU * 659.0 * time) * .20 + sin(TAU * 980.0 * time) * .08
+				"drop": value=sin(TAU * (455.0 + time * 1150.0) * time) * .30
+				"blocked": value=sin(TAU * (196.0 - time * 200.0) * time) * .17 + low * .15
 				"touch": value=low*.32+sin(TAU*324.0*pitch*time)*.15
 				"wood": value=low*.37+sin(TAU*118.0*pitch*time)*.31
 				"stone": value=noise*.25+low*.45+sin(TAU*186.0*pitch*time)*.11
@@ -130,6 +201,10 @@ func _sample(kind: String,variant: int) -> AudioStreamWAV:
 	return stream
 
 func shutdown():
+	if is_instance_valid(music): music.stop();music.stream=null
+	music_gain=0.0
+	music_key=""
+	score_cache.clear()
 	if is_instance_valid(ambient): ambient.stop();ambient.stream=null
 	if is_instance_valid(cue): cue.stop();cue.stream=null
 	if is_instance_valid(world_voice): world_voice.stop();world_voice.stream=null

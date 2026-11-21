@@ -21,11 +21,14 @@ var reflected=false
 var tile=ENTRY
 var order: Array
 var scene_number: int
+var variant: String
+const FIELD_VARIANT = "field_notes"
 
-func _init(id: String):
+func _init(id: String, configuration: String = ""):
 	scene_id=id
-	order=ORDERS[id]
-	scene_number=2 # The existing Sonya layout and checkpoints use this offset.
+	variant=configuration
+	order=[1, 0, 2, 1] if variant == FIELD_VARIANT else ORDERS[id]
+	scene_number=1 if variant == FIELD_VARIANT else 2
 
 func walkable(point: Vector2i) -> bool:
 	if not Rect2i(0,0,9,7).has_point(point): return false
@@ -90,7 +93,7 @@ func restore(data: Variant) -> bool:
 	var cell=data.get("tile")
 	if not _whole(saved_stage,order.size()) or not cell is Array or cell.size()!=2: return false
 	if not _whole(cell[0],9) or not _whole(cell[1],7): return false
-	var candidate=get_script().new(scene_id)
+	var candidate=get_script().new(scene_id,variant)
 	candidate.stage=int(saved_stage);candidate.reflected=data.reflected
 	var point=Vector2i(cell[0],cell[1])
 	if not candidate.walkable(point) or point in PORTALS or (point!=ENTRY and candidate.route(point).is_empty()): return false

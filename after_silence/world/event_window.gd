@@ -4,6 +4,7 @@ const RealityPanel=preload("res://after_silence/ui/reality_maze_panel.gd")
 const TrialPanel=preload("res://after_silence/ui/journey_trial_panel.gd")
 const StageArt=preload("res://after_silence/ui/trial_stage_art.gd")
 const Ambience=preload("res://after_silence/ui/board_ambience.gd")
+const TrialSeal=preload("res://after_silence/scenes/trial_seal.tscn")
 var game
 var frame: Panel
 var title: Label
@@ -20,13 +21,15 @@ var decoration: Control
 var entrance: Tween
 var pause_motion: Tween
 var bar_motion: Tween
+var displayed
+var side_id: String=""
 
 func _ready():
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	z_index=30;mouse_filter=Control.MOUSE_FILTER_STOP
 	var shade=ColorRect.new();shade.color=Color("131e1aed");shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(shade)
 	frame=Panel.new();frame.position=Vector2(16,12);frame.size=Vector2(608,336)
-	frame.add_theme_stylebox_override("panel",game.ComfortTheme.panel(Color("222f29"),true));add_child(frame)
+	frame.add_theme_stylebox_override("panel",game.PixelArt.panel("panel",6));add_child(frame)
 	decoration=Ambience.new();decoration.game=game
 	decoration.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);frame.add_child(decoration)
 	title=Label.new();title.position=Vector2(16,8);title.add_theme_font_override("font",game.ComfortTheme.HEADING);title.add_theme_font_size_override("font_size",17);title.modulate=game.ComfortTheme.PEACH;frame.add_child(title)
@@ -39,6 +42,7 @@ func _ready():
 	progress_label=Label.new();progress_label.position=Vector2(280,296);progress_label.add_theme_font_size_override("font_size",11);frame.add_child(progress_label)
 	var pause=Button.new();pause.text=game.t("Пауза · Esc","Pause · Esc");pause.position=Vector2(474,295);pause.size=Vector2(118,26);pause.add_theme_font_size_override("font_size",11);pause.pressed.connect(toggle_pause);frame.add_child(pause)
 	game.ComfortMotion.wire_button(pause,game.comfort)
+	StageArt.button(pause)
 	controls_hint=Label.new();controls_hint.position=Vector2(16,319);controls_hint.add_theme_font_size_override("font_size",10)
 	frame.add_child(controls_hint)
 	pause_shade=ColorRect.new();pause_shade.color=Color(0.08,0.09,0.13,.72);pause_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(pause_shade);pause_shade.hide()
@@ -46,6 +50,7 @@ func _ready():
 	for entry in [["Продолжить","Resume",resume],["Повторить","Retry",retry],["Сохранить и выйти","Save and leave",leave]]:
 		var button=Button.new();button.text=game.t(entry[0],entry[1]);button.position=Vector2(16,16+pause_panel.get_child_count()*50);button.size=Vector2(308,42);button.pressed.connect(entry[2]);pause_panel.add_child(button)
 		game.ComfortMotion.wire_button(button,game.comfort)
+		StageArt.button(button)
 	pause_panel.hide();hide()
 
 func open():
@@ -54,18 +59,28 @@ func open():
 	var activity=director.activity
 	if activity==null: return
 	var event=director.events[director.index]
+	var portrait=preload("res://after_silence/core/npc_appearance.gd").portrait(director.index)
+	_present(activity,director.pair(event.title),director.pair(event.context),portrait,director.npc,director.success)
+
+func open_investigation(id: String, activity, heading: String, description: String, success: Callable) -> void:
+	if active: return
+	side_id=id
+	_present(activity,heading,description,null,null,success)
+
+func _present(activity, heading: String, description: String, portrait: Texture2D, resident, success: Callable) -> void:
+	displayed=activity
 	active=true;pause_panel.hide();pause_shade.hide();show()
 	decoration.begin(StageArt.accent(activity.mode))
 	if is_instance_valid(entrance): entrance.kill()
 	entrance=game.ComfortMotion.enter(frame,game.comfort)
-	title.text=director.pair(event.title)
-	goal.text=director.pair(event.context)
-	event_portrait.texture=preload("res://after_silence/core/npc_appearance.gd").portrait(director.index)
+	title.text=heading
+	goal.text=description
+	event_portrait.texture=portrait
 	progress.max_value=activity.goal()
 	progress.accent=StageArt.accent(activity.mode).lerp(game.ComfortTheme.PEACH,.35)
 	if activity.reality!=null:
 		puzzle_panel=RealityPanel.new()
-		puzzle_panel.model=activity.reality;puzzle_panel.resident=director.npc
+		puzzle_panel.model=activity.reality;puzzle_panel.resident=resident
 		controls_hint.text=game.t("WASD / мышь · Esc — пауза","WASD / mouse · Esc — pause")
 	elif activity.trial!=null:
 		puzzle_panel=TrialPanel.new()
@@ -77,14 +92,14 @@ func open():
 		controls_hint.text=game.t("Мышь / Tab + Enter · Esc — пауза","Mouse / Tab + Enter · Esc — pause")
 	puzzle_panel.game=game
 	puzzle_panel.position=Vector2(16,76);puzzle_panel.size=Vector2(576,216)
-	puzzle_panel.solved.connect(director.success)
+	puzzle_panel.solved.connect(success)
 	puzzle_panel.changed.connect(_changed)
 	frame.add_child(puzzle_panel)
 	_refresh()
 	game.objective.hide();game.hint.hide();game.toast.hide()
 
 func _refresh(animate: bool=false):
-	var activity=game.events_controller.activity
+	var activity=displayed
 	if is_instance_valid(bar_motion): bar_motion.kill()
 	if animate and not game.comfort.reduce_motion:
 		bar_motion=create_tween()
@@ -94,11 +109,21 @@ func _refresh(animate: bool=false):
 
 func _changed():
 	_refresh(true)
+	if not side_id.is_empty():
+		game.state.case_trials[side_id]=displayed.trial.capture()
 	game._save(false)
+
+func present_victory():
+	var emblem=TrialSeal.instantiate()
+	emblem.animate=not game.comfort.reduce_motion
+	emblem.position=Vector2(game.card.size.x-35,35)
+	game.card.add_child(emblem)
 
 func close():
 	if not active: return
 	active=false
+	side_id=""
+	displayed=null
 	decoration.set_process(false)
 	for animation in [entrance,pause_motion,bar_motion]:
 		if is_instance_valid(animation): animation.kill()
@@ -122,10 +147,16 @@ func resume():
 	if is_instance_valid(puzzle_panel): puzzle_panel.focus_board()
 
 func retry():
-	resume();close();game.events_controller.start_activity()
+	var investigation=side_id
+	resume();close()
+	if investigation.is_empty(): game.events_controller.start_activity()
+	else: game.investigations.open_trial(investigation,true)
 
 func leave():
-	resume();close();game.events_controller.suspend()
+	var investigation=side_id
+	resume();close()
+	if investigation.is_empty(): game.events_controller.suspend()
+	else: game._save(false)
 
 func _input(event):
 	if active and event is InputEventKey and event.pressed and not event.echo and (event.physical_keycode==KEY_ESCAPE or event.keycode==KEY_ESCAPE):

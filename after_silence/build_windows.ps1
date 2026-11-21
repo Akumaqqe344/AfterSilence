@@ -28,7 +28,6 @@ if (-not $SkipTests) {
     Invoke-CheckedGodot 'work/visual-fix-test.log' @('--headless','--path','.','--script','after_silence/tests/run_visual_fix091.gd','--','--qa')
     Invoke-CheckedGodot 'work/art-audit-test.log' @('--headless','--path','.','--script','after_silence/tests/run_art_audit.gd','--','--qa')
 }
-Copy-Item -LiteralPath after_silence/export_windows.cfg -Destination export_presets.cfg -Force
 Invoke-CheckedGodot 'work/export-windows.log' @('--headless','--path','.','--export-release','After Silence Windows','after_silence/build/AfterSilence.exe')
 Get-Item -LiteralPath after_silence/build/AfterSilence.exe | Select-Object FullName,Length
 $binaryHash=Get-FileHash -Algorithm SHA256 -LiteralPath after_silence/build/AfterSilence.exe

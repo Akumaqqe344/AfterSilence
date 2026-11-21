@@ -1,5 +1,5 @@
 extends CharacterBody2D
-const CLOAK=preload("res://after_silence/assets/remaster0290/watcher.png")
+const Art=preload("res://after_silence/core/ppae_art.gd")
 signal caught
 var world
 var player
@@ -62,4 +62,5 @@ func _draw():
 	var moving=velocity.length_squared()>25.0
 	var frame=(int(age*(8 if behavior=="chase" else 5))%4) if moving and is_instance_valid(player) and (player.visual_comfort==null or not player.visual_comfort.reduce_motion) else 0
 	draw_rect(Rect2(-10,-4,20,5),Color("2227395a"))
-	draw_texture_rect_region(CLOAK,Rect2(-14,-41,28,42),Rect2(frame*28,0,28,42))
+	var facing: String="S" if absf(direction.y)>=absf(direction.x) and direction.y>=0 else "N" if absf(direction.y)>=absf(direction.x) else "E" if direction.x>=0 else "W"
+	Art.paint_actor(self,"watcher",("walk_" if moving else "idle_")+facing,frame,Vector2.ZERO,1.03)

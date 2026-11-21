@@ -13,25 +13,36 @@ const LIGHTS=[
 	[0,2,1,2,2,1,0,1,2,1,2,0],
 ]
 const TUBES=[[0,1,2],[1,2,0],[2,0,1],[],[]]
+const FIELD_VARIANT = "field_notes"
+const FIELD_PAIRS = [3, 1, 5, 0, 3, 4, 2, 5, 0, 2, 4, 1]
+const FIELD_SHELVES = [3, 0, 2, 1, 1, 2, 1, 3, 0, 2, 3, 0]
+const FIELD_SEEDS = [2, 0, 1, 2, 1, 0]
 
 var mode: String
 var board: Array
 var history: Array=[]
 var round_index=0
+var variant: String
+var seeds: Array = SEEDS
+var light_boards: Array = LIGHTS
 
-func _init(kind: String) -> void:
+func _init(kind: String, configuration: String = "") -> void:
 	mode=kind
+	variant=configuration
+	if variant == FIELD_VARIANT:
+		seeds = FIELD_SEEDS
+		light_boards = [LIGHTS[2], LIGHTS[0], LIGHTS[1], [1, 2, 0, 1, 0, 0, 2, 2, 1, 1, 0, 2]]
 	reset()
 
 func reset() -> void:
 	history.clear()
 	round_index=0
 	match mode:
-		"tubes": board=TUBES.duplicate(true)
-		"pairs": board=PAIRS.duplicate()
-		"shelves": board=SHELVES.duplicate()
+		"tubes": board = [[1, 0, 1], [2, 1, 0], [0, 2, 2], [], []] if variant == FIELD_VARIANT else TUBES.duplicate(true)
+		"pairs": board=(FIELD_PAIRS if variant == FIELD_VARIANT else PAIRS).duplicate()
+		"shelves": board=(FIELD_SHELVES if variant == FIELD_VARIANT else SHELVES).duplicate()
 		"seeds": board=[0,1,2,-1,-1,-1,-1,-1,-1]
-		"lights": board=LIGHTS[0].duplicate()
+		"lights": board=light_boards[0].duplicate()
 
 func color_at(i: int) -> int:
 	if mode=="tubes": return -1 if board[i].is_empty() else board[i].back()
@@ -63,12 +74,12 @@ func _apply(move: Array) -> bool:
 			var plot: int=move.back()
 			if plot<3: return false
 			if move.size()==1 and board[plot] in [0,1,2]: board[plot]+=3
-			elif move.size()==2 and board[plot]==-1 and move[0]==SEEDS[plot-3]: board[plot]=move[0]
+			elif move.size()==2 and board[plot]==-1 and move[0]==seeds[plot-3]: board[plot]=move[0]
 			else: return false
 		"lights":
 			if move.size()!=2 or not _lights_match(move[0],move[1]): return false
 			round_index+=1
-			if round_index<LIGHTS.size(): board=LIGHTS[round_index].duplicate()
+			if round_index<light_boards.size(): board=light_boards[round_index].duplicate()
 		_: return false
 	return true
 
@@ -86,7 +97,7 @@ func _lights_match(a: int,b: int) -> bool:
 	return false
 
 func goal() -> int:
-	return {"tubes":3,"pairs":6,"seeds":12,"lights":3,"shelves":4}[mode]
+	return {"tubes":3,"pairs":6,"seeds":12,"lights":light_boards.size(),"shelves":4}[mode]
 
 func progress() -> int:
 	match mode:
@@ -108,7 +119,7 @@ func checkpoint() -> Array:
 
 func restore(raw: Variant) -> bool:
 	if not raw is Array or raw.size()>MOVE_LIMIT: return false
-	var candidate=get_script().new(mode)
+	var candidate=get_script().new(mode,variant)
 	for move in raw:
 		if not move is Array or move.is_empty() or move.size()>3: return false
 		var indices: Array=[]
@@ -128,7 +139,7 @@ func hint() -> Array:
 		"tubes": return _tube_hint()
 		"seeds":
 			for i in range(3,board.size()):
-				if board[i]==-1: return [SEEDS[i-3],i]
+				if board[i]==-1: return [seeds[i-3],i]
 				if board[i]<3: return [i]
 		"lights":
 			for a in range(board.size()):

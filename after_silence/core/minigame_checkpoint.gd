@@ -2,11 +2,12 @@ extends RefCounted
 const NUMBERS={"index":[0,11],"elapsed":[0,100000],"remaining":[0,60],"health":[1,3],"rescued":[0,20],"switch_round":[0,20],"beat":[0,8],"beat_age":[0,10],"mask":[0,15],"wave":[0,10000],"lane":[0,2],"guard_age":[0,2],"reveal_time":[0,10]}
 static func valid(data: Dictionary) -> bool:
 	if data.is_empty(): return true
-	if not data.get("phase","") in ["play","decision","intro"]: return false
+	if not data.get("phase","") in ["play","decision","intro","fail"]: return false
 	for key in NUMBERS:
 		var value=data.get(key)
 		if not (value is float or value is int) or not is_finite(float(value)): return false
-		if value<NUMBERS[key][0] or value>NUMBERS[key][1]: return false
+		var lower: int=0 if key=="health" and data.phase=="fail" else NUMBERS[key][0]
+		if value<lower or value>NUMBERS[key][1]: return false
 	for key in ["player_pos","escort_pos"]:
 		var v=data.get(key)
 		if not v is Array or v.size()!=2: return false
@@ -33,6 +34,7 @@ static func valid(data: Dictionary) -> bool:
 static func capture(rift) -> Dictionary:
 	var data={"phase":rift.before_pause if rift.phase=="pause" else rift.phase}
 	for key in NUMBERS: data[key]=rift.get(key)
+	if data.phase=="fail": data.remaining=maxf(0,data.remaining)
 	for key in ["board","picked","matched"]: data[key]=rift.get(key).duplicate()
 	for key in ["player_pos","escort_pos"]:
 		var p=rift.get(key)

@@ -8,6 +8,8 @@ var results: Array=[]
 var shots: Array=[]
 var seconds=0.0
 var tag=""
+var timing: Dictionary={}
+var optional_timing: Dictionary={}
 var nav_path=PackedVector2Array()
 var nav_target=Vector2.INF
 var nav_zone=""
@@ -102,11 +104,20 @@ func mouse_at(position: Vector2):
 		game.get_viewport().push_input(event,true)
 	await get_tree().process_frame
 func maze_key_path(model, target: Vector2i):
-	var path: Array=model.route(target)
-	for tile in path:
-		var delta: Vector2i=tile-model.tile
+	var previous_stage: int=model.stage
+	var was_reflected: bool=model.reflected
+	for attempt in range(64):
+		if model.stage!=previous_stage or model.reflected!=was_reflected: return
+		var path: Array=model.route(target)
+		if path.is_empty(): return
+		var start: Vector2i=model.tile
+		var delta: Vector2i=path.front()-start
 		var keycode=KEY_RIGHT if delta.x>0 else KEY_LEFT if delta.x<0 else KEY_DOWN if delta.y>0 else KEY_UP
 		await tap(keycode)
+		var elapsed:=0.0
+		while model.tile==start and model.stage==previous_stage and model.reflected==was_reflected and elapsed<.44:
+			await get_tree().physics_frame
+			elapsed+=dt()
 
 func play_reality(index: int,id: String) -> bool:
 	var director=game.events_controller
@@ -216,23 +227,131 @@ func play_event(index: int) -> bool:
 	if game.buttons.has("continue") and game.modal: await choose("continue")
 	check(game.state.flag("event_done_"+event.id),"completed "+event.id)
 	return true
+
+func find_case(id: String) -> Dictionary:
+	for spot in game.world.interactables:
+		if spot.id=="case_"+id: return spot
+	return {}
+
+func play_case(entry: Dictionary, ending: String) -> bool:
+	var director=game.investigations
+	for attempt in range(12):
+		if director.done(entry.id): return true
+		var step: Dictionary=director.next_step(entry)
+		if step.is_empty(): return false
+		if not await travel(step.zone):
+			check(false,"case travel "+step.id+" to "+step.zone)
+			return false
+		var clue=find_case(step.id)
+		if clue.is_empty() or not await walk(clue.position,8):
+			check(false,"case approach "+step.id+" in "+step.zone)
+			return false
+		await tap(KEY_E)
+		match step.kind:
+			"door":
+				while game.transitions.busy: await get_tree().physics_frame
+				check(game.state.zone==step.room,"case room reached "+step.room)
+				if game.state.zone!=step.room: return false
+				await shot(step.room)
+			"question":
+				if step.id=="arrival_report":
+					await choose("answer_0")
+					check(not director.seen(step.id),"wrong deduction leaves progress intact")
+				await choose("answer_"+str(int(step.correct)))
+			"survey":
+				await choose("look_"+str((int(step.correct)+1)%4))
+				check(not game.buttons.has("aligned"),"wrong viewpoint cannot record alignment")
+				check(game.buttons["look_0"].get_parent() is HBoxContainer,"all viewpoints share a visible row")
+				await choose("look_"+str(int(step.correct)))
+				await get_tree().create_timer(.36).timeout
+				await shot(step.id)
+				await choose("aligned")
+			"sequence":
+				if step.id=="sluice_valves":
+					for digit in [0,1,2]: await choose("order_"+str(digit))
+					check(not director.seen(step.id),"wrong valve sequence can be retried")
+				for digit in step.order: await choose("order_"+str(int(digit)))
+			"device":
+				var panel = game.column.get_child(2)
+				await shot(step.id+"-before")
+				await button(panel.buttons[3])
+				check(not director.seen(step.id),"wrong mechanism setting can be retried")
+				var moves = [0,1,2,3] if step.device=="winch" else [0,0,1,2,2,3]
+				for action in moves:
+					await button(panel.buttons[action])
+				if not panel.finished and not director.seen(step.id):
+					print("DEVICE BLOCK: ", step.id, " values=", panel.dials, " feedback=", panel.caption.text)
+				for frame in range(180):
+					if director.seen(step.id): break
+					await get_tree().process_frame
+				if step.device=="winch": await shot("landing-open")
+			"witness":
+				check(game.buttons.has("roll_rendezvous")==(ending=="together"),"joint archive account unlocks public testimony")
+				check(game.buttons.has("roll_relay")==(ending=="together"),"receiver and pier choices unlock remote testimony")
+				var option = "roll_rendezvous" if ending=="together" else "roll_private"
+				await shot("roll-call-choices")
+				await choose(option)
+				check(director.decided(option),"roll-call decision retained")
+			"trial":
+				check(game.event_window.active and game.event_window.side_id==step.id,"optional board opens from its hotspot "+step.id)
+				if not game.event_window.active: return false
+				var board=game.event_window.displayed.trial
+				for turn in range(board.MOVE_LIMIT):
+					if board.won(): break
+					var next: int=board.hint()
+					if next<0: break
+					await button(game.event_window.puzzle_panel.action_buttons[next])
+				check(board.won(),"optional variant solved "+step.id)
+			_:
+				if step.kind=="listen": await choose("listen")
+				await choose("remember")
+		if not director.seen(step.id):
+			check(false,"case checkpoint retains "+step.id)
+			return false
+		if not entry.branches.is_empty():
+			var branch: Dictionary=entry.branches[0 if ending=="together" else 1]
+			if game.buttons.has(branch.id) and game.modal:
+				await choose(branch.id)
+				check(director.decided(branch.id),"choice persists "+branch.id)
+		if game.modal and game.buttons.has("close"): await choose("close")
+	check(false,"case did not finish "+entry.id)
+	return false
+
 func campaign(ending: String):
 	tag=ending
+	var started=Time.get_ticks_msec()
 	await choose("events_new")
 	if game.buttons.has("restart"): await choose("restart")
+	if game.departing_home: await get_tree().create_timer(1.3).timeout
 	check(not game.in_menu and game.state.flag("event_campaign"),"clean new game")
 	var ok=true
 	for i in range(game.events_controller.events.size()):
 		print("PLAYTHROUGH EVENT: ",tag," ",i+1)
-		if not await play_event(i): ok=false;break
+		var investigation: Dictionary=game.investigations.active_chapter()
+		while not investigation.is_empty():
+			print("PLAYTHROUGH CASE: ",tag," ",investigation.id)
+			if not await play_case(investigation,ending): ok=false;break
+			investigation=game.investigations.active_chapter()
+		if not ok or not await play_event(i): ok=false;break
 	check(ok and game.state.flag("events_finished") and game.state.flag("events_final_"+ending) and game.modal,"final screen")
 	results.append({"campaign":"events","ending":ending,"passed":ok and game.state.flag("events_finished"),"flags":game.state.flags.duplicate(),"history":game.state.history.size()})
+	timing[ending]=float(Time.get_ticks_msec()-started)/1000.0
 	await shot("ending")
+	if ok and "--side-cases" in OS.get_cmdline_user_args() and game.buttons.has("walk"):
+		var optional_started=Time.get_ticks_msec()
+		await choose("walk")
+		for definition in game.investigations.Catalog.data.sides:
+			var side: Dictionary = game.investigations.entries[definition.id]
+			if not game.investigations.available(side): continue
+			print("PLAYTHROUGH SIDE CASE: ",side.id)
+			if not await play_case(side,ending): return false
+		optional_timing[ending]=float(Time.get_ticks_msec()-optional_started)/1000.0
+		await main_menu()
 	if game.modal and game.buttons.has("menu"): await choose("menu")
 	return ok
 func archive(ending: String) -> bool:
 	tag="rift-"+ending
-	await choose("archive");await choose("rift")
+	await choose("settings");await choose("archive");await choose("rift")
 	var r=game.rift
 	var picks=["warn","follow","open","limit","guard","restore","truth","defend","present","truce","trust",ending]
 	for index in range(12):
@@ -294,20 +413,27 @@ func archive(ending: String) -> bool:
 	await tap(KEY_ESCAPE);await choose("menu")
 	return true
 func run():
-	Engine.time_scale=8;Engine.physics_ticks_per_second=480;Engine.max_physics_steps_per_frame=64;Engine.max_fps=240
+	var args=OS.get_cmdline_user_args()
+	if "--real-time" not in args:
+		Engine.time_scale=8;Engine.physics_ticks_per_second=480;Engine.max_physics_steps_per_frame=64;Engine.max_fps=240
 	if not OS.has_feature("editor"):
 		output_dir=OS.get_executable_path().get_base_dir().path_join("qa-input")
 		screenshot_dir=output_dir.path_join("screenshots")
+	for arg in args:
+		if arg.begins_with("--qa-output="):
+			output_dir=arg.trim_prefix("--qa-output=")
+			screenshot_dir=output_dir.path_join("screenshots")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(screenshot_dir))
 	get_tree().create_timer(3600).timeout.connect(func():check(false,"watchdog");finish())
 	if not is_instance_valid(game):
 		game=load("res://after_silence/scenes/main.tscn").instantiate();get_tree().root.add_child(game)
 	await get_tree().process_frame
-	var qa_prefix="user://qa_input_"+("source" if OS.has_feature("editor") else "export")+"_"+DisplayServer.get_name()+"_"
+	game.expanded_new_game="--classic-story" not in args
+	game.expedition_new_game="--expansion" in args
+	var qa_prefix="user://qa_input_"+("source" if OS.has_feature("editor") else "export")+"_"+DisplayServer.get_name()+"_"+str(Time.get_ticks_usec())+"_"
 	game.event_saves.path=qa_prefix+"events.json";game.rift_saves.path=qa_prefix+"rift.json";game.archive_saves.path=qa_prefix+"episode.json"
-	var args=OS.get_cmdline_user_args()
 	if "--archive-only" not in args:
-		for ending in ["together","home"]:
+		for ending in (["together"] if "--one-ending" in args else ["together","home"]):
 			if not await campaign(ending): finish();return
 	if "--events-only" not in args:
 		for ending in ["close","both","child","return"]:
@@ -315,10 +441,12 @@ func run():
 	finish()
 func finish():
 	motion(Vector2.ZERO)
-	var report={"checks":checks,"failures":errors,"results":results,"screenshots":shots,"renderer":DisplayServer.get_name(),"method":"input-driven automated playthrough; not a human playtest"}
+	var report={"checks":checks,"failures":errors,"results":results,"screenshots":shots,"renderer":DisplayServer.get_name(),"time_scale":Engine.time_scale,"main_elapsed_seconds":timing,"optional_elapsed_seconds":optional_timing,"method":"input-driven automated playthrough; not a human playtest"}
 	var out=output_dir.path_join("input-playthrough-report"+("-archive" if "--archive-only" in OS.get_cmdline_user_args() else "")+".json")
 	var f=FileAccess.open(out,FileAccess.WRITE);f.store_string(JSON.stringify(report,"  "));f.close()
 	print("INPUT PLAYTHROUGH: ",checks," checks, ",errors.size()," failures; endings=",results.size())
+	print("MAIN CAMPAIGN ELAPSED: ",timing," time_scale=",Engine.time_scale)
+	print("OPTIONAL CHAPTERS ELAPSED: ",optional_timing)
 	game.audio.shutdown();game.queue_free()
 	await get_tree().process_frame;await get_tree().process_frame
 	await get_tree().create_timer(.25,true,false,true).timeout

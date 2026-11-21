@@ -1,4 +1,5 @@
 extends RefCounted
+const Art=preload("res://after_silence/core/ppae_art.gd")
 ## Original seeded pixel materials; cached across navigation world snapshots.
 static var cache: Dictionary={}
 static func material(kind: String, variant: int) -> ShaderMaterial:
@@ -13,6 +14,8 @@ static func material(kind: String, variant: int) -> ShaderMaterial:
 	return cache[key]
 
 static func atlas(kind: String, zone: String="") -> Texture2D:
+	var baked:=Art.material_tile(kind,zone)
+	if baked: return baked
 	var key=kind+":"+zone if kind in ["grass","floor"] else kind
 	if cache.has(key): return cache[key]
 	var extent=80 if kind=="water" else 320

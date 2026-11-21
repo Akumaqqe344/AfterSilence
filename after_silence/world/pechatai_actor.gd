@@ -4,6 +4,7 @@ signal landed
 # Pechatai character.js: 180 / 1.65 / 1300 / 1600, normalized eight-way input.
 const VERA_IDLE=preload("res://after_silence/assets/remaster0290/vera_idle.png")
 const Appearance=preload("res://after_silence/core/npc_appearance.gd")
+const Art=preload("res://after_silence/core/ppae_art.gd")
 const SPEED=180.0
 const ACCEL=1300.0
 const DECEL=1600.0
@@ -18,6 +19,9 @@ var inspect_time=0.0
 var target=Vector2.ZERO
 var sheet: Texture2D
 var sprite: Sprite2D
+var animated: AnimatedSprite2D
+var art_id=""
+var art_scale=1.0
 var npc_color=Color.WHITE
 var scripted=false
 var jump_age=1.0
@@ -65,6 +69,20 @@ func _ready():
 		portrait=Rect2(bounds.position,Vector2(bounds.size.x,bounds.size.y*.52))
 	if is_player:
 		for id in ["walk","run","diagonal-run","jump","jump-diagonal"]: clips[id]=load("res://after_silence/assets/pechatai/player/"+id+".png")
+	var frames:=Art.sprite_frames(art_id)
+	if frames:
+		animated=AnimatedSprite2D.new()
+		animated.sprite_frames=frames
+		animated.centered=false
+		animated.texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
+		animated.modulate=npc_color
+		var rest: AtlasTexture=frames.get_frame_texture("idle_S",0)
+		var bounds:=rest.atlas.get_image().get_region(Rect2i(rest.region)).get_used_rect()
+		art_scale=(49.0 if is_player else body_height)/maxf(1,bounds.size.y)
+		animated.scale=Vector2.ONE*art_scale
+		sprite.hide()
+		add_child(animated)
+		_animate_art(false,0.0)
 func set_appearance(texture: Texture2D, height: float):
 	sheet=texture;body_height=height
 	if not is_instance_valid(sprite): return
@@ -129,6 +147,38 @@ func _physics_process(dt):
 	var p=jump_age/jump_duration
 	elevation=4*p*(1-p)*jump_peak if p<1 else 0.0
 	inspect_time=maxf(0,inspect_time-dt)
+	if is_instance_valid(animated):
+		if not moving and (visual_comfort==null or not visual_comfort.reduce_motion):
+			idle_clock=fposmod(idle_clock+dt,12.0)
+			vera_idle_age=fposmod(vera_idle_age+dt,4.0)
+		_animate_art(moving,p)
+	else:
+		_animate_legacy(moving,p,dt,motion)
+	if not is_equal_approx(elevation,last_shadow_height) or last_inspected!=(inspect_time>0):
+		last_shadow_height=elevation
+		last_inspected=inspect_time>0
+		queue_redraw()
+
+func _animate_art(moving: bool, jump_progress: float) -> void:
+	var direction: String = Art.CARDINALS[facing] if diagonal<0 else Art.DIAGONALS[diagonal]
+	var calm: bool = visual_comfort!=null and visual_comfort.reduce_motion
+	var move := "walk" if moving else "idle"
+	if moving and running and is_player: move="run"
+	if not moving and inspect_time>0 and not calm: move="use_tool"
+	if is_player and jump_progress<1.0 and jump_age<jump_duration: move="dodge"
+	var sequence:=move+"_"+direction
+	var count:=animated.sprite_frames.get_frame_count(sequence)
+	var index:=floori(phase*count/4.0) if moving else floori((idle_clock if not is_player else vera_idle_age)*3.0)
+	if move=="dodge": index=mini(count-1,floori(jump_progress*count))
+	elif move=="use_tool": index=clampi(floori((.6-inspect_time)*count/.6),0,count-1)
+	elif calm and not moving: index=0
+	index=posmod(index,count)
+	var frame:=Art.actor_frame(art_id,sequence,index)
+	animated.animation=sequence
+	animated.set_frame_and_progress(index,0.0)
+	animated.position=(-Vector2(frame.pivot)*art_scale-Vector2(0,elevation)).round()
+
+func _animate_legacy(moving: bool,p: float,dt: float,motion: Vector2):
 	var frame=int(phase)%4 if moving else 0
 	if animated_idle and not moving:
 		if visual_comfort!=null and not visual_comfort.reduce_motion:
@@ -166,10 +216,6 @@ func _physics_process(dt):
 		var lift=sin(phase*PI)*1.3 if moving and p>=1 and show_motion else 0.0
 		sprite_step=lerpf(sprite_step,lift,minf(1,dt*16))
 		if show_motion: sprite.position.y-=roundf(sprite_step-settle_age*7)
-	if not is_equal_approx(elevation,last_shadow_height) or last_inspected!=(inspect_time>0):
-		last_shadow_height=elevation
-		last_inspected=inspect_time>0
-		queue_redraw()
 func idle_frame() -> int:
 	if visual_comfort==null or visual_comfort.reduce_motion: return Appearance.REST_FRAME
 	if fposmod(idle_clock,4.0)>3.84: return Appearance.BLINK_FRAME

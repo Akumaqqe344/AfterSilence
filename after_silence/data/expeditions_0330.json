@@ -1,0 +1,1007 @@
+{
+  "rooms": {
+    "closed_post": {
+      "parent": "town",
+      "gate": "dispatch_gate",
+      "from": [
+        925,
+        590
+      ],
+      "name": [
+        "Закрытое отделение",
+        "Closed post office"
+      ],
+      "entry": [
+        320,
+        405
+      ],
+      "exit": [
+        320,
+        423
+      ]
+    },
+    "signal_cellar": {
+      "parent": "closed_post",
+      "gate": "dispatch_stairs",
+      "from": [
+        489,
+        382
+      ],
+      "name": [
+        "Узел связи",
+        "Signal cellar"
+      ],
+      "entry": [
+        320,
+        405
+      ],
+      "exit": [
+        320,
+        423
+      ]
+    },
+    "listening_archive": {
+      "parent": "records_annex",
+      "gate": "audio_gate",
+      "from": [
+        450,
+        381
+      ],
+      "name": [
+        "Зал звукозаписей",
+        "Listening archive"
+      ],
+      "entry": [
+        320,
+        405
+      ],
+      "exit": [
+        320,
+        423
+      ]
+    },
+    "tide_station": {
+      "parent": "harbor",
+      "gate": "tide_gate",
+      "from": [
+        810,
+        573
+      ],
+      "name": [
+        "Нижний причал",
+        "Lower landing"
+      ],
+      "entry": [
+        320,
+        405
+      ],
+      "exit": [
+        320,
+        423
+      ]
+    },
+    "bracken_clearing": {
+      "parent": "forest",
+      "gate": "bracken_gate",
+      "from": [
+        815,
+        665
+      ],
+      "name": [
+        "Просека за папоротником",
+        "Bracken clearing"
+      ],
+      "entry": [
+        320,
+        405
+      ],
+      "exit": [
+        320,
+        423
+      ]
+    }
+  },
+  "chapters": [
+    {
+      "id": "dispatch",
+      "before": "letter",
+      "after": "",
+      "owner": "lev",
+      "title": [
+        "Город без адресов",
+        "The town without addresses"
+      ],
+      "intro": [
+        "Лев узнал свой почерк на жёлтой квитанции Веры. На ней адрес закрытого отделения связи. За письмом надо вернуться туда, где его пытались отправить.",
+        "Lev recognized his hand on Vera's yellow receipt. It points to the closed post office. To find the letter, go back to where they tried to send it."
+      ],
+      "steps": [
+        {
+          "id": "dispatch_gate",
+          "kind": "door",
+          "zone": "town",
+          "at": [
+            925,
+            590
+          ],
+          "art": "door",
+          "title": [
+            "Дверь отделения связи",
+            "Post-office door"
+          ],
+          "body": [
+            "За стеклом видна щель для возвратов.",
+            "A returns slot is visible behind the glass."
+          ],
+          "room": "closed_post"
+        },
+        {
+          "id": "dispatch_board",
+          "kind": "note",
+          "zone": "closed_post",
+          "at": [
+            147,
+            190
+          ],
+          "art": "papers",
+          "title": [
+            "Исчезнувшие номера",
+            "Missing numbers"
+          ],
+          "body": [
+            "С доски сняли все номера, кроме семнадцатого. Под ним карандашом выведено: «Получатель переехал вместе с домом».",
+            "Every number except seventeen has been removed. Beneath it someone wrote: “Recipient moved, house and all.”"
+          ],
+          "group": "post"
+        },
+        {
+          "id": "dispatch_slot",
+          "kind": "note",
+          "zone": "closed_post",
+          "at": [
+            485,
+            203
+          ],
+          "art": "stamp",
+          "title": [
+            "Щель для возвратов",
+            "Returns slot"
+          ],
+          "body": [
+            "Внутри застрял деревянный жетон №17. Его прорезь смотрит к низу. На обороте — значок прямого эфира.",
+            "A wooden token marked 17 is jammed inside, its notch pointing down. The back carries a live broadcast symbol."
+          ],
+          "group": "post"
+        },
+        {
+          "id": "dispatch_lock",
+          "kind": "device",
+          "zone": "closed_post",
+          "at": [
+            320,
+            298
+          ],
+          "art": "lock",
+          "title": [
+            "Сортировочный переключатель",
+            "Sorting switch"
+          ],
+          "body": [
+            "Жетон входит в гнездо. Чтобы открыть окно выдачи, выставьте адрес, положение прорези и назначение карточки.",
+            "The token fits. To open the issue window, set the address, notch direction and destination."
+          ],
+          "device": "dispatch",
+          "dials": [
+            [
+              [
+                "12",
+                "12"
+              ],
+              [
+                "14",
+                "14"
+              ],
+              [
+                "17",
+                "17"
+              ]
+            ],
+            [
+              [
+                "Вверх",
+                "Up"
+              ],
+              [
+                "Вниз",
+                "Down"
+              ],
+              [
+                "Влево",
+                "Left"
+              ]
+            ],
+            [
+              [
+                "Хранилище",
+                "Storage"
+              ],
+              [
+                "Служебный",
+                "Internal"
+              ],
+              [
+                "Прямой эфир",
+                "Live"
+              ]
+            ]
+          ],
+          "target": [
+            2,
+            1,
+            2
+          ]
+        },
+        {
+          "id": "dispatch_stairs",
+          "kind": "door",
+          "zone": "closed_post",
+          "at": [
+            489,
+            382
+          ],
+          "art": "door",
+          "title": [
+            "Лестница в узел связи",
+            "Signal-room stairs"
+          ],
+          "body": [
+            "Из-под двери слышен электрический гул.",
+            "An electric hum comes from below the door."
+          ],
+          "room": "signal_cellar"
+        },
+        {
+          "id": "dispatch_reel",
+          "kind": "note",
+          "zone": "signal_cellar",
+          "at": [
+            308,
+            257
+          ],
+          "art": "reel",
+          "title": [
+            "Неотправленное сообщение",
+            "Unsent message"
+          ],
+          "body": [
+            "На ленте два голоса. Женщина называет пустой адрес и просит оставить дверь открытой. Лев отвечает: «Я пришлю Веру, когда она сможет услышать».",
+            "Two voices on the tape. A woman reads a vacant address and asks them to leave the door open. Lev answers, “I'll send Vera when she's able to hear.”"
+          ]
+        }
+      ],
+      "branches": [
+        {
+          "id": "dispatch_named",
+          "title": [
+            "Вернуть кассету Льву",
+            "Return the tape to Lev"
+          ],
+          "result": [
+            "Вера подписала конверт. Лев оставляет на площади приёмник и включает его перед каждой вечерней перекличкой.",
+            "Vera signed the envelope. Lev leaves a receiver in the square and turns it on before each evening roll call."
+          ]
+        },
+        {
+          "id": "dispatch_anon",
+          "title": [
+            "Оставить на полке для соседей",
+            "Leave it on the shelf for the neighbors"
+          ],
+          "result": [
+            "Вера убрала имя с коробки. Любой, кто помнит адрес, сможет прослушать запись.",
+            "Vera removed the name from the case. Anyone who remembers the address can hear the recording."
+          ]
+        }
+      ],
+      "expansion": true
+    },
+    {
+      "id": "acoustic_archive",
+      "before": "epochs",
+      "after": "",
+      "owner": "mara",
+      "title": [
+        "Лента поверх бумаги",
+        "Tape over paper"
+      ],
+      "intro": [
+        "Среди подшитых бумаг снова проступила дата. Мара считает, что её вписали позже. В соседнем зале сохранилась звуковая копия.",
+        "A date has surfaced again on the bound records. Mara thinks it was filled in later. There is an audio copy in the neighboring room."
+      ],
+      "steps": [
+        {
+          "id": "audio_gate",
+          "kind": "door",
+          "zone": "records_annex",
+          "at": [
+            450,
+            381
+          ],
+          "art": "door",
+          "title": [
+            "Зал звукозаписей",
+            "Listening archive"
+          ],
+          "body": [
+            "На косяке — восковая печать архива.",
+            "An archive seal hangs from the doorframe."
+          ],
+          "room": "listening_archive"
+        },
+        {
+          "id": "audio_glass",
+          "kind": "note",
+          "zone": "listening_archive",
+          "at": [
+            157,
+            199
+          ],
+          "art": "papers",
+          "title": [
+            "Лист карантинных объявлений",
+            "Quarantine notice"
+          ],
+          "body": [
+            "До общего сигнала была передана просьба оставить двери открытыми. После него дежурная расписалась на пустой ведомости.",
+            "Before the general signal, a message asked people to leave their doors open. Afterwards, the attendant signed a blank ledger."
+          ],
+          "group": "archive"
+        },
+        {
+          "id": "audio_wire",
+          "kind": "listen",
+          "zone": "listening_archive",
+          "at": [
+            487,
+            197
+          ],
+          "art": "reel",
+          "title": [
+            "Контрольная лента",
+            "Monitor tape"
+          ],
+          "body": [
+            "Хриплый голос сменяется одним высоким ударом. Перьевая ручка царапает бумагу уже в тишине.",
+            "A hoarse voice gives way to a single high strike. A nib scratches paper once the room is quiet."
+          ],
+          "tones": [
+            330,
+            660,
+            220
+          ],
+          "group": "archive"
+        },
+        {
+          "id": "audio_order",
+          "kind": "sequence",
+          "zone": "listening_archive",
+          "at": [
+            324,
+            302
+          ],
+          "art": "stamp",
+          "title": [
+            "Монтажная ведомость",
+            "Splicing ledger"
+          ],
+          "body": [
+            "Разложите подлинные события по порядку. Пустая ведомость поможет отличить объявление от поздней подписи.",
+            "Put the original events in order. The blank ledger distinguishes the announcement from the later signature."
+          ],
+          "options": [
+            [
+              "Подпись",
+              "Signature"
+            ],
+            [
+              "Просьба",
+              "Request"
+            ],
+            [
+              "Сигнал",
+              "Signal"
+            ]
+          ],
+          "order": [
+            1,
+            2,
+            0
+          ]
+        },
+        {
+          "id": "audio_backing",
+          "kind": "note",
+          "zone": "listening_archive",
+          "at": [
+            478,
+            341
+          ],
+          "art": "letter",
+          "title": [
+            "Оборот склейки",
+            "Back of the splice"
+          ],
+          "body": [
+            "На склейке слово «эвакуация» закрыло надпись «перекличка». Кто-то переписал назначение сигнала после события.",
+            "On the splice, “evacuation” covers “roll call.” Someone changed the purpose of the signal after it happened."
+          ]
+        }
+      ],
+      "branches": [
+        {
+          "id": "archive_joint",
+          "title": [
+            "Подписать общую версию",
+            "Sign a joint account"
+          ],
+          "result": [
+            "Мара приписала своё имя под именем Веры. Теперь они смогут показать лист человеку, которому не хватало подтверждения.",
+            "Mara signs beside Vera. They can now show the sheet to someone who needs corroboration."
+          ]
+        },
+        {
+          "id": "archive_seal",
+          "title": [
+            "Запечатать имена на обороте",
+            "Seal the names on the back"
+          ],
+          "result": [
+            "Мара сохранила обе части под одной описью. На площади она вывесит только порядок событий.",
+            "Mara files both pieces together. In the square she'll display only the order of events."
+          ]
+        }
+      ],
+      "expansion": true
+    },
+    {
+      "id": "undertow",
+      "before": "train",
+      "after": "",
+      "owner": "pavel",
+      "title": [
+        "Последний прилив",
+        "The last tide"
+      ],
+      "intro": [
+        "Павел нашёл в расписании грузовой рейс без отметки о прибытии. На конце причала есть лебёдка, которая поднимает площадку над приливом.",
+        "Pavel found a cargo run without an arrival stamp. A winch at the end of the pier raises a landing above the tide."
+      ],
+      "steps": [
+        {
+          "id": "tide_gate",
+          "kind": "door",
+          "zone": "harbor",
+          "at": [
+            810,
+            573
+          ],
+          "art": "door",
+          "title": [
+            "Нижний причал",
+            "Lower landing"
+          ],
+          "body": [
+            "Вода у нижних ступеней поднимается и опускается.",
+            "Water washes up and down the last steps."
+          ],
+          "room": "tide_station"
+        },
+        {
+          "id": "tide_marks",
+          "kind": "note",
+          "zone": "tide_station",
+          "at": [
+            137,
+            322
+          ],
+          "art": "flag",
+          "title": [
+            "Соль на свае",
+            "Salt line"
+          ],
+          "body": [
+            "Уровень сейчас ниже полосы с двумя насечками. Для подъёма площадки нужна средняя отметка. Ослабленный канат надо выбрать прежде, чем закрывать тормоз.",
+            "The tide is below the two-notch line. The landing rises at the middle mark. Take up the slack before setting the brake."
+          ],
+          "group": "tide"
+        },
+        {
+          "id": "tide_crate",
+          "kind": "note",
+          "zone": "tide_station",
+          "at": [
+            492,
+            326
+          ],
+          "art": "papers",
+          "title": [
+            "Ящик обратной тары",
+            "Return crate"
+          ],
+          "body": [
+            "Под крышкой лежат два сухих жетона. В графе «груз» у обоих стоит имя, а не вес.",
+            "Two dry tokens lie beneath the lid. Each has a name in the cargo column, where the weight should be."
+          ],
+          "group": "tide"
+        },
+        {
+          "id": "tide_winch",
+          "kind": "device",
+          "zone": "tide_station",
+          "at": [
+            320,
+            315
+          ],
+          "art": "winch",
+          "title": [
+            "Ручная лебёдка",
+            "Hand winch"
+          ],
+          "body": [
+            "Подготовьте тормоз, выберите слабину и поднимите площадку до нужной отметки. После фиксации площадки станет доступен дальний настил.",
+            "Release the brake, take up the slack and raise the landing to the proper line. Securing it opens the far deck."
+          ],
+          "device": "winch"
+        },
+        {
+          "id": "tide_manifest",
+          "kind": "note",
+          "zone": "tide_station",
+          "at": [
+            319,
+            124
+          ],
+          "art": "letter",
+          "title": [
+            "Список поднятой площадки",
+            "Register on the raised landing"
+          ],
+          "body": [
+            "На последней строке — подросток, который не проходил по спискам жильцов. Павел оставил в расписании пустую графу, чтобы за ним могли вернуться.",
+            "The last line belongs to a teenager missing from the residents' lists. Pavel left a blank in the schedule so someone could come back for him."
+          ]
+        }
+      ],
+      "branches": [
+        {
+          "id": "pier_line",
+          "title": [
+            "Оставить лебёдку поднятой",
+            "Leave the landing raised"
+          ],
+          "result": [
+            "Павел проверит дальние ступени. На площади он спросит, кто сможет держать канат во время отправления.",
+            "Pavel will check the far steps. In the square he'll ask who can hold the line during departure."
+          ]
+        },
+        {
+          "id": "pier_mark",
+          "title": [
+            "Передать жетоны Павлу",
+            "Give Pavel the tokens"
+          ],
+          "result": [
+            "Павел поставит имена в расписание. Если придётся оставить низкий причал закрытым, на другом берегу будут знать, кого ждать.",
+            "Pavel will add the names to the timetable. If the low landing has to close, the other bank will know who to wait for."
+          ]
+        }
+      ],
+      "expansion": true
+    },
+    {
+      "id": "windbreak",
+      "before": "alina",
+      "after": "",
+      "owner": "alina",
+      "title": [
+        "Лес между шагами",
+        "The forest between steps"
+      ],
+      "intro": [
+        "За знаком Алины сохранилась просека. После дождя в лесу виден свет старого репера. Его приходится смотреть с двух сторон.",
+        "A clearing lies beyond Alina's marker. After rain you can see the old survey lantern through the trees. You have to look at it from two sides."
+      ],
+      "steps": [
+        {
+          "id": "bracken_gate",
+          "kind": "door",
+          "zone": "forest",
+          "at": [
+            815,
+            665
+          ],
+          "art": "door",
+          "title": [
+            "Просвет за папоротником",
+            "Opening behind the bracken"
+          ],
+          "body": [
+            "Папоротник шевелится над узкой проходной колеёй.",
+            "Bracken stirs above a narrow track."
+          ],
+          "room": "bracken_clearing"
+        },
+        {
+          "id": "bracken_bell",
+          "kind": "note",
+          "zone": "bracken_clearing",
+          "at": [
+            147,
+            273
+          ],
+          "art": "bell",
+          "title": [
+            "Колокол без языка",
+            "Tongueless bell"
+          ],
+          "body": [
+            "Пока репер тёплый, лес отражает свет возле ольхи. Холодный луч проходит к поваленному стволу.",
+            "While the marker burns warm, the woods reflect its light beside the alder. The cool beam reaches the fallen trunk."
+          ],
+          "group": "wood"
+        },
+        {
+          "id": "bracken_ribbon",
+          "kind": "note",
+          "zone": "bracken_clearing",
+          "at": [
+            483,
+            274
+          ],
+          "art": "ribbon",
+          "title": [
+            "Мокрая лента",
+            "Wet ribbon"
+          ],
+          "body": [
+            "На ленте две узелковые метки. Алина велела искать северный край там, где тёплая полоска сходится с холодной.",
+            "There are two knot marks on the ribbon. Alina said to find the north edge where the warm band meets the cool one."
+          ],
+          "group": "wood"
+        },
+        {
+          "id": "bracken_lens",
+          "kind": "survey",
+          "zone": "bracken_clearing",
+          "at": [
+            316,
+            297
+          ],
+          "art": "post",
+          "title": [
+            "Двойной репер",
+            "Double survey marker"
+          ],
+          "body": [
+            "Отсюда видно две метки на одном камне. За вторым стволом в обеих полосах света есть просвет.",
+            "From here two marks land on one stone. Beyond the second trunk, both bands of light reveal the same gap."
+          ],
+          "correct": 0
+        },
+        {
+          "id": "bracken_cache",
+          "kind": "note",
+          "zone": "bracken_clearing",
+          "at": [
+            322,
+            125
+          ],
+          "art": "letter",
+          "title": [
+            "Записка из просвета",
+            "Note in the glade"
+          ],
+          "body": [
+            "«Вера, если выйдешь к тому же дереву второй раз, подожди у него. Ты не заблудилась. Это я вышла из другого времени».",
+            "“Vera, if you reach the same tree twice, wait by it. You aren't lost. I'm the one who came out of another time.”"
+          ]
+        }
+      ],
+      "branches": [
+        {
+          "id": "bracken_public",
+          "title": [
+            "Оставить оба луча",
+            "Leave both beams lit"
+          ],
+          "result": [
+            "Алина повяжет вторую ленту на сухой дороге. Теперь ориентир виден с площадки у выхода.",
+            "Alina will tie a second ribbon on the dry road. The marker is now visible from the way out."
+          ]
+        },
+        {
+          "id": "bracken_quiet",
+          "title": [
+            "Закрыть заслонку",
+            "Close the shutter"
+          ],
+          "result": [
+            "Алина запомнит дерево. По тропе можно идти в темноте, если знаешь, на какой стороне лежит ствол.",
+            "Alina will remember the tree. The trail is walkable in darkness if you know which side the trunk lies on."
+          ]
+        }
+      ],
+      "expansion": true
+    },
+    {
+      "id": "evening_roll",
+      "before": "shore",
+      "after": "",
+      "owner": "sonya",
+      "title": [
+        "Перед общей перекличкой",
+        "Before the roll call"
+      ],
+      "intro": [
+        "Соня просит принести свидетельства на площадь. Время отправления уже объявлено. Теперь нужно договориться, чьи имена могут прозвучать.",
+        "Sonya asks you to bring the records to the square. Departure has been announced. Now decide whose names can be spoken."
+      ],
+      "steps": [
+        {
+          "id": "roll_people",
+          "kind": "note",
+          "zone": "town",
+          "at": [
+            748,
+            635
+          ],
+          "art": "papers",
+          "title": [
+            "Стол переклички",
+            "Roll-call table"
+          ],
+          "body": [
+            "Вера кладёт рядом копию ленты и список с площадки. Имена сходятся, а расписания показывают разное время. Люди в очереди ждут, пока кто-нибудь начнёт первым.",
+            "Vera lays a copy of the tape beside the landing register. The names match, but the timetables disagree. People in line wait for someone to go first."
+          ]
+        },
+        {
+          "id": "roll_witness",
+          "kind": "witness",
+          "zone": "town",
+          "at": [
+            681,
+            638
+          ],
+          "art": "bell",
+          "title": [
+            "Репетиция у колодца",
+            "Rehearsal at the well"
+          ],
+          "body": [
+            "Соня предлагает заранее решить, что делать, если кто-то откликнется с другого берега.",
+            "Sonya asks you to decide what happens if someone answers from the other shore."
+          ],
+          "options": [
+            {
+              "id": "roll_rendezvous",
+              "title": [
+                "Назвать оба времени встречи",
+                "Read both meeting times"
+              ],
+              "result": [
+                "Мара и Вера прочтут два времени подряд. Каждому, кто откликнется, оставят возможность выбрать берег.",
+                "Mara and Vera will read both times. Anyone who answers will have a choice of shore."
+              ],
+              "requires": [
+                "case_choice_archive_joint"
+              ]
+            },
+            {
+              "id": "roll_relay",
+              "title": [
+                "Оставить открытым канал связи",
+                "Keep the receiver open"
+              ],
+              "result": [
+                "Лев останется у приёмника, пока Павел держит канат. Люди смогут ответить с дальнего причала.",
+                "Lev will stay by the receiver while Pavel holds the line. People can answer from the far landing."
+              ],
+              "requires": [
+                "case_choice_dispatch_named",
+                "case_choice_pier_line"
+              ]
+            },
+            {
+              "id": "roll_private",
+              "title": [
+                "Читать только места встречи",
+                "Read only the meeting places"
+              ],
+              "result": [
+                "Соня назовёт места и время. Записи с именами будут ждать своих владельцев в конверте у Нади.",
+                "Sonya will read the places and times. The names will wait for their owners in an envelope with Nadia."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "roll_signal",
+          "kind": "note",
+          "zone": "town",
+          "at": [
+            622,
+            612
+          ],
+          "art": "lamp",
+          "title": [
+            "Сигнал Соне",
+            "Signal to Sonya"
+          ],
+          "body": [
+            "Вера проверяет, видно ли огонь с дороги к пристани. Соня поднимает руку в ответ. Пора идти к берегу.",
+            "Vera checks that the light can be seen from the pier road. Sonya raises a hand in answer. It's time to go to the shore."
+          ]
+        }
+      ],
+      "branches": [],
+      "expansion": true
+    }
+  ],
+  "sides": [
+    {
+      "id": "return_address",
+      "before": "",
+      "after": "letter",
+      "owner": "lev",
+      "title": [
+        "Адрес на обороте",
+        "The address on the back"
+      ],
+      "intro": [
+        "У одной городской квитанции два адреса. Лев просит проверить, кто ещё ждёт ответа.",
+        "One receipt carries two addresses. Lev asks you to find out who is still waiting."
+      ],
+      "steps": [
+        {
+          "id": "return_box",
+          "kind": "note",
+          "zone": "closed_post",
+          "at": [
+            462,
+            286
+          ],
+          "art": "letter",
+          "title": [
+            "Ячейка возвратов",
+            "Returns compartment"
+          ],
+          "body": [
+            "«Я оставила адрес дома. Напишите на обороте, где его теперь искать».",
+            "“I left the address at home. Write where I can find it now on the back.”"
+          ]
+        },
+        {
+          "id": "return_bench",
+          "kind": "note",
+          "zone": "town",
+          "at": [
+            534,
+            622
+          ],
+          "art": "ribbon",
+          "title": [
+            "Пустая прищепка",
+            "The empty clip"
+          ],
+          "body": [
+            "Соседи перенесли адресную книгу на площадь. Вера узнаёт на её обложке тот же деревянный жетон.",
+            "The neighbors moved the address book to the square. Vera recognizes the same wooden token on its cover."
+          ]
+        }
+      ],
+      "branches": [
+        {
+          "id": "return_pin",
+          "title": [
+            "Прикрепить ответ на площади",
+            "Leave the answer in the square"
+          ],
+          "result": [
+            "Вера оставляет маршрут до дома рядом с именами тех, кто согласился ждать.",
+            "Vera leaves the route beside the names of the people who agreed to wait."
+          ]
+        },
+        {
+          "id": "return_post",
+          "title": [
+            "Оставить ответ в ячейке",
+            "Leave the answer in the slot"
+          ],
+          "result": [
+            "Если письмо вернётся, почтальон поймёт, куда его нести.",
+            "If the letter comes back, the carrier will know where to take it."
+          ]
+        }
+      ],
+      "expansion": true
+    },
+    {
+      "id": "names_in_foam",
+      "before": "",
+      "after": "alina",
+      "owner": "pavel",
+      "title": [
+        "Имена на волне",
+        "Names on the water"
+      ],
+      "intro": [
+        "На обратной стороне жетонов сохранились две разные буквы. Павел просит вернуть знаки тем, кто их вырезал.",
+        "Two different initials survive on the back of the tokens. Pavel asks you to return them to the people who carved them."
+      ],
+      "steps": [
+        {
+          "id": "foam_token",
+          "kind": "note",
+          "zone": "tide_station",
+          "at": [
+            493,
+            357
+          ],
+          "art": "stamp",
+          "title": [
+            "Оборот жетонов",
+            "Backs of the tokens"
+          ],
+          "body": [
+            "На первом жетоне буква «Н», на втором — след старой ольховой коры. Кто-то начал вырезать имя и оставил его незаконченным.",
+            "The first token has an N. The second carries a trace of alder bark. Someone began a name and left it unfinished."
+          ]
+        },
+        {
+          "id": "foam_alder",
+          "kind": "note",
+          "zone": "bracken_clearing",
+          "at": [
+            477,
+            364
+          ],
+          "art": "ribbon",
+          "title": [
+            "Срез у ольхи",
+            "A cut on the alder"
+          ],
+          "body": [
+            "У корней Ольхи лежит лента Нади. Второй жетон подходит к прорези под ней. Вера может оставить ему место рядом.",
+            "Nadia's ribbon lies at the alder's roots. The second token fits a cut beneath it. Vera can leave a place for it here."
+          ]
+        }
+      ],
+      "branches": [
+        {
+          "id": "foam_leave",
+          "title": [
+            "Вернуть жетон дереву",
+            "Return the token to the tree"
+          ],
+          "result": [
+            "Надя будет следить, чтобы ветер не унёс ленту с ветки.",
+            "Nadia will make sure the ribbon stays on the branch."
+          ]
+        },
+        {
+          "id": "foam_tell",
+          "title": [
+            "Отнести жетон к списку имён",
+            "Take the token to the roll-call list"
+          ],
+          "result": [
+            "Вера оставит на столе свободную строку. Тот, кто придёт за жетоном, сможет вписать имя сам.",
+            "Vera will leave a blank line on the table. The person who comes for the token can write in their own name."
+          ]
+        }
+      ],
+      "expansion": true
+    }
+  ]
+}

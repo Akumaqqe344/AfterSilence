@@ -17,7 +17,7 @@ var sampled_target=Vector2.INF
 var sampled_revision=-1
 var sampled_id=""
 var toggle: Button
-var tile_skin: StyleBoxFlat
+var tile_skin: StyleBox
 
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
@@ -27,7 +27,7 @@ func _ready():
 	toggle.focus_mode=Control.FOCUS_NONE
 	toggle.pressed.connect(game._toggle_route_guide)
 	add_child(toggle)
-	tile_skin=game.ComfortTheme.panel(DARK,true)
+	tile_skin=game.PixelArt.panel("hud",5)
 	game.ComfortMotion.wire_button(toggle,game.comfort)
 
 func _process(dt):
@@ -103,6 +103,7 @@ func _draw():
 	if target.is_empty() or not game.comfort.route_guide or not is_instance_valid(game.world): return
 	var transform=game.world.get_global_transform_with_canvas()
 	var dst: Vector2=transform*target.point
+	if not dst.is_finite(): return
 	var viewport_bounds=Rect2(Vector2(19,57),size-Vector2(38,115))
 	var close: bool=game.player.position.distance_to(target.point)<=target.range
 	var caption: String=target.label
@@ -118,23 +119,22 @@ func _draw():
 			var at: Vector2=transform*sample.point
 			if viewport_bounds.has_point(at): _arrow(at,sample.direction,4,Color("eaca93"))
 		var guide_point: Vector2=transform*route[mini(1,route.size()-1)]
-		if not viewport_bounds.has_point(guide_point):
+		if guide_point.is_finite() and not viewport_bounds.has_point(guide_point):
 			var mid=size*.5
 			var ray=guide_point-mid
 			var scale_factor=minf((viewport_bounds.size.x*.5)/maxf(absf(ray.x),1),(viewport_bounds.size.y*.5)/maxf(absf(ray.y),1))
 			var pin=(viewport_bounds.get_center()+ray*scale_factor*.93).round()
 			draw_circle(pin,12,DARK)
 			_arrow(pin,ray.normalized(),7,TRACE)
-	if viewport_bounds.has_point(dst):
-		var shift=0 if game.comfort.reduce_motion else roundf(sin(travel_age*TAU/3)*2)
-		var marker=dst+Vector2(0,-15+shift)
-		draw_circle(marker,9,DARK)
-		var rim=Color(.94,.80,.55,.42) if close else Color(.94,.80,.55,.30)
-		draw_arc(marker,11,0,TAU,20,rim,1)
-		_arrow(marker,Vector2.DOWN,5,TRACE)
-		if close and target.action:
-			draw_rect(Rect2(marker+Vector2(10,-7),Vector2(17,14)),DARK)
-			draw_string(get_theme_default_font(),marker+Vector2(15,4),"E",HORIZONTAL_ALIGNMENT_LEFT,-1,10,TRACE)
+	if viewport_bounds.has_point(dst) and not close:
+		# Mark the base. The prop and the interaction prompt occupy the space above it.
+		var phase = 0.0 if game.comfort.reduce_motion else sin(travel_age*TAU/3)
+		var padding = roundf(phase*2.0)
+		var left = (dst+Vector2(-13-padding,5)).round()
+		var right = (dst+Vector2(13+padding,5)).round()
+		for p in [left,right]:
+			var inward = 1.0 if p==left else -1.0
+			draw_line(p,p+Vector2(inward*5,3),TRACE,2)
 
 func _markers(points: PackedVector2Array, offset: float) -> Array:
 	var choices=[]
@@ -142,7 +142,7 @@ func _markers(points: PackedVector2Array, offset: float) -> Array:
 	for i in range(1,points.size()):
 		var delta=points[i]-points[i-1]
 		var span=delta.length()
-		if span<.5: continue
+		if not is_finite(span) or span<.5: continue
 		while offset<=walked+span:
 			choices.append({"point":points[i-1]+delta*((offset-walked)/span),"direction":delta/span})
 			if choices.size()>=10: return choices
@@ -151,6 +151,7 @@ func _markers(points: PackedVector2Array, offset: float) -> Array:
 	return choices
 
 func _arrow(at: Vector2, direction: Vector2, scale_px: float, tint: Color):
+	if not at.is_finite() or not direction.is_finite() or direction.length_squared() < .01: return
 	var normal=direction.orthogonal()
 	var points=PackedVector2Array([(at+direction*scale_px).round(),(at-direction*scale_px+normal*scale_px*.8).round(),(at-direction*scale_px*.45).round(),(at-direction*scale_px-normal*scale_px*.8).round()])
 	draw_colored_polygon(points,tint)

@@ -24,9 +24,10 @@ const Rift=preload("res://after_silence/world/rift_campaign.gd")
 
 const ComfortTheme=preload("res://after_silence/ui/comfort_theme.gd")
 const ComfortMotion=preload("res://after_silence/ui/comfort_motion.gd")
+const PixelArt=preload("res://after_silence/core/ppae_art.gd")
+const JourneyMenuButton=preload("res://after_silence/ui/menu_button.gd")
 var comfort=preload("res://after_silence/ui/comfort_preferences.gd").new()
 var modal_back: Callable
-var settings_volume: Label
 var state=State.new()
 var saves=Saves.new()
 var archive_saves: RefCounted
@@ -34,6 +35,9 @@ var rift_saves=Saves.new()
 var event_saves=Saves.new()
 var events_controller
 var journey=preload("res://after_silence/world/journey.gd").new(self)
+var investigations=preload("res://after_silence/world/investigation_director.gd").new(self)
+var expanded_new_game=true
+var expedition_new_game=true
 var event_window
 var route_guide: Control
 var story_hud: Control
@@ -76,13 +80,12 @@ var toast: Label
 var buttons: Dictionary={}
 var modal=true
 var in_menu=true
+var departing_home=false
 var type_progress=0.0
 var autosave_age=0.0
 var shift_cooldown=0.0
-var catalog_sequence: Array=[]
-var clock_hour=0
-var clock_minute=0
-var relay_mask=0
+const ArchivePanel = preload("res://after_silence/ui/archive_board.gd")
+const ArchiveModel = preload("res://after_silence/core/archive_trials.gd")
 var selected_evidence=""
 var dirty=false
 var loading_save=false
@@ -194,6 +197,7 @@ func _setup_services():
 	if not is_instance_valid(audio):
 		audio=Audio.new()
 		add_child(audio)
+	audio.set_mix(comfort.music_volume,comfort.effects_volume)
 func _mark_dirty():
 	dirty=true
 	for id in Achievements.evaluate(state):
@@ -296,6 +300,7 @@ func _setup_ui():
 	battle.visible=false
 	battle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	battle.won.connect(_boss_won)
+	battle.left.connect(func():living.restore_camera();_close())
 	battle.struck.connect(func(): audio.ping(state.volume))
 	battle.hurt.connect(func(): audio.ping(state.volume))
 
@@ -316,16 +321,17 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	modal=true
 	modal_back=Callable()
 	shade.show()
+	card.show()
 	buttons.clear()
 	if is_instance_valid(modal_tween): modal_tween.kill()
-	modal_backdrop.menu_mode=main_layout
+	modal_backdrop.menu_mode=in_menu
 	modal_backdrop.finish_mark=id.ends_with("_decision")
 	modal_backdrop.configure_motion(not comfort.reduce_motion)
-	var card_size=Vector2(268,287) if main_layout else Vector2(388,272) if compact else Vector2(518,298)
-	var target=Vector2(32,43) if main_layout else (Vector2(640,360)-card_size)*.5
+	var card_size=Vector2(257,244) if main_layout else Vector2(388,272) if compact else Vector2(518,298)
+	var target=Vector2(43,82) if main_layout else (Vector2(640,360)-card_size)*.5
 	card.position=target
 	card.size=card_size
-	var panel_style: StyleBox=ComfortTheme.panel()
+	var panel_style: StyleBox=PixelArt.panel("panel",12)
 	if main_layout:
 		panel_style=StyleBoxEmpty.new()
 	else:
@@ -340,8 +346,8 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	header.text=title
 	header.add_theme_color_override("font_color",ComfortTheme.PEACH)
 	header.add_theme_font_override("font",ComfortTheme.HEADING)
-	header.add_theme_font_size_override("font_size",33 if main_layout else 20)
-	header.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	header.add_theme_font_size_override("font_size",32 if main_layout else 20)
+	header.autowrap_mode=TextServer.AUTOWRAP_OFF if main_layout else TextServer.AUTOWRAP_WORD_SMART
 	var portrait_id=id.split("_")[0]
 	if id=="intro": portrait_id="vera"
 	if not main_layout and (portrait_id in actors or portrait_id=="vera"):
@@ -363,6 +369,14 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 		row.add_child(header)
 		column.add_child(row)
 	else: column.add_child(header)
+	if main_layout:
+		var rule=HSeparator.new()
+		rule.custom_minimum_size=Vector2(84,6)
+		rule.size_flags_horizontal=Control.SIZE_SHRINK_BEGIN
+		var ink=StyleBoxLine.new()
+		ink.color=Color("a7745f")
+		rule.add_theme_stylebox_override("separator",ink)
+		column.add_child(rule)
 	body=RichTextLabel.new()
 	body.bbcode_enabled=false
 	body.text=text
@@ -372,7 +386,6 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	body.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	body.add_theme_color_override("default_color",ComfortTheme.TEXT)
 	body.add_theme_font_size_override("normal_font_size",15 if comfort.large_text else 13)
-	if main_layout: body.add_theme_color_override("default_color",ComfortTheme.MUTED)
 	column.add_child(body)
 	body.visible=not text.is_empty()
 	var seen=dialogues.was_seen(id)
@@ -381,31 +394,32 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	type_progress=0
 	for i in range(actions.size()):
 		var item=actions[i]
-		var button=Button.new()
+		var button: Button
+		if main_layout:
+			var menu_button=JourneyMenuButton.new()
+			menu_button.action_id=item.id
+			menu_button.primary=item.id==("events_load" if event_saves.exists() else "events_new")
+			button=menu_button
+		else:
+			button=Button.new()
 		button.text=item.label
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
-		button.custom_minimum_size=Vector2(0,26)
-		button.add_theme_font_size_override("font_size",14 if comfort.large_text else 13)
+		button.custom_minimum_size=Vector2(0,30 if main_layout else 26)
+		button.add_theme_font_size_override("font_size",(16 if comfort.large_text else 15) if main_layout else (14 if comfort.large_text else 13))
 		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		button.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND
 		button.pressed.connect(func():
+			if departing_home or button.disabled: return
 			if body.visible_characters>=0 and body.visible_characters<body.get_total_character_count():
 				body.visible_characters=-1
 				return
 			audio.ping(state.volume)
 			item.run.call())
-		if main_layout:
-			for style in ["normal","hover","pressed"]:
-				var skin=ComfortTheme.button(style!="normal",style=="pressed")
-				skin.bg_color.a=.87 if style=="normal" else .94
-				button.add_theme_stylebox_override(style,skin)
 		column.add_child(button)
 		buttons[item.id]=button
 		if item.id in ["back","close"]: modal_back=item.run
-		if item.id in ["events_new","events_load","resume","start"] and i==0:
-			var primary=ComfortTheme.button(true)
-			primary.bg_color=Color("3c503ce8") if main_layout else Color("3c503c")
-			button.add_theme_stylebox_override("normal",primary)
+		if not main_layout and item.id in ["resume","start"] and i==0:
+			button.add_theme_stylebox_override("normal",ComfortTheme.button(true))
 		ComfortMotion.wire_button(button,comfort)
 	_wire_dialog_focus()
 	card_scroll.scroll_vertical=0
@@ -451,33 +465,46 @@ func _close():
 	_save(false)
 func _main_menu():
 	in_menu=true
-	_dialog("",t("После тишины","After Silence"),t("Вера ищет сестру в городе, который забывает.","Vera searches for her sister in a town that forgets."),[choice("events_load","Продолжить путешествие","Continue journey",func():saves=event_saves;_load_game()),choice("events_new","Новое путешествие","New journey",_confirm_new_event),choice("archive","Архив историй","Story archive",_archive_menu),choice("settings","Настройки","Settings",_settings),choice("quit","Выйти из игры","Quit game",func():get_tree().quit())],false,true)
+	_dialog("",t("После тишины","After Silence"),"",[
+		choice("events_load","Продолжить","Continue",func():saves=event_saves;_load_game()),
+		choice("events_new","Новое путешествие","New journey",_confirm_new_event),
+		choice("settings","Настройки","Settings",_settings),
+		choice("quit","Выйти","Quit",func():get_tree().quit())],false,true)
 	buttons["events_load"].disabled=not event_saves.exists()
-	buttons["events_load"].tooltip_text=t("Здесь появится твоё сохранённое путешествие","Your saved journey will appear here") if not event_saves.exists() else t("Вернуться к сохранённой истории","Return to your saved story")
 	_wire_dialog_focus()
-	if not event_saves.exists():
-		var primary=ComfortTheme.button(true);primary.bg_color=Color("3c503c");primary.border_color=ComfortTheme.PEACH
-		buttons["events_new"].add_theme_stylebox_override("normal",primary)
 func _confirm_new_event():
 	if not event_saves.exists():
-		_new_event_game()
+		_depart_home()
 		return
-	_dialog("",t("Начать сначала?","Begin again?"),t("Новое путешествие заменит текущее автосохранение. Прежние истории в архиве останутся.","A new journey replaces the current autosave. Earlier stories in the archive stay safe."),[choice("back","Оставить мою историю","Keep my story",_main_menu),choice("restart","Начать новое путешествие","Begin a new journey",_new_event_game)],false)
+	_dialog("",t("Начать сначала?","Begin again?"),t("Новое путешествие заменит текущее автосохранение.","A new journey replaces the current autosave."),[choice("back","Назад","Back",_main_menu),choice("restart","Начать новое путешествие","Begin a new journey",_depart_home)],false)
+func _depart_home():
+	if departing_home: return
+	if not comfort.reduce_motion:
+		departing_home=true
+		if is_instance_valid(modal_tween): modal_tween.kill()
+		card.hide()
+		await modal_backdrop.play_departure()
+		departing_home=false
+	_new_event_game(expanded_new_game, expedition_new_game)
 func _archive_menu():
 	in_menu=true
-	_dialog("",t("Архив","Archive"),t("Прежние истории","Earlier stories"),[choice("load","Продолжить разлом","Continue rift",_continue_rift),choice("rift","Начать разлом заново","Restart rift",_new_rift_game),choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_main_menu)],false,true)
-func _new_event_game():
+	_dialog("",t("Архив","Archive"),"",[choice("load","Продолжить разлом","Continue rift",_continue_rift),choice("rift","Начать разлом заново","Restart rift",_new_rift_game),choice("archive_load","Продолжить архив","Continue archive",_continue_archive),choice("new","Начать архив заново","Restart archive",_new_game),choice("back","Назад","Back",_settings)],false)
+func _new_event_game(expanded: bool=false, expeditions: bool=false):
 	var lang=state.language
 	var volume=state.volume
 	state=State.new();state.language=lang;state.volume=volume
 	saves=event_saves
 	_setup_services()
 	state.set_flag("event_campaign");state.set_flag("rift_mode")
+	state.set_flag("case_chapters",expanded)
+	state.set_flag("expedition_0330",expanded and expeditions)
+	investigations.tracked=""
 	state.set_flag("nadia_met");state.set_flag("catalog");state.set_flag("clock_solved")
 	in_menu=false;modal=false;shade.hide();adventure.expanded=false
 	if event_window.active: event_window.close()
 	_build_world("town",Vector2(600,645))
 	events_controller.start()
+	investigations.install()
 	_save(false)
 func _continue_rift():
 	saves=rift_saves
@@ -534,10 +561,16 @@ func _load_game():
 	await _travel(state.zone,state.position,false)
 	state.minigame=checkpoint
 	state.event_state=event_checkpoint
-	if state.flag("event_campaign"): events_controller.start(true)
+	if state.flag("event_campaign"):
+		investigations.tracked=""
+		events_controller.start(true)
+		investigations.install()
 	elif state.flag("rift_mode") and not state.flag("rift_finished"): rift.start(self)
 	loading_save=false
+	var recovered = not saves.recovered_from.is_empty()
 	_save(false)
+	if recovered:
+		_notify(t("История восстановлена из резервного файла.","Your story was recovered from a backup file."))
 
 func _save(notify: bool=true):
 	if loading_save or in_menu or not is_instance_valid(player): return
@@ -560,10 +593,11 @@ func _travel(id: String,p: Vector2,persist: bool=true):
 		var destination=""
 		for place in journey.places.values():
 			if place.zone==id: destination=journey.pair(place.name);break
+		if investigations.Catalog.data.rooms.has(id): destination=investigations.locate(id)
 		if not destination.is_empty(): story_hud.announce(destination)
 	if persist: _save(false)
 	if id in Homes.IDS: _notify(Story.pair(Homes.NAMES[Homes.IDS.find(id)],state.language))
-func _build_world(id: String,p: Vector2):
+func _build_world(id: String,p: Vector2,animate_gate: bool=false):
 	if is_instance_valid(events_controller): events_controller.detach_activity()
 	npcs.detach(self)
 	if is_instance_valid(living): living.restore_camera(0.0)
@@ -575,12 +609,15 @@ func _build_world(id: String,p: Vector2):
 		add_child(world)
 	world.story_mode=state.flag("event_campaign")
 	world.visual_comfort=comfort
+	world.animate_expedition_gate = animate_gate
+	world.expedition_route_open = (id == "tide_station" and investigations.seen("tide_winch")) or (id == "bracken_clearing" and investigations.seen("bracken_lens"))
 	world.build(id,state.echo)
 	state.zone=id
 	state.set_flag("explored_"+id)
 	if not is_instance_valid(player):
 		player=Actor.new()
 		player.is_player=true
+		player.art_id="vera"
 		player.visual_comfort=comfort
 		player.sheet=load("res://after_silence/assets/pechatai/player/walk.png")
 		player.footstep.connect(_footstep)
@@ -630,8 +667,10 @@ func _build_world(id: String,p: Vector2):
 	if id=="town" and rift.phase=="travel" and state.flag("rift_mode") and not state.flag("rift_finished") and rift.index<rift.STOPS.size():
 		world.spot("rift_next",rift.STOPS[rift.index],"trace")
 	if is_instance_valid(events_controller): events_controller.refresh_mementos()
+	investigations.install()
 func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 	var actor=Actor.new()
+	actor.art_id=id
 	var appearance=preload("res://after_silence/core/npc_appearance.gd")
 	actor.animated_idle=appearance.PROFILES.has(id)
 	actor.visual_comfort=comfort
@@ -658,8 +697,8 @@ func _npc(id: String,p: Vector2,path: String,color: Color=Color.WHITE):
 func _physics_process(dt):
 	var board_open=is_instance_valid(event_window) and event_window.active
 	if is_instance_valid(help_button): help_button.visible=not modal and not in_menu and not rift.active and not battle.active and not board_open
-	if is_instance_valid(zoom_button): zoom_button.visible=not modal and not in_menu and not rift.active and not board_open
-	if is_instance_valid(objective): objective.visible=not modal and not in_menu and not rift.active and not board_open
+	if is_instance_valid(zoom_button): zoom_button.visible=not modal and not in_menu and not rift.active and not battle.active and not board_open
+	if is_instance_valid(objective): objective.visible=not modal and not in_menu and not rift.active and not battle.active and not board_open
 	shift_cooldown=maxf(0,shift_cooldown-dt)
 	if modal and is_instance_valid(body) and body.visible_characters>=0:
 		type_progress+=dt*42
@@ -668,7 +707,8 @@ func _physics_process(dt):
 	if not is_instance_valid(player): return
 	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active and not rift.active and not adventure.expanded and not board_open
 	player.enabled=enabled
-	audio.set_listening(enabled and state.flag("event_campaign"))
+	audio.set_listening(not in_menu and not rift.active)
+	audio.duck_score = modal or board_open
 	if is_instance_valid(enemy):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
 		enemy.visible=state.flag("sonya_met") and not state.flag("returned")
@@ -733,10 +773,16 @@ func _nearest() -> String:
 	for spot in world.interactables:
 		if spot.position.distance_to(player.position)<28 and (spot.id in Homes.IDS or spot.id in ["to_library","to_forest","to_town","leave_home","leave_shop","visit_shop","visit_orchard","visit_harbor","district_return"]):
 			return spot.id
+	var event_actor=""
 	if state.flag("event_campaign") and is_instance_valid(events_controller) and events_controller.phase in ["observe","ready","suspended","decision"]:
 		var actor=events_controller.npc
 		if is_instance_valid(actor) and actor.is_visible_in_tree() and actor.position.distance_to(player.position)<55:
-			return events_controller.events[events_controller.index].npc
+			var event: Dictionary=events_controller.events[events_controller.index]
+			if not investigations.barrier(event.id): return event.npc
+			event_actor=event.npc
+	var case_spot=investigations.hit(player.position)
+	if not case_spot.is_empty(): return case_spot
+	if not event_actor.is_empty(): return event_actor
 	var result=""
 	var distance=55.0
 	for id in actors:
@@ -755,6 +801,7 @@ func can_interact(id: String) -> bool:
 	if not state.flag("rift_mode"): return true
 	return id not in ["photo","poster","ledger","clock","diagram","testimony","signature","medical","relay","mirror","catalog","library_light","ribbon","trace","shelter","home_memory"]
 func _object_name(id: String) -> String:
+	if id.begins_with("case_"): return investigations.label(id)
 	if state.flag("event_campaign") and events_controller.owns(id):
 		return events_controller.pair(events_controller.events[events_controller.index].title)
 	if id.begins_with("landmark_"):
@@ -780,6 +827,9 @@ func _object_name(id: String) -> String:
 	var labels={"to_library":["войти в библиотеку","enter the library"],"to_town":["вернуться в город","return to town"],"to_forest":["пойти в лес","enter the forest"],"catalog":["каталог","catalogue"],"clock":["часы","clock"],"mirror":["зеркало","mirror"],"relay":["аварийное реле","emergency relay"],"library_light":["светильник","light socket"],"well":["отдохнуть у воды","rest at the well"],"trace":["след присутствия","trace of presence"],"shelter":["каменное укрытие","stone shelter"],"ribbon":["красная лента","red ribbon"]}
 	if id in Story.CLUES: return Story.CLUES[id][1] if state.language=="en" else Story.CLUES[id][0]
 	return Story.pair(labels.get(id,[id,id]),state.language)
+func _input(_event: InputEvent) -> void:
+	if departing_home: get_viewport().set_input_as_handled()
+
 func _unhandled_key_input(event):
 	if not event.is_pressed() or event.is_echo(): return
 	if transitions.busy: return
@@ -800,7 +850,8 @@ func _unhandled_key_input(event):
 		if event.physical_keycode==KEY_E and is_instance_valid(body): body.visible_characters=-1
 		elif event.physical_keycode>=KEY_1 and event.physical_keycode<=KEY_9:
 			var index=int(event.physical_keycode-KEY_1)
-			if index<buttons.size(): buttons.values()[index].pressed.emit()
+			if index<buttons.size() and not buttons.values()[index].disabled:
+				buttons.values()[index].pressed.emit()
 		elif event.physical_keycode==KEY_ESCAPE:
 			if modal_back.is_valid():
 				modal_back.call()
@@ -853,6 +904,7 @@ func _quest_help():
 	if state.flag("event_campaign"): journey.open();return
 	_dialog("",t("Куда идти?","Where to go?"),shop.hint()+"\n"+t("Золотая отметка на карте — следующее событие. E — действие.","The gold map marker is the next event. E: interact."),[choice("map","Показать карту","Show map",func():_close();adventure.expanded=true),choice("close","Понятно","Got it",_close)],false)
 func interact(id: String):
+	if investigations.interact(id): return
 	if id.begins_with("landmark_"):
 		var site: Dictionary=Landmarks.SITES.get(id.trim_prefix("landmark_"),{})
 		if not site.is_empty() and site.zone==state.zone and player.position.distance_to(site.point)<55.0:
@@ -935,6 +987,7 @@ func _rift_talk(id: String):
 	var special=state.flag({"nadia":"rift_choice_08_defend","lev":"rift_choice_04_limit","mara":"rift_choice_02_follow","pavel":"rift_choice_05_guard","sonya":"rift_choice_11_trust"}.get(id,""))
 	_dialog("rift_talk_"+id,named(id),lines.get(id,[t("Город снова меняется, но люди помнят друг друга.","Town still changes, but its people remember one another.")])[1 if special else 0],[choice("close","Продолжить","Continue",_close)],false)
 func _talk(id: String):
+	if investigations.followup(id): return
 	if is_instance_valid(events_controller) and events_controller.talk(id): return
 	if living.talk(id): return
 	if state.flag("rift_mode"): _rift_talk(id);return
@@ -1025,58 +1078,88 @@ func _shift():
 	shade.hide()
 	_travel(state.zone,player.position)
 func _catalog():
-	if state.flag("catalog"): _clue("ledger");return
-	var labels=[["Дождь","Rain"],["Колокол","Bell"],["Тишина","Silence"]]
-	var options=[]
-	for i in range(3): options.append(choice("book_"+str(i),labels[i][0],labels[i][1],func():_catalog_select(i)))
-	options.append(choice("reset","Сбросить порядок","Reset order",func():catalog_sequence.clear();_catalog()))
-	options.append(choice("close","Отойти","Step away",_close))
-	var sequence=PackedStringArray()
-	for index in catalog_sequence: sequence.append(Story.pair(labels[index],state.language))
-	_dialog("",t("Каталог эвакуации","Evacuation catalogue"),t("Три защёлки откликаются на считалку с афиши. Выберите книги по порядку. Сейчас: ","Three latches follow the rhyme on the poster. Choose books in order. Current: ")+" → ".join(sequence),options,false)
-func _catalog_select(index: int):
-	catalog_sequence.append(index)
-	if catalog_sequence.size()==3:
-		if catalog_sequence==[0,1,2]:
+	if state.flag("catalog"):
+		_clue("ledger")
+		return
+	var description = t("Вложите карточки в папку в порядке учебной тревоги. На площади сохранилась афиша с этой считалкой.", "File the cards in the order of the drill. The square still has the poster with its rhyme.")
+	if "poster" in state.evidence:
+		description += "\n" + t("Строка с афиши: «Дождь. Колокол. Тишина».", "The poster reads “Rain. Bell. Silence.”")
+	_open_archive_board("catalog",t("Каталог эвакуации","Evacuation catalogue"),description)
+
+func _clock():
+	if state.flag("clock_solved"):
+		_clue("clock")
+		return
+	var linked = "date" in state.links
+	var description = t("Свяжите афишу и часы в журнале. Без этого времени на циферблате будет недостаточно.", "Connect the poster and clock in the journal. The time alone won't establish what happened.")
+	if linked:
+		description = t("Афиша называет 02:17. Часы остановили при отключении сигнала. Введите время, которое подтверждают оба свидетельства.", "The poster gives 02:17. The clock stopped at the signal cut. Enter the time supported by both records.")
+	_open_archive_board("clock",t("Остановленные часы","The stopped clock"),description,[choice("journal","Журнал","Journal",_journal)])
+
+func _relay():
+	if state.flag("forest_power"):
+		_notify(t("Насос работает тихо.","The pump runs quietly."))
+		return
+	if not state.flag("boss_relay_defeated"):
+		_begin_boss("relay")
+		return
+	_open_archive_board("relay",t("Аварийное реле","Emergency relay"),t("Соедините источник слева с обеими ветвями насоса. Колокол оставьте без питания. Проверка не расходует предохранитель.","Connect the supply at left to both pump branches. Leave the bell unpowered. Testing uses no fuse."))
+
+func _open_archive_board(kind: String, heading: String, description: String, actions: Array = []):
+	actions.append(choice("close","Отойти","Step away",_close))
+	_dialog("",heading,description,actions,false)
+	var board = ArchivePanel.new()
+	board.kind = kind
+	board.game = self
+	board.values = ArchiveModel.checkpoint(kind,state.archive_boards.get(kind))
+	column.add_child(board)
+	column.move_child(board,2)
+	board.changed.connect(func(values: Array):
+		state.archive_boards[kind] = values
+		audio.trial_move("railway" if kind=="relay" else "letter_press",true,state.volume)
+		_save(false))
+	board.checked.connect(func(): audio.trial_move("railway",ArchiveModel.solved(kind,board.values),state.volume))
+	board.confirmed.connect(_confirm_archive_board.bind(kind,board))
+	for control in buttons.values():
+		control.reparent(board.footer,false)
+		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		control.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		control.focus_next = NodePath()
+		control.focus_previous = NodePath()
+		control.focus_neighbor_top = NodePath()
+		control.focus_neighbor_bottom = NodePath()
+	if not board.tools.is_empty(): board.tools.front().grab_focus()
+
+func _confirm_archive_board(kind: String, board):
+	var accepted = ArchiveModel.solved(kind,board.values)
+	var feedback = t("Проверьте порядок по афише.","Compare the order with the poster.")
+	if kind == "clock":
+		accepted = accepted and "date" in state.links
+		feedback = t("Сначала свяжите афишу и часы в журнале.","Connect the poster and clock in the journal first.") if not "date" in state.links else t("Сверьте часы и минуты с записью.","Check both hours and minutes against the record.")
+	elif kind == "relay":
+		feedback = t("Нужны обе ветви насоса при отключённом колоколе.","Connect both pump branches with the bell unpowered.")
+		if accepted and not inventory.install_fuse("forest_power"):
+			accepted = false
+			feedback = t("Нужен предохранитель Льва или деталь из библиотечного светильника.","You need Lev's fuse or the one from the library light.")
+	if not accepted:
+		board.message(feedback,false)
+		audio.trial_move("railway",false,state.volume)
+		return
+	state.archive_boards.erase(kind)
+	audio.scene_cue("memory",state.volume)
+	match kind:
+		"catalog":
 			state.set_flag("catalog")
 			state.add_clue("ledger")
 			state.give("lens")
 			_clue("ledger")
-		else:
-			state.pressure=mini(5,state.pressure+1)
-			catalog_sequence.clear()
-			_notify(t("Защёлки вернулись на место. Вспомните афишу.","The latches reset. Remember the poster."))
-			_catalog()
-	else: _catalog()
-func _clock():
-	if state.flag("clock_solved"): _clue("clock");return
-	_dialog("",t("Восстановить момент","Restore the moment"),t("Сначала свяжите афишу и часы в журнале. Затем выставьте время.\n","First connect the poster and clock in the journal, then set the time.\n")+("%02d:%02d"%[clock_hour,clock_minute]),[choice("hour","Час +1","Hour +1",func():clock_hour=(clock_hour+1)%24;_clock()),choice("minute","Минута +1","Minute +1",func():clock_minute=(clock_minute+1)%60;_clock()),choice("five","Минуты +5","Minutes +5",func():clock_minute=(clock_minute+5)%60;_clock()),choice("set","Зафиксировать","Set",_set_clock),choice("close","Назад","Back",_close)],false)
-func _set_clock():
-	if clock_hour==2 and clock_minute==17 and "date" in state.links:
-		state.set_flag("clock_solved")
-		_dialog("clock_restored",t("02:17","02:17"),t("Колокол отзывается одним ударом. Лесная дорога больше не замыкается на площадь. Запись говорит об отключении сигнала, а не о моменте смерти.","A bell rings once. The forest road no longer loops back to the square. The record marks a signal cut, not a death."),[choice("close","Продолжить","Continue",_close)])
-	else:
-		state.pressure=mini(5,state.pressure+1)
-		_notify(t("Механизм не совпал со свидетельствами.","The mechanism does not match the evidence."))
-		_clock()
-func _relay():
-	if state.flag("forest_power"): _notify(t("Насос работает тихо.","The pump runs quietly."));return
-	if not state.flag("boss_relay_defeated"): _begin_boss("relay");return
+		"clock":
+			state.set_flag("clock_solved")
+			_dialog("clock_restored","02:17",t("Колокол отзывается одним ударом. Лесная дорога открылась. Запись отмечает отключение сигнала. В описи этот момент ошибочно приняли за время гибели.","A bell rings once. The forest road is open. The record marks the signal cut. The register mistook that moment for a time of death."),[choice("close","Продолжить","Continue",_close)])
+		"relay":
+			_dialog("power",t("Тихий запуск","Quiet start"),t("Насос включился. Колокол молчит. В отголоске кто-то выходит из восточного укрытия.","The pump starts. The bell stays quiet. In the echo, someone leaves the eastern shelter."),[choice("close","Продолжить","Continue",_close)])
+	_save(false)
 
-	var options=[]
-	for i in range(3): options.append(choice("lever_"+str(i),t("Рычаг ","Lever ")+str(i+1)+(" ●" if relay_mask&(1<<i) else " ○"),"Lever "+str(i+1)+(" ON" if relay_mask&(1<<i) else " OFF"),func():relay_mask=relay_mask^(1<<i);_relay()))
-	options.append(choice("power","Вставить предохранитель и подать питание","Insert fuse and power on",_power_relay))
-	options.append(choice("close","Назад","Back",_close))
-	_dialog("",t("Аварийное реле","Emergency relay"),t("Средний контур питает колокол. Не поднимайте тревогу. Схема осталась в библиотеке.","The middle circuit powers the bell. Do not raise the alarm. The diagram is in the library."),options,false)
-func _power_relay():
-	if relay_mask!=5:
-		state.pressure=mini(5,state.pressure+1)
-		_notify(t("Сработал колокол. Первый и третий контуры питают насос.","The bell rang. The first and third circuits power the pump."))
-		if is_instance_valid(enemy): enemy.hear(player.position,true)
-		_relay()
-	elif inventory.install_fuse("forest_power"):
-		_dialog("power",t("Тихий запуск","Quiet start"),t("Насос ожил. В отголоске на востоке кто-то выходит из убежища.","The pump awakens. In the echo, someone leaves the eastern shelter."),[choice("close","Продолжить","Continue",_close)])
-	else: _notify(t("Нет предохранителя: спросите Льва или извлеките его из света библиотеки.","No fuse: ask Lev or remove it from the library light."))
 func _light_socket():
 	var installed=state.flag("library_light")
 	_dialog("",t("Свет библиотеки","Library light"),t("Это гнездо и лесное реле используют одну деталь. Свет помогает читать обычные страницы, но не проявляет чернила отголоска.","This socket and the forest relay use the same part. The light helps with ordinary pages, but cannot reveal echo ink."),[choice("fuse","Извлечь предохранитель" if installed else "Поставить предохранитель","Remove fuse" if installed else "Install fuse",func():
@@ -1084,7 +1167,10 @@ func _light_socket():
 		elif not inventory.install_fuse("library_light"): _notify(t("Нужна деталь Льва.","You need Lev's part."))
 		_close()),choice("close","Назад","Back",_close)],false)
 func _journal():
-	if state.flag("event_campaign"): events_controller.journal();return
+	if state.flag("event_campaign"):
+		if state.flag("case_chapters"): investigations.journal()
+		else: events_controller.journal()
+		return
 	if state.flag("rift_mode"):
 		var completed=0
 		var event_lines=[]
@@ -1158,30 +1244,18 @@ func _pause():
 	buttons["slots"]=slot_button
 	_wire_dialog_focus()
 func _settings():
-	_dialog("",t("Настройки","Settings"),t("Изменения сохраняются сразу.","Changes save automatically."),[choice("back","Готово · Esc","Done · Esc",func():
+	var actions=[choice("back","Готово · Esc","Done · Esc",func():
 		if in_menu: _main_menu()
-		else: _pause())],false)
-	var row=HBoxContainer.new()
-	row.custom_minimum_size.y=28
-	settings_volume=Label.new()
-	settings_volume.custom_minimum_size.x=116
-	settings_volume.text=t("Звук","Sound")+" · %d%%"%roundi(state.volume*100)
-	row.add_child(settings_volume)
-	var slider=HSlider.new()
-	slider.name="VolumeSlider"
-	slider.min_value=0;slider.max_value=100;slider.step=5
-	slider.value=roundi(state.volume*100)
-	slider.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	slider.custom_minimum_size.y=28
-	slider.tooltip_text=t("Громкость · стрелки влево / вправо","Volume · left / right arrows")
-	slider.value_changed.connect(func(value):
-		state.volume=value/100.0
-		audio.set_scene(state.echo,state.volume,state.zone)
-		settings_volume.text=t("Звук","Sound")+" · %d%%"%roundi(value)
-		_save_comfort())
-	row.add_child(slider)
-	column.add_child(row)
-	column.move_child(row,2)
+		else: _pause())]
+	if in_menu: actions.push_front(choice("archive","Архив","Archive",_archive_menu))
+	_dialog("",t("Настройки","Settings"),"",actions,false)
+	var mixer = HBoxContainer.new()
+	mixer.add_theme_constant_override("separation",10)
+	column.add_child(mixer)
+	column.move_child(mixer,2)
+	var slider = _add_mix_slider(mixer,"VolumeSlider",t("Общая","Master"),"volume")
+	_add_mix_slider(mixer,"MusicSlider",t("Музыка","Music"),"music_volume")
+	_add_mix_slider(mixer,"EffectsSlider",t("Эффекты","Effects"),"effects_volume")
 	var grid=GridContainer.new()
 	grid.name="ComfortOptions"
 	grid.columns=2
@@ -1212,6 +1286,36 @@ func _settings():
 		button.focus_neighbor_top=NodePath();button.focus_neighbor_bottom=NodePath()
 		button.focus_previous=NodePath();button.focus_next=NodePath()
 	slider.grab_focus()
+
+func _add_mix_slider(mixer: HBoxContainer, node_name: String, caption: String, key: String) -> HSlider:
+	var group = VBoxContainer.new()
+	group.add_theme_constant_override("separation",1)
+	group.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mixer.add_child(group)
+	var label = Label.new()
+	var amount = state.volume if key=="volume" else comfort.get(key)
+	label.text = caption + " · %d%%" % roundi(amount*100)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	group.add_child(label)
+	var slider = HSlider.new()
+	slider.name = node_name
+	slider.tooltip_text = caption
+	slider.max_value = 100
+	slider.step = 5
+	slider.value = roundi(amount*100)
+	slider.custom_minimum_size.y = 17
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.value_changed.connect(func(value: float):
+		if key=="volume":
+			state.volume=value/100.0
+			audio.set_scene(state.echo,state.volume,state.zone)
+		else:
+			comfort.set(key,value/100.0)
+			audio.set_mix(comfort.music_volume,comfort.effects_volume)
+		label.text = caption + " · %d%%" % roundi(value)
+		_save_comfort())
+	group.add_child(slider)
+	return slider
 
 func _save_comfort():
 	comfort.language=state.language;comfort.volume=state.volume

@@ -1,6 +1,6 @@
 extends RefCounted
 signal changed
-const ZONES = ["town", "library", "forest","home_nadia","home_lev","home_pavel","home_sonya","orchard","harbor","shop"]
+const ZONES = ["town", "library", "forest","home_nadia","home_lev","home_pavel","home_sonya","orchard","harbor","shop","records_annex","pump_chamber","closed_post","signal_cellar","listening_archive","tide_station","bracken_clearing"]
 const SIZES={"town":Vector2(1792,1280),"forest":Vector2(1792,1344),"library":Vector2(960,720),"orchard":Vector2(1200,900),"harbor":Vector2(1200,900)}
 const ITEMS = ["fuse", "lens", "key", "ribbon", "bandage", "keepsake"]
 const CLUES = ["photo", "poster", "ledger", "clock", "diagram", "testimony", "signature", "medical"]
@@ -28,6 +28,9 @@ var storage: Dictionary={}
 var minigame: Dictionary={}
 var tokens=3
 var event_state: Dictionary={}
+var case_trials: Dictionary={}
+var archive_boards: Dictionary={}
+var case_orders: Dictionary={}
 func flag(id: String) -> bool:
 	return flags.get(id, false) == true
 func set_flag(id: String, value: bool = true) -> void:
@@ -46,10 +49,30 @@ func give(id: String, count: int = 1) -> bool:
 	changed.emit()
 	return true
 func to_data() -> Dictionary:
-	return {"event_state":event_state.duplicate(true),"tokens":tokens,"schema":3,"storage":storage.duplicate(),"minigame":minigame.duplicate(true),"last_memories":last_memories.duplicate(),"away_times":away_times.duplicate(),"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "achievements":achievements.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
+	return {"archive_boards":archive_boards.duplicate(true),"case_orders":case_orders.duplicate(true),"case_trials":case_trials.duplicate(true),"event_state":event_state.duplicate(true),"tokens":tokens,"schema":3,"storage":storage.duplicate(),"minigame":minigame.duplicate(true),"last_memories":last_memories.duplicate(),"away_times":away_times.duplicate(),"residents":residents.duplicate(true), "flags": flags.duplicate(true), "inventory": inventory.duplicate(), "evidence": evidence.duplicate(), "links": links.duplicate(), "relations": relations.duplicate(), "history": history.duplicate(true), "seen": seen.duplicate(), "achievements":achievements.duplicate(), "zone": zone, "position": [position.x, position.y], "echo": echo, "charges": charges, "pressure": pressure, "clock": clock, "play_seconds": play_seconds, "language": language, "volume": volume}
 func restore(d: Dictionary) -> bool:
 	var saved_event=d.get("event_state",{})
 	if not saved_event is Dictionary or not preload("res://after_silence/core/event_progress.gd").valid(saved_event): return false
+	var raw_trials: Variant=d.get("case_trials",{})
+	var safe_trials: Dictionary={}
+	if raw_trials is Dictionary:
+		var Trial=preload("res://after_silence/core/journey_trials.gd")
+		for panel in {"weights_panel":["balance","weights"],"lamp_frame":["signal_grid","lamps"]}:
+			if not raw_trials.has(panel): continue
+			var mode: String="balance" if panel=="weights_panel" else "signal_grid"
+			var trial=Trial.new(mode,"weights" if panel=="weights_panel" else "lamps")
+			if trial.restore(raw_trials[panel]): safe_trials[panel]=trial.capture()
+		for panel in ["dispatch_lock", "tide_winch"]:
+			var values: Variant = raw_trials.get(panel, [])
+			if not values is Array or values.size() != 3: continue
+			var limit = [1, 1, 2] if panel == "tide_winch" else [2, 2, 2]
+			var valid = true
+			for i in range(values.size()):
+				var n: Variant = values[i]
+				if not (n is int or n is float) or not is_finite(float(n)) or int(n) != n or n < 0 or n > limit[i]:
+					valid = false
+					break
+			if valid: safe_trials[panel] = values.map(func(n): return int(n))
 	var saved_tokens=d.get("tokens",3)
 	if not (saved_tokens is int or saved_tokens is float) or not is_finite(float(saved_tokens)) or saved_tokens<0 or saved_tokens>999: return false
 	var schema=d.get("schema",2)
@@ -149,6 +172,26 @@ func restore(d: Dictionary) -> bool:
 	storage=saved_storage
 	tokens=int(saved_tokens)
 	event_state=saved_event.duplicate(true)
+	case_trials=safe_trials
+	archive_boards.clear()
+	var raw_boards: Variant = d.get("archive_boards", {})
+	if raw_boards is Dictionary:
+		var archive = preload("res://after_silence/core/archive_trials.gd")
+		for kind in archive.DEFAULTS:
+			if raw_boards.has(kind):
+				archive_boards[kind] = archive.checkpoint(kind,raw_boards[kind])
+	case_orders.clear()
+	var raw_orders: Variant = d.get("case_orders", {})
+	if raw_orders is Dictionary:
+		for id in ["copies_proof","sluice_valves","audio_order"]:
+			var marks: Variant = raw_orders.get(id, [])
+			if not marks is Array or marks.size() > 2: continue
+			var order = []
+			for item in marks:
+				if (item is int or item is float) and item >= 0 and item <= 2 and int(item) == item and int(item) not in order:
+					order.append(int(item))
+			if order.size() == marks.size() and not order.is_empty():
+				case_orders[id] = order
 	minigame=saved_game
 	last_memories=saved_memories
 	away_times=saved_times

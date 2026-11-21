@@ -3,7 +3,34 @@ var zone="town"
 var distorted=false
 var dimensions=Vector2.ZERO
 const Shore=preload("res://after_silence/world/shore_atlas.gd")
+const Art=preload("res://after_silence/core/ppae_art.gd")
+const WATER_SHADER=preload("res://after_silence/world/ppae_water.gdshader")
 var rug=preload("res://after_silence/assets/art100/rug.png")
+var water_materials: Array[ShaderMaterial]=[]
+var water_time:=0.0
+
+func _ready() -> void:
+	texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
+	for layer in Shore.layers(zone):
+		var surface:=Sprite2D.new()
+		surface.texture=layer[2]
+		surface.centered=false
+		surface.position=Vector2(layer[0])
+		var waves:=ShaderMaterial.new()
+		waves.shader=WATER_SHADER
+		waves.set_shader_parameter("waves",Art.texture("liquid"))
+		waves.set_shader_parameter("field_origin",surface.position)
+		waves.set_shader_parameter("field_size",surface.texture.get_size())
+		surface.material=waves
+		add_child(surface)
+		water_materials.append(waves)
+	set_process(not water_materials.is_empty())
+
+func _process(delta: float) -> void:
+	var parent=get_parent()
+	if parent.visual_comfort!=null and parent.visual_comfort.reduce_motion: return
+	water_time=fposmod(water_time+delta,16.0)
+	for waves in water_materials: waves.set_shader_parameter("water_age",water_time)
 func _draw():
 	if zone in ["town","harbor"]:
 		for layer in Shore.layers(zone): draw_texture(layer[1],Vector2(layer[0]))

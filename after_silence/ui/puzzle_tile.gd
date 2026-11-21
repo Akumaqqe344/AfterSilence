@@ -1,4 +1,6 @@
 extends Button
+const Art=preload("res://after_silence/ui/trial_stage_art.gd")
+const GARDEN=preload("res://after_silence/assets/minigames0310/garden.png")
 
 const COLORS=[Color("e6af89"),Color("acd0b1"),Color("aac0e1"),Color("d3a9c8"),Color("e4cf95"),Color("8fd0c9")]
 const SYMBOLS=[
@@ -18,12 +20,31 @@ var picked=false
 var suggested=false
 var lift=0.0
 var bounce: Tween
+var garden_frame = -1
+
+func set_garden_stage(value: int):
+	if value == stage: return
+	if is_instance_valid(bounce): bounce.kill()
+	garden_frame = -1
+	stage = value
 
 func animate_change():
 	if is_instance_valid(bounce): bounce.kill()
+	if kind == "seeds":
+		bounce = create_tween()
+		var frames = [1,2,3] if stage==1 else [3,4,6,7,5] if stage==2 else [0]
+		for frame in frames:
+			bounce.tween_callback(_garden_frame.bind(frame))
+			bounce.tween_interval(.08)
+		bounce.tween_callback(_garden_frame.bind(-1))
+		return
 	lift=5
 	bounce=create_tween()
 	bounce.tween_method(_raise_art,5.0,0.0,.27).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _garden_frame(frame: int):
+	garden_frame = frame
+	queue_redraw()
 
 func _raise_art(value: float):
 	lift=value
@@ -44,41 +65,32 @@ func _draw() -> void:
 			draw_rect(Rect2(liquid.position,Vector2(20,2)),COLORS[stack[i]].lightened(.24))
 			_symbol(liquid.get_center(),stack[i],1)
 	elif kind=="seeds":
-		if stage>=0:
-			draw_rect(Rect2(center-Vector2(16,-2),Vector2(32,12)),Color("74584f"))
-			draw_rect(Rect2(center-Vector2(16,-3),Vector2(32,2)),Color("aa8068"))
-		if stage>0:
-			draw_rect(Rect2(center-Vector2(1,10),Vector2(3,17)),Color("9ab092"))
-			draw_rect(Rect2(center-Vector2(7,3),Vector2(6,2)),Color("a7bc8e"))
-			draw_rect(Rect2(center+Vector2(2,-5),Vector2(7,2)),Color("7fa282"))
-		_symbol(center-Vector2(0,6),tone,3 if stage==2 else 2,stage==0)
+		var frame = garden_frame if garden_frame >= 0 else [0,1,3,5][stage+1]
+		var icon_center = center + Vector2(-7,0)
+		draw_texture_rect_region(GARDEN,Rect2(icon_center-Vector2(20,20),Vector2(40,40)),Rect2(frame*24,0,24,24),Color.WHITE,false,true)
+		_symbol(center+Vector2(24,0),tone,2)
 	elif tone>=0:
 		match kind:
 			"pairs":
 				draw_rect(Rect2(center-Vector2(22,15),Vector2(44,30)),Color("282739"))
 				draw_rect(Rect2(center-Vector2(20,14),Vector2(40,27)),Color("765b67"))
 				draw_rect(Rect2(center-Vector2(19,13),Vector2(38,25)),Color("a68680"))
+				draw_rect(Rect2(center-Vector2(18,12),Vector2(36,23)),Color("c2a299"),false,1)
 				draw_rect(Rect2(center-Vector2(16,10),Vector2(32,19)),COLORS[tone].darkened(.54))
 				_symbol(center,tone,2)
 			"lights":
-				draw_rect(Rect2(center-Vector2(14,11),Vector2(28,22)),Color("272638"))
-				draw_rect(Rect2(center-Vector2(10,14),Vector2(20,27)),Color("272638"))
-				draw_rect(Rect2(center-Vector2(11,9),Vector2(22,18)),COLORS[tone].darkened(.32))
-				draw_rect(Rect2(center-Vector2(8,12),Vector2(16,23)),COLORS[tone].darkened(.32))
-				draw_rect(Rect2(center-Vector2(6,10),Vector2(12,2)),COLORS[tone])
-				_symbol(center,tone,2)
+				Art.stamp(self,1,center,Vector2(32,32),COLORS[tone].lerp(Color.WHITE,.46))
+				_symbol(center+Vector2(0,2),tone,1)
 			"shelves":
 				draw_rect(Rect2(center+Vector2(-26,15),Vector2(52,4)),Color("987265"))
 				draw_rect(Rect2(center+Vector2(-26,19),Vector2(52,2)),Color("2c2839"))
-				draw_rect(Rect2(center-Vector2(13,10),Vector2(26,23)),Color("272638"))
-				draw_rect(Rect2(center-Vector2(11,7),Vector2(22,18)),COLORS[tone].darkened(.42))
-				draw_rect(Rect2(center-Vector2(8,13),Vector2(16,5)),Color("a48d77"))
-				_symbol(center+Vector2(0,2),tone,2)
+				Art.stamp(self,13,center,Vector2(32,32),COLORS[tone].lerp(Color.WHITE,.58))
+				_symbol(center+Vector2(0,4),tone,1)
 	if suggested: draw_rect(Rect2(Vector2(3,3),size-Vector2(6,6)),Color("e4cf95"),false,2)
 	if picked: draw_rect(Rect2(Vector2(5,5),size-Vector2(10,10)),Color("c2ddc8"),false,2)
 
-func _symbol(at: Vector2,i: int,dot: int,muted=false) -> void:
-	var tint=COLORS[i].darkened(.28) if muted else COLORS[i].lightened(.48)
+func _symbol(at: Vector2,i: int,dot: int) -> void:
+	var tint=COLORS[i].lightened(.34)
 	if dot==1: tint=Color("353041")
 	var start=(at-Vector2.ONE*dot*2.5).floor()
 	for y in range(5):

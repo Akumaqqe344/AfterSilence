@@ -1,4 +1,5 @@
 extends Node2D
+const Art=preload("res://after_silence/core/ppae_art.gd")
 
 const INK=Color("45352e")
 const WOOD=Color("876044")
@@ -15,6 +16,13 @@ func solid() -> bool: return kind not in ["rug","window"]
 func _draw():
 	draw_set_transform(Vector2(-extent.x*.5,-extent.y))
 	if solid(): draw_rect(Rect2(3,5,extent.x,extent.y),Color("352b2655"))
+	var ppae_kind: String=Art.FURNITURE.get(kind,"")
+	if not ppae_kind.is_empty():
+		var surface:=Art.texture("interior_"+ppae_kind)
+		if surface:
+			texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
+			draw_texture_rect(surface,Rect2(Vector2.ZERO,extent),false,Color.WHITE.lerp(tint,.18))
+			return
 	match kind:
 		"window": _window()
 		"rug": _rug()

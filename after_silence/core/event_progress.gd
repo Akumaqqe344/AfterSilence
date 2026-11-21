@@ -19,14 +19,17 @@ static func valid(data: Dictionary) -> bool:
 	if not activity is Dictionary: return false
 	if activity.is_empty(): return true
 	var mode=activity.get("mode","")
+	var variant: Variant = activity.get("variant", "")
+	if not variant is String or variant not in ["", "quiet_plaza", Trials.FIELD_VARIANT]: return false
+	if variant == "quiet_plaza" and mode != "signal_grid": return false
 	if mode in RETIRED: return true
 	if mode=="reality":
 		if Trials.STOPS.has(int(index)): return activity.get("reality") is Dictionary
 		var id: String=Reality.STOPS.get(int(index),"")
-		return id!="" and Reality.new(id).restore(activity.get("reality"))
+		return id!="" and Reality.new(id,variant).restore(activity.get("reality"))
 	if mode in Trials.ACTIONS:
-		return Trials.STOPS.get(int(index))==mode and Trials.new(mode).restore(activity.get("moves"))
-	return mode in Puzzle.SIZES and PUZZLE_STOPS.get(int(index))==mode and Puzzle.new(mode).restore(activity.get("moves"))
+		return Trials.STOPS.get(int(index))==mode and Trials.new(mode,variant).restore(activity.get("moves"))
+	return mode in Puzzle.SIZES and PUZZLE_STOPS.get(int(index))==mode and Puzzle.new(mode,variant).restore(activity.get("moves"))
 
 static func upgrade(data: Dictionary, event: Dictionary) -> Dictionary:
 	var saved=data.duplicate(true)

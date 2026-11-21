@@ -5,6 +5,9 @@ var particles=[]
 var transfers=[]
 var turns=[]
 const DURATION=.36
+const REACTIONS = "res://after_silence/assets/expeditions0330/trial_reactions.png"
+const MODES = preload("res://after_silence/ui/trial_stage_art.gd").MODES
+var stamps: Array = []
 
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
@@ -31,15 +34,31 @@ func turn(at: Vector2,texture: Texture2D):
 	while turns.size()>4: turns.pop_front()
 	set_process(true)
 
+func stamp(at: Vector2, mode: String, accepted: bool):
+	if game.comfort.reduce_motion: return
+	var row = MODES.find(mode)
+	if row < 0: return
+	stamps.append({"at":at,"row":row,"accepted":accepted,"age":0.0})
+	while stamps.size() > 12: stamps.pop_front()
+	set_process(true)
+
 func _process(dt):
 	if game.modal: return
-	for set_of_items in [particles,transfers,turns]:
+	for set_of_items in [particles,transfers,turns,stamps]:
 		for item in set_of_items: item.age+=dt
 		while not set_of_items.is_empty() and set_of_items[0].age>=DURATION: set_of_items.pop_front()
 	queue_redraw()
-	if particles.is_empty() and transfers.is_empty() and turns.is_empty(): set_process(false)
+	if particles.is_empty() and transfers.is_empty() and turns.is_empty() and stamps.is_empty(): set_process(false)
 
 func _draw():
+	if not stamps.is_empty():
+		var atlas: Texture2D = load(REACTIONS)
+		for item in stamps:
+			var time = item.age / DURATION
+			var frame = clampi(floori(time * 6), 0, 5)
+			var tint = Color.WHITE if item.accepted else Color("e2a19c")
+			tint.a = 1.0 - time * .50
+			draw_texture_rect_region(atlas, Rect2(item.at.round() - Vector2(24,24), Vector2(48,48)), Rect2(frame * 24, item.row * 24, 24, 24), tint)
 	for turn_effect in turns:
 		var t=turn_effect.age/DURATION
 		draw_set_transform(turn_effect.point,-PI*.5*(1-t))

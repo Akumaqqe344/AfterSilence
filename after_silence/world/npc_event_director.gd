@@ -134,6 +134,9 @@ func tell_puzzle_memory(id: String) -> bool:
 	return false
 func start_activity(checkpoint: Dictionary={}):
 	if not is_instance_valid(npc) or phase not in ["ready","running","suspended"]: return
+	if game.investigations.barrier(events[index].id):
+		game.investigations.followup(events[index].npc)
+		return
 	game.state.set_flag("event_action_"+events[index].id)
 	game._close();game.toast.text=""
 	if game.event_window.active: game.event_window.close()
@@ -154,7 +157,14 @@ func refresh_mementos():
 		prop.position=game.npcs.safe_point(place.zone,Vector2(place.point[0],place.point[1])+Vector2(90,45))
 		game.world.sorter.add_child(prop)
 func make_activity(checkpoint: Dictionary={}):
-	activity=Activity.new(events[index])
+	var definition: Dictionary=events[index].duplicate()
+	if not checkpoint.is_empty():
+		definition.variant = checkpoint.get("variant", "")
+	elif definition.id=="crowd" and game.investigations.decided("quiet_call"):
+		definition.variant="quiet_plaza"
+	elif game.state.flag("expedition_0330"):
+		definition.variant = "field_notes"
+	activity=Activity.new(definition)
 	if checkpoint.get("mode","")==activity.mode: activity.restore(checkpoint)
 	npc.get_meta("caption").hide()
 func dispose_activity():
@@ -179,10 +189,14 @@ func success():
 		npc.modulate=Color("a1e0ca");game.create_tween().tween_property(npc,"modulate",Color.WHITE,.7)
 	game._save(false)
 	game.audio.scene_cue("memory",game.state.volume);show_decision()
+	game.event_window.present_victory()
 func show_decision():
 	var actions=[]
 	for option in events[index].choices: actions.append(game.choice(option[0],option[1],option[2],func():choose(option)))
-	game._dialog(events[index].npc+"_decision",pair(events[index].title),"",actions,false)
+	var body = ""
+	if events[index].id == "shore":
+		body = game.t("Соня сбилась на последнем имени. Вера держит список, пока она начинает строку заново. «Если разойдёмся по разным берегам, кто ответит первой?»", "Sonya loses her place on the last name. Vera holds the register while she reads the line again. “If we leave for different shores, who answers first?”")
+	game._dialog(events[index].npc+"_decision",pair(events[index].title),body,actions,false)
 func choose(option: Array):
 	if phase!="decision": return
 	var event=events[index]
@@ -200,16 +214,37 @@ func choose(option: Array):
 	game.npcs.release(event.npc)
 	game.state.set_flag("event_left_"+event.npc,false)
 	index+=1
-	if index>=events.size(): finish();return
+	if index>=events.size():
+		game.investigations.install()
+		finish()
+		return
 	prepare()
+	game.investigations.install()
 	game._notify(option[2] if game.state.language=="en" else option[1])
 	game._save(false)
 func finish():
 	game.event_window.close();index=events.size();phase="finished";game.state.set_flag("events_finished")
 	dispose_activity()
-	var ending=game.t("Оба времени остались рядом. Никто не один.","Both eras remain together. Nobody is alone.") if game.state.flag("events_final_together") else game.t("Жители вернулись домой. Берег сохранил их память.","The residents returned home. The shore remembers them.")
-	game._dialog("",game.t("Последний берег","The final shore"),ending,[game.choice("journal","Итоги путешествия","Journey results",journal),game.choice("menu","В главное меню","Main menu",func():game._save(false);game._main_menu())],true)
+	var ending = game.t("На дальнем берегу ответили на свет фонаря. Соня подняла фонарь и услышала ответ уже с другого берега.\n\nВера сдвинулась на край скамьи. «Оставим место?» Соня села рядом. «Да. Завтра я сама приду раньше».","Someone across the water answered the lantern. Sonya raised the lantern and heard the answer from the other bank.\n\nVera moved to the end of the bench. ‘Shall we leave a place?’ Sonya sat beside her. ‘Yes. Tomorrow I'll get here first.’") if game.state.flag("events_final_together") else game.t("На дальнем берегу один за другим погасли огни. Соня дочитала список до конца и сложила его по старым сгибам.\n\n«Я боялась, что дома меня уже не ждут». Вера подала ей сумку. «Пойдём вместе до двери». Соня взяла сумку, а список оставила Вере.","The lights across the water went out one by one. Sonya read the register to the end and folded it along the old creases.\n\n‘I was afraid no one at home would be waiting.’ Vera handed over her bag. ‘I'll walk with you to the door.’ Sonya took the bag and left Vera the register.")
+	if game.investigations.decided("keep_trace"):
+		ending+="\n"+game.t("Свидетельство осталось на берегу рядом с семейными метками.","The witness record stayed at the shore beside the family tags.")
+	elif game.investigations.decided("carry_trace"):
+		ending+="\n"+game.t("К утру Вера принесла свидетельство на площадь.","By morning Vera brought the record to the square.")
+	if game.investigations.decided("roll_rendezvous"):
+		ending+="\n"+game.t("В обеих эпохах прозвучали оба времени встречи.","Both meeting times were heard in both eras.")
+	elif game.investigations.decided("roll_relay"):
+		ending+="\n"+game.t("Лев записал ответ с дальнего берега.","Lev recorded the reply from the far shore.")
+	elif game.investigations.decided("roll_private"):
+		ending+="\n"+game.t("Имена остались в конверте у Нади.","The names stayed in Nadia's envelope.")
+	var actions=[game.choice("journal","Итоги путешествия","Journey results",journal),game.choice("credits","Титры","Credits",credits),game.choice("menu","В главное меню","Main menu",func():game._save(false);game._main_menu())]
+	if game.state.flag("case_chapters"):
+		actions.insert(1,game.choice("walk","Вернуться в мир","Return to the area",game._close))
+	game._dialog("",game.t("Последний берег","The final shore"),ending,actions,true)
 	game._save(false)
+func credits():
+	var text = game.t("История, мир, графика и звук — команда After Silence.\n\nLittle Adventure — Michael Bertocchi.\nGodot Engine — команда Godot.\nЛистья просеки — Pixel-Boy и AAA.\n\nЛицензии приложены к сборке.","Story, world, art and sound by the After Silence contributors.\n\nLittle Adventure by Michael Bertocchi.\nGodot Engine by the Godot contributors.\nGlade leaves by Pixel-Boy and AAA.\n\nLicenses are included in the release.")
+	game._dialog("",game.t("Титры","Credits"),text,[game.choice("back","Вернуться к финалу","Back to the ending",finish),game.choice("menu","В главное меню","Main menu",game._main_menu)],false)
+
 func journal():
 	var lines=[]
 	if index<events.size(): lines.append(pair(events[index].title)+"\n"+pair(events[index].context))
@@ -228,6 +263,10 @@ func _physics_process(_dt):
 	if index>=events.size(): game.objective.text=game.t("Путешествие завершено. J — итоги.","Journey complete. J: results.");return
 	if preparing: return
 	var event=events[index]
+	var investigation: String=game.investigations.objective()
+	if not investigation.is_empty():
+		game.objective.text=investigation
+		return
 	if phase in ["running","suspended"] and not is_instance_valid(activity):
 		game.event_window.close();phase="ready"
 		game._notify(game.t("Событие восстановлено. Можно начать снова.","The event was restored. You can retry."))

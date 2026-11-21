@@ -4,6 +4,8 @@ const Landmarks=preload("res://after_silence/world/district_landmarks.gd")
 const Ground = preload("res://after_silence/world/ground_detail.gd")
 const Homes = preload("res://after_silence/world/homes.gd")
 const Art=preload("res://after_silence/core/art_catalog.gd")
+const Ppae=preload("res://after_silence/core/ppae_art.gd")
+const Study=preload("res://after_silence/core/investigation_catalog.gd")
 const PROP_ART={"lamp":"wall_lamp","street_lamp":"street_lamp","trace":"way_lamp","poster":"noticeboard","signpost":"signpost","chest":"chest","relay":"relay","catalog":"book","schematic":"book","note":"book","photo":"photo"}
 var dimensions = Vector2(1280,960)
 var sorter: Node2D
@@ -15,10 +17,14 @@ var interactables: Array = []
 var zone = "town"
 var echo = false
 var story_mode=false
+var expedition_route_open=false
+var animate_expedition_gate=false
 var visual_comfort
 var paths: Array=[]
 var glow_texture: Texture2D
 var focused_hotspot=""
+var scenery: Array[Node2D]=[]
+var facades: Array[Node2D]=[]
 var geometry_revision=0
 func build(id: String, distorted: bool):
 	grid=null
@@ -29,6 +35,8 @@ func build(id: String, distorted: bool):
 		remove_child(child)
 		child.queue_free()
 	obstacles.clear()
+	scenery.clear()
+	facades.clear()
 	focused_hotspot=""
 	interactables.clear()
 	dimensions = {"town":Vector2(1792,1280),"library":Vector2(960,720),"forest":Vector2(1792,1344)}.get(id,Vector2(640,480))
@@ -104,6 +112,10 @@ func build(id: String, distorted: bool):
 	elif id=="forest": build_forest()
 	elif id in ["orchard","harbor"]: build_district()
 	elif id=="shop": preload("res://after_silence/world/village_shop.gd").build(self)
+	elif Study.data.rooms.has(id):
+		var layout=load("res://after_silence/scenes/"+id+".tscn").instantiate()
+		add_child(layout)
+		layout.mount(self)
 	else: Homes.build(self)
 	Landmarks.build(self)
 	preload("res://after_silence/world/landscape.gd").build(self)
@@ -191,7 +203,19 @@ func prop(kind: String, p: Vector2, variant: int=0):
 		node.tex=load("res://after_silence/assets/pechatai/interior/"+file+".png")
 		node.size=node.tex.get_size()*2
 		if kind=="clock": node.size=Vector2(38,62)
-	if node.tex: node.material=preload("res://after_silence/world/surface_textures.gd").material(kind,variant)
+	var generated:=Ppae.prop_key(kind,zone,variant,p)
+	if generated.ends_with("_"):
+		node.wind_key=generated
+		node.tex=Ppae.texture(generated+"1")
+		node.size=Vector2(105,112) if variant==1 else Vector2(121,112)
+		scenery.append(node)
+	elif not generated.is_empty():
+		node.tex=Ppae.texture(generated)
+		if kind=="flowers": node.size=Vector2(26,30)
+		if generated.begins_with("structure_") and kind!="well":
+			node.glass=Ppae.texture(generated.replace("structure_","windows_"))
+			if node.glass: facades.append(node)
+	if generated.is_empty() and node.tex: node.material=preload("res://after_silence/world/surface_textures.gd").material(kind,variant)
 	sorter.add_child(node)
 	if kind=="rug": node.z_index=-1
 	if kind=="bridge": node.z_index=-1
@@ -207,14 +231,9 @@ func on_path(p: Vector2, margin: float=0.0) -> bool:
 	for segment in paths:
 		if p.distance_to(Geometry2D.get_closest_point_to_segment(p,segment[0],segment[1]))<=segment[2]+margin: return true
 	return false
-func add_light(p: Vector2):
+func add_light(p: Vector2) -> PointLight2D:
 	if not glow_texture:
-		var image=Image.create(64,64,false,Image.FORMAT_RGBA8)
-		for y in range(64):
-			for x in range(64):
-				var strength=maxf(0,1.0-Vector2(x-32,y-32).length()/32)
-				image.set_pixel(x,y,Color(1,1,1,strength*strength))
-		glow_texture=ImageTexture.create_from_image(image)
+		glow_texture=Ppae.texture("light_window")
 	var light=PointLight2D.new()
 	light.texture=glow_texture
 	light.position=p
@@ -222,6 +241,7 @@ func add_light(p: Vector2):
 	light.color=Color("97bfd0") if echo else Color("f1ce8b")
 	light.energy=.7 if echo else .35
 	add_child(light)
+	return light
 func decorate():
 	if zone not in ["town","forest","orchard","harbor"]: return
 	var water=preload("res://after_silence/world/watercourse.gd")
