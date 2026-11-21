@@ -18,6 +18,7 @@ var zone = "town"
 var echo = false
 var story_mode=false
 var expedition_route_open=false
+var animate_expedition_gate=false
 var visual_comfort
 var paths: Array=[]
 var glow_texture: Texture2D

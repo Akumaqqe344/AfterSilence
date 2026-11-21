@@ -33,7 +33,8 @@ static func icon(i: int) -> AtlasTexture:
 	return icons[i]
 
 static func stamp(canvas: CanvasItem, i: int, at: Vector2, extent: Vector2, tint: Color=Color.WHITE):
-	canvas.draw_texture_rect(icon(i),Rect2((at-extent*.5).round(),extent),false,tint)
+	var region = Rect2((i%8)*24,floori(i/8.0)*24,24,24)
+	canvas.draw_texture_rect_region(OBJECTS,Rect2((at-extent*.5).round(),extent),region,tint,false,true)
 
 static func button(control: Button, active: bool=false):
 	for pair in [["normal","hover" if active else "normal"],["hover","hover"],["pressed","pressed"],["disabled","disabled"]]:

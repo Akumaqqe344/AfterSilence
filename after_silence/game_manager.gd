@@ -597,7 +597,7 @@ func _travel(id: String,p: Vector2,persist: bool=true):
 		if not destination.is_empty(): story_hud.announce(destination)
 	if persist: _save(false)
 	if id in Homes.IDS: _notify(Story.pair(Homes.NAMES[Homes.IDS.find(id)],state.language))
-func _build_world(id: String,p: Vector2):
+func _build_world(id: String,p: Vector2,animate_gate: bool=false):
 	if is_instance_valid(events_controller): events_controller.detach_activity()
 	npcs.detach(self)
 	if is_instance_valid(living): living.restore_camera(0.0)
@@ -609,6 +609,7 @@ func _build_world(id: String,p: Vector2):
 		add_child(world)
 	world.story_mode=state.flag("event_campaign")
 	world.visual_comfort=comfort
+	world.animate_expedition_gate = animate_gate
 	world.expedition_route_open = (id == "tide_station" and investigations.seen("tide_winch")) or (id == "bracken_clearing" and investigations.seen("bracken_lens"))
 	world.build(id,state.echo)
 	state.zone=id

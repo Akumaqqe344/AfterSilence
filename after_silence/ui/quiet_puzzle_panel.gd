@@ -133,14 +133,17 @@ func _accept(next: Array) -> void:
 		return
 	selection=[]
 	var accepted: bool=model.submit(next)
+	_refresh()
 	if accepted:
 		game.audio.trial_move(model.mode, true, game.state.volume)
 		feedback.text=game.t("Получилось.","That worked.")
 		if not game.comfort.reduce_motion:
 			var color=Stage.accent(model.mode).lightened(.28)
 			for i in next:
-				effects.stamp(tiles[i].position+tiles[i].size*.5,model.mode,true)
-				tiles[i].animate_change()
+				if model.mode!="seeds":
+					effects.stamp(tiles[i].position+tiles[i].size*.5,model.mode,true)
+				if model.mode!="seeds" or i>=3:
+					tiles[i].animate_change()
 			if model.mode=="tubes":
 				effects.transfer(tiles[next[0]].get_rect().get_center(),tiles[next[1]].get_rect().get_center(),color)
 	else:
@@ -153,7 +156,6 @@ func _accept(next: Array) -> void:
 			"lights": feedback.text=game.t("Обмен должен собрать ряд из трёх соседних огней.","The swap must form a line of three adjacent lights.")
 			"pairs", "shelves": feedback.text=game.t("У этих предметов разные метки.","These objects carry different marks.")
 			"seeds": feedback.text=game.t("Сверь метку семени и грядки.","Compare the seed mark with the plot.")
-	_refresh()
 	if model.won(): solved.emit()
 	elif accepted: changed.emit()
 
@@ -199,7 +201,7 @@ func _refresh() -> void:
 			tile.text=str(i+1)
 			tile.alignment=HORIZONTAL_ALIGNMENT_LEFT
 		elif model.mode=="seeds":
-			tile.stage=-1 if i<3 else 0 if model.board[i]==-1 else 1 if model.board[i]<3 else 2
+			tile.set_garden_stage(-1 if i<3 else 0 if model.board[i]==-1 else 1 if model.board[i]<3 else 2)
 			if tile.stage==0: tile.tone=model.seeds[i-3]
 		var tone: int=tile.tone
 		tile.tooltip_text=game.t(COLORS_RU[tone],COLORS_EN[tone]) if tone>=0 else game.t("Пусто","Empty")

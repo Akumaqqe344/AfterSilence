@@ -147,7 +147,8 @@ func _place(id: String, point: Vector2, art: String, ready: bool, extent: float)
 	var mark=Marker.new()
 	mark.kind=art
 	mark.position=place
-	mark.item_size=Vector2(extent,extent)
+	mark.item_size=Vector2.ONE*roundf(extent*.77)
+	mark.player=game.player
 	mark.ready_to_read=ready
 	mark.reduced=game.comfort.reduce_motion
 	game.world.sorter.add_child(mark)
@@ -426,7 +427,7 @@ func _resolve_step(step: Dictionary):
 		game.state.set_flag("case_read_"+step.id)
 		game.audio.ping(game.state.volume)
 		if step.id in ["tide_winch", "bracken_lens"]:
-			game._build_world(game.state.zone, game.player.position)
+			game._build_world(game.state.zone, game.player.position, true)
 	_resolution(entries[owners[step.id]])
 	game._save(false)
 

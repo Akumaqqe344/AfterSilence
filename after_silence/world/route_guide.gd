@@ -126,16 +126,15 @@ func _draw():
 			var pin=(viewport_bounds.get_center()+ray*scale_factor*.93).round()
 			draw_circle(pin,12,DARK)
 			_arrow(pin,ray.normalized(),7,TRACE)
-	if viewport_bounds.has_point(dst):
-		var shift=0 if game.comfort.reduce_motion else roundf(sin(travel_age*TAU/3)*2)
-		var marker=dst+Vector2(0,-15+shift)
-		draw_circle(marker,9,DARK)
-		var rim=Color(.94,.80,.55,.42) if close else Color(.94,.80,.55,.30)
-		draw_arc(marker,11,0,TAU,20,rim,1)
-		_arrow(marker,Vector2.DOWN,5,TRACE)
-		if close and target.action:
-			draw_rect(Rect2(marker+Vector2(10,-7),Vector2(17,14)),DARK)
-			draw_string(get_theme_default_font(),marker+Vector2(15,4),"E",HORIZONTAL_ALIGNMENT_LEFT,-1,10,TRACE)
+	if viewport_bounds.has_point(dst) and not close:
+		# Mark the base. The prop and the interaction prompt occupy the space above it.
+		var phase = 0.0 if game.comfort.reduce_motion else sin(travel_age*TAU/3)
+		var padding = roundf(phase*2.0)
+		var left = (dst+Vector2(-13-padding,5)).round()
+		var right = (dst+Vector2(13+padding,5)).round()
+		for p in [left,right]:
+			var inward = 1.0 if p==left else -1.0
+			draw_line(p,p+Vector2(inward*5,3),TRACE,2)
 
 func _markers(points: PackedVector2Array, offset: float) -> Array:
 	var choices=[]

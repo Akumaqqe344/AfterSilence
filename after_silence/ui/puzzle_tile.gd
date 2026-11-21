@@ -1,5 +1,6 @@
 extends Button
 const Art=preload("res://after_silence/ui/trial_stage_art.gd")
+const GARDEN=preload("res://after_silence/assets/minigames0310/garden.png")
 
 const COLORS=[Color("e6af89"),Color("acd0b1"),Color("aac0e1"),Color("d3a9c8"),Color("e4cf95"),Color("8fd0c9")]
 const SYMBOLS=[
@@ -19,12 +20,31 @@ var picked=false
 var suggested=false
 var lift=0.0
 var bounce: Tween
+var garden_frame = -1
+
+func set_garden_stage(value: int):
+	if value == stage: return
+	if is_instance_valid(bounce): bounce.kill()
+	garden_frame = -1
+	stage = value
 
 func animate_change():
 	if is_instance_valid(bounce): bounce.kill()
+	if kind == "seeds":
+		bounce = create_tween()
+		var frames = [1,2,3] if stage==1 else [3,4,6,7,5] if stage==2 else [0]
+		for frame in frames:
+			bounce.tween_callback(_garden_frame.bind(frame))
+			bounce.tween_interval(.08)
+		bounce.tween_callback(_garden_frame.bind(-1))
+		return
 	lift=5
 	bounce=create_tween()
 	bounce.tween_method(_raise_art,5.0,0.0,.27).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _garden_frame(frame: int):
+	garden_frame = frame
+	queue_redraw()
 
 func _raise_art(value: float):
 	lift=value
@@ -45,16 +65,10 @@ func _draw() -> void:
 			draw_rect(Rect2(liquid.position,Vector2(20,2)),COLORS[stack[i]].lightened(.24))
 			_symbol(liquid.get_center(),stack[i],1)
 	elif kind=="seeds":
-		if stage>=0:
-			draw_rect(Rect2(center-Vector2(16,-2),Vector2(32,12)),Color("74584f"))
-			draw_rect(Rect2(center-Vector2(16,-3),Vector2(32,2)),Color("aa8068"))
-		if stage<=0:
-			Art.stamp(self,7,center-Vector2(0,4),Vector2(24,24),Color("ffffff8f"))
-		if stage>0:
-			draw_rect(Rect2(center-Vector2(1,10),Vector2(3,17)),Color("9ab092"))
-			draw_rect(Rect2(center-Vector2(7,3),Vector2(6,2)),Color("a7bc8e"))
-			draw_rect(Rect2(center+Vector2(2,-5),Vector2(7,2)),Color("7fa282"))
-		_symbol(center-Vector2(0,6),tone,3 if stage==2 else 2,stage==0)
+		var frame = garden_frame if garden_frame >= 0 else [0,1,3,5][stage+1]
+		var icon_center = center + Vector2(-7,0)
+		draw_texture_rect_region(GARDEN,Rect2(icon_center-Vector2(20,20),Vector2(40,40)),Rect2(frame*24,0,24,24),Color.WHITE,false,true)
+		_symbol(center+Vector2(24,0),tone,2)
 	elif tone>=0:
 		match kind:
 			"pairs":
@@ -75,8 +89,8 @@ func _draw() -> void:
 	if suggested: draw_rect(Rect2(Vector2(3,3),size-Vector2(6,6)),Color("e4cf95"),false,2)
 	if picked: draw_rect(Rect2(Vector2(5,5),size-Vector2(10,10)),Color("c2ddc8"),false,2)
 
-func _symbol(at: Vector2,i: int,dot: int,muted=false) -> void:
-	var tint=COLORS[i].darkened(.28) if muted else COLORS[i].lightened(.48)
+func _symbol(at: Vector2,i: int,dot: int) -> void:
+	var tint=COLORS[i].lightened(.34)
 	if dot==1: tint=Color("353041")
 	var start=(at-Vector2.ONE*dot*2.5).floor()
 	for y in range(5):

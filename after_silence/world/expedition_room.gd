@@ -137,7 +137,7 @@ func route_gate(world, area: Rect2, edge: Color):
 	if not world.expedition_route_open:
 		world.boundary(area)
 		return
-	if reduced:
+	if reduced or not world.animate_expedition_gate:
 		gate.hide()
 		return
 	var animation = Animation.new()
