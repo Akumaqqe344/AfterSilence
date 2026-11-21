@@ -1120,8 +1120,13 @@ func _open_archive_board(kind: String, heading: String, description: String, act
 	board.checked.connect(func(): audio.trial_move("railway",ArchiveModel.solved(kind,board.values),state.volume))
 	board.confirmed.connect(_confirm_archive_board.bind(kind,board))
 	for control in buttons.values():
+		control.reparent(board.footer,false)
+		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		control.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		control.focus_next = NodePath()
 		control.focus_previous = NodePath()
+		control.focus_neighbor_top = NodePath()
+		control.focus_neighbor_bottom = NodePath()
 	if not board.tools.is_empty(): board.tools.front().grab_focus()
 
 func _confirm_archive_board(kind: String, board):

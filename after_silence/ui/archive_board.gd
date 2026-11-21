@@ -21,6 +21,7 @@ var slots: Array[Button] = []
 var heading: Label
 var status: Label
 var art: Control
+var footer: HBoxContainer
 
 func _ready():
 	name = "ArchiveBoard"
@@ -37,12 +38,12 @@ func _ready():
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(status)
-	var actions = HBoxContainer.new()
-	add_child(actions)
+	footer = HBoxContainer.new()
+	add_child(footer)
 	if kind == "relay":
-		make_button(game.t("Проверить цепь", "Test circuit"), actions, test_circuit)
-	make_button(game.t("Сбросить", "Reset"), actions, reset_board)
-	make_button(game.t("Подтвердить", "Confirm"), actions, func(): confirmed.emit())
+		make_button(game.t("Проверить цепь", "Test circuit"), footer, test_circuit)
+	make_button(game.t("Сбросить", "Reset"), footer, reset_board)
+	make_button(game.t("Подтвердить", "Confirm"), footer, func(): confirmed.emit())
 	refresh()
 
 func make_button(title: String, row: Container, action: Callable) -> Button:

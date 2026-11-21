@@ -242,7 +242,7 @@ func finish():
 	game._dialog("",game.t("Последний берег","The final shore"),ending,actions,true)
 	game._save(false)
 func credits():
-	var text = game.t("После тишины · 0.9.0 Pre-Release\n\nИстория, мир, графика и звук — команда After Silence.\n\nОснова Little Adventure — Michael Bertocchi.\nДвижок — Godot Engine и его авторы.\nЛистья просеки — Pixel-Boy и AAA.\n\nСведения об остальных материалах и лицензиях приложены к сборке.","After Silence · 0.9.0 Pre-Release\n\nStory, world, art and sound by the After Silence contributors.\n\nLittle Adventure foundation by Michael Bertocchi.\nPowered by Godot Engine and its contributors.\nGlade leaves by Pixel-Boy and AAA.\n\nSee the release package for other assets and licenses.")
+	var text = game.t("История, мир, графика и звук — команда After Silence.\n\nLittle Adventure — Michael Bertocchi.\nGodot Engine — команда Godot.\nЛистья просеки — Pixel-Boy и AAA.\n\nЛицензии приложены к сборке.","Story, world, art and sound by the After Silence contributors.\n\nLittle Adventure by Michael Bertocchi.\nGodot Engine by the Godot contributors.\nGlade leaves by Pixel-Boy and AAA.\n\nLicenses are included in the release.")
 	game._dialog("",game.t("Титры","Credits"),text,[game.choice("back","Вернуться к финалу","Back to the ending",finish),game.choice("menu","В главное меню","Main menu",game._main_menu)],false)
 
 func journal():
