@@ -147,13 +147,17 @@ func focus(kind: String):
 	camera_tween.tween_property(game.camera,"zoom",Vector2.ONE*1.12,.45).set_trans(Tween.TRANS_SINE)
 	game.audio.scene_cue(kind,game.state.volume)
 
-func restore_camera():
+func restore_camera(duration: float=.5):
 	if is_instance_valid(camera_tween): camera_tween.kill()
 	focus_left=0
 	scene_kind=""
 	if is_instance_valid(game.camera):
-		camera_tween=create_tween()
-		camera_tween.tween_property(game.camera,"zoom",Vector2.ONE*(.65 if game.wide_camera else 1.0),.5)
+		var target=Vector2.ONE*(.65 if game.wide_camera else 1.0)
+		if game.comfort.reduce_motion or duration<=0.0:
+			game.camera.zoom=target
+		else:
+			camera_tween=create_tween()
+			camera_tween.tween_property(game.camera,"zoom",target,duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func tick(dt: float):
 	var state=game.state

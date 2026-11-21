@@ -1,72 +1,142 @@
 extends Node
+
+const RATE=16000
 var ambient: AudioStreamPlayer
 var cue: AudioStreamPlayer
-var cache: Dictionary = {}
-var zone = "town"
+var world_voice: AudioStreamPlayer2D
+var cache: Dictionary={}
+var zone="town"
+var echo_mode=false
+var listening=false
+var master_volume=.5
+var ambient_gain=0.0
+var ambient_key=""
+var sequence=0
+
 func _ready():
-	ambient = AudioStreamPlayer.new()
-	cue = AudioStreamPlayer.new()
+	ambient=AudioStreamPlayer.new()
+	cue=AudioStreamPlayer.new()
+	world_voice=AudioStreamPlayer2D.new()
+	world_voice.max_distance=720
+	world_voice.attenuation=.65
+	world_voice.max_polyphony=2
 	add_child(ambient)
 	add_child(cue)
-func wave(echo: bool, effect: bool = false) -> AudioStreamWAV:
-	var key=zone+str(echo)+str(effect)
-	if cache.has(key): return cache[key]
-	var rate = 16000
-	var length = 0.18 if effect else 4.0
-	var data = PackedByteArray()
-	data.resize(int(length * rate) * 2)
-	for i in range(int(length * rate)):
-		var t = float(i) / rate
-		var base={"town":110.0,"library":82.0,"forest":66.0}.get(zone,110.0)
-		var f = 392.0 if effect else base*(0.667 if echo else 1.0)
-		var value = sin(TAU*f*t)*0.07 + sin(TAU*f*2*t)*0.012
-		value *= minf(1.0,t/.012)
-		value *= pow(maxf(0, 1.0-t/length), 2) if effect else pow(sin(PI*t/length),2)
-		data.encode_s16(i*2, int(value*15000))
-	var result = AudioStreamWAV.new()
-	result.format = AudioStreamWAV.FORMAT_16_BITS
-	result.mix_rate = rate
-	result.data = data
-	if not effect:
-		result.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		result.loop_begin = 0
-		result.loop_end = data.size()/2
-	cache[key]=result
-	return result
-func set_scene(echo: bool, volume: float, location: String="town"):
-	ambient.stop()
-	ambient.stream=null
+	add_child(world_voice)
+
+func set_scene(echo: bool,volume: float,location: String="town"):
 	zone=location
-	# Exploration and menus are quiet; only short interaction cues play.
+	echo_mode=echo
+	master_volume=clampf(volume,0.0,1.0)
+
+func set_listening(active: bool):
+	listening=active
+
+func _process(dt: float):
+	var wanted=zone+str(echo_mode) if listening and master_volume>0 else ""
+	var target=master_volume*.16 if ambient_key==wanted and not wanted.is_empty() else 0.0
+	ambient_gain=move_toward(ambient_gain,target,dt*.23)
+	ambient.volume_db=linear_to_db(maxf(ambient_gain,.0001))
+	if target==0.0 and ambient_gain==0.0 and ambient_key!=wanted:
+		ambient.stop()
+		ambient.stream=null
+		ambient_key=wanted
+		if not wanted.is_empty():
+			var family="surf" if zone=="harbor" else "room" if zone.begins_with("home_") or zone in ["shop","library"] else "wind"
+			ambient.stream=_sample(family,1 if echo_mode else 0)
+			ambient.play()
+
 func ping(volume: float):
-	cue.stop()
-	cue.stream=null
-	cue.stream = wave(false,true)
-	cue.volume_db = linear_to_db(maxf(volume*0.18,0.0001))
+	_play_ui("click",volume*.20)
+
+func touch(at: Vector2,volume: float):
+	_play_world("touch",at,volume*.18)
+
+func footstep(at: Vector2,surface: String,running: bool,volume: float):
+	_play_world(surface,at,volume*(.31 if running else .23))
+
+func landing(at: Vector2,volume: float):
+	_play_world("land",at,volume*.29)
+
+func door(at: Vector2,volume: float):
+	_play_world("door",at,volume*.24)
+
+func scene_cue(kind: String,volume: float):
+	_play_ui("danger" if kind=="boss" else "memory",volume*.24)
+
+func _play_ui(kind: String,gain: float):
+	if gain<=0: return
+	cue.stream=_sample(kind,0)
+	cue.volume_db=linear_to_db(gain)
 	cue.play()
-func shutdown():
-	ambient.stop()
-	cue.stop()
-	ambient.stream=null
-	cue.stream=null
-	cache.clear()
-func scene_cue(kind: String, volume: float):
-	# Short musical phrase; never loops and never plays on a menu.
-	var tones=[261.63,329.63,392.0] if kind!="boss" else [196.0,233.08,293.66]
+
+func _play_world(kind: String,at: Vector2,gain: float):
+	if gain<=0: return
+	sequence=(sequence+1)%3
+	world_voice.position=at
+	world_voice.stream=_sample(kind,sequence)
+	world_voice.volume_db=linear_to_db(gain)
+	world_voice.play()
+
+func _sample(kind: String,variant: int) -> AudioStreamWAV:
+	var key=kind+str(variant)
+	if cache.has(key): return cache[key]
+	var is_bed=kind in ["wind","surf","room"]
+	var is_phrase=kind in ["memory","danger"]
+	var length=4.8 if is_bed else 1.2 if is_phrase else .27 if kind=="door" else .15
 	var stream=AudioStreamWAV.new()
 	stream.format=AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate=16000
+	stream.mix_rate=RATE
+	var count=int(length*RATE)
 	var samples=PackedByteArray()
-	samples.resize(19200*2)
-	for i in range(19200):
-		var time=float(i)/16000
-		var part=mini(2,int(time/.4))
-		var local=fmod(time,.4)
-		var envelope=sin(PI*local/.4)*exp(-local*5)
-		samples.encode_s16(i*2,int(sin(TAU*tones[part]*time)*envelope*1800))
+	samples.resize(count*2)
+	var rng=RandomNumberGenerator.new()
+	rng.seed=key.hash()
+	var low=0.0
+	var slow=0.0
+	var pitch=1.0+variant*.077
+	var tones=[196.0,233.08,293.66] if kind=="danger" else [261.63,329.63,392.0]
+	for i in range(count):
+		var time=float(i)/RATE
+		var noise=rng.randf_range(-1.0,1.0)
+		low=lerpf(low,noise,.16)
+		slow=lerpf(slow,noise,.024)
+		var value=0.0
+		if is_bed:
+			var wave=.65+.23*sin(TAU*time/length)
+			value=(slow*.62+low*.10)*wave if kind=="surf" else slow*.49 if kind=="wind" else slow*.17
+			value*=minf(1.0,minf(time,length-time)/.22)
+		elif is_phrase:
+			var local=fmod(time,.4)
+			value=sin(TAU*tones[mini(2,int(time/.4))]*time)*sin(PI*local/.4)*exp(-local*5.0)*.22
+		else:
+			var envelope=minf(1.0,time/.006)*pow(1.0-time/length,2.6)
+			match kind:
+				"click": value=sin(TAU*528.0*time)*.23+sin(TAU*792.0*time)*.06
+				"touch": value=low*.32+sin(TAU*324.0*pitch*time)*.15
+				"wood": value=low*.37+sin(TAU*118.0*pitch*time)*.31
+				"stone": value=noise*.25+low*.45+sin(TAU*186.0*pitch*time)*.11
+				"door": value=low*.34+sin(TAU*(93.0+time*64.0)*pitch*time)*.23
+				"land": value=low*.69+sin(TAU*76.0*pitch*time)*.22
+				_: value=low*.65+slow*.18
+			value*=envelope
+		samples.encode_s16(i*2,roundi(clampf(value,-1.0,1.0)*32760))
 	stream.data=samples
-	cue.stop();cue.stream=stream
-	cue.volume_db=linear_to_db(maxf(volume*.24,.0001))
-	cue.play()
+	if is_bed:
+		stream.loop_mode=AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin=0
+		stream.loop_end=count
+	cache[key]=stream
+	return stream
+
+func shutdown():
+	if is_instance_valid(ambient): ambient.stop();ambient.stream=null
+	if is_instance_valid(cue): cue.stop();cue.stream=null
+	if is_instance_valid(world_voice): world_voice.stop();world_voice.stream=null
+	ambient_gain=0.0
+	ambient_key=""
+	listening=false
+	cache.clear()
+
 func _exit_tree():
 	shutdown()

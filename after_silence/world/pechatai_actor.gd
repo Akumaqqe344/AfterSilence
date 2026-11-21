@@ -6,6 +6,7 @@ const Appearance=preload("res://after_silence/core/npc_appearance.gd")
 const SPEED=180.0
 const ACCEL=1300.0
 const DECEL=1600.0
+const STRIDE_CONTACT=64.0
 var is_player=false
 var enabled=true
 var running=false
@@ -18,7 +19,6 @@ var sheet: Texture2D
 var sprite: Sprite2D
 var npc_color=Color.WHITE
 var scripted=false
-var step_time=0.0
 var jump_age=1.0
 var jump_duration=.44
 var jump_peak=28.0
@@ -35,6 +35,8 @@ var animated_idle=false
 var idle_clock=0.0
 var settle_age=0.0
 var sprite_step=0.0
+var last_shadow_height=-1.0
+var last_inspected=false
 func _ready():
 	collision_layer=2 if is_player else 4
 	collision_mask=1
@@ -102,11 +104,20 @@ func _physics_process(dt):
 	var motion=managed_velocity if managed_motion else get_real_velocity()
 	var moving=motion.length()>4
 	if moving:
-		facing=(3 if motion.x>0 else 2) if absf(motion.x)>absf(motion.y) else (0 if motion.y>0 else 1)
-		diagonal=([2,3,0,1][(0 if motion.x<0 else 1)+(0 if motion.y<0 else 2)] if absf(motion.x)>4 and absf(motion.y)>4 else -1)
-		phase+=dt*(12 if running else 8)*minf(1.5,motion.length()/(297 if running else 180)) if is_player else dt*6
-		step_time+=dt
-		if is_player and step_time>(.25 if running else .42): step_time=0;footstep.emit(running)
+		var horizontal=absf(motion.x)
+		var vertical=absf(motion.y)
+		var use_row=facing>=2
+		if horizontal>vertical*1.15: use_row=true
+		elif vertical>horizontal*1.15: use_row=false
+		facing=(3 if motion.x>0 else 2) if use_row else (0 if motion.y>0 else 1)
+		diagonal=[2,3,0,1][(0 if motion.x<0 else 1)+(0 if motion.y<0 else 2)] if minf(horizontal,vertical)>maxf(horizontal,vertical)*.28 else -1
+		if is_player and jump_age>=jump_duration:
+			var previous=int(phase/2.0)
+			var next=phase+2.0*motion.length()*dt/STRIDE_CONTACT
+			phase=fposmod(next,4.0)
+			if int(next/2.0)!=previous: footstep.emit(running)
+		elif not is_player:
+			phase=fposmod(phase+dt*6.0,4.0)
 	var in_air=jump_age<jump_duration
 	if enabled or scripted: jump_age=minf(jump_duration,jump_age+dt)
 	if is_player and in_air and jump_age>=jump_duration:
@@ -126,7 +137,7 @@ func _physics_process(dt):
 	var anchor=Vector2(32,92)
 	if is_player:
 		var clip="run" if running else "walk"
-		if diagonal>=0: clip="diagonal-run";row=diagonal
+		if diagonal>=0 and running: clip="diagonal-run";row=diagonal
 		if not moving:
 			clip="idle"
 			var index=4+diagonal if diagonal>=0 else facing
@@ -150,7 +161,10 @@ func _physics_process(dt):
 		var lift=sin(phase*PI)*1.3 if moving and p>=1 and show_motion else 0.0
 		sprite_step=lerpf(sprite_step,lift,minf(1,dt*16))
 		if show_motion: sprite.position.y-=roundf(sprite_step-settle_age*7)
-	queue_redraw()
+	if not is_equal_approx(elevation,last_shadow_height) or last_inspected!=(inspect_time>0):
+		last_shadow_height=elevation
+		last_inspected=inspect_time>0
+		queue_redraw()
 func idle_frame() -> int:
 	if visual_comfort==null or visual_comfort.reduce_motion: return Appearance.REST_FRAME
 	return Appearance.BLINK_FRAME if fposmod(idle_clock,4.0)>3.84 else Appearance.REST_FRAME

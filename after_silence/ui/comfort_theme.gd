@@ -13,9 +13,12 @@ const BRASS=Color("c69b6c")
 const EDGE=Color("45584c")
 
 static func world_light(zone: String, night: bool, echo: bool) -> Color:
-	if echo: return Color("a0a7c8")
-	if night: return Color("999bb7")
-	if zone=="forest" or zone=="library": return Color("cbd1ba")
+	if echo: return Color("a9afca")
+	if zone.begins_with("home_") or zone=="shop": return Color("d2b99d") if night else Color("e5d2b0")
+	if zone=="library": return Color("b6b4a8") if night else Color("d1cbbb")
+	if night: return Color("a1a6be")
+	if zone=="forest": return Color("c4ccae")
+	if zone=="harbor": return Color("ccd6c9")
 	return Color("ded9bf")
 
 static func _weighted_font(weight: int) -> Font:

@@ -77,8 +77,6 @@ var buttons: Dictionary={}
 var modal=true
 var in_menu=true
 var type_progress=0.0
-var modal_age=0.0
-var hint_age=0.0
 var autosave_age=0.0
 var shift_cooldown=0.0
 var catalog_sequence: Array=[]
@@ -87,6 +85,7 @@ var clock_minute=0
 var relay_mask=0
 var selected_evidence=""
 var dirty=false
+var loading_save=false
 var cutscenes=Cutscenes.new()
 var expedition=preload("res://after_silence/world/expedition_ui.gd").new(self)
 var talkkit_pilot
@@ -243,8 +242,11 @@ func _setup_ui():
 	help_button.size=Vector2(34,22)
 	status=Label.new()
 	status.hide()
-	status.position=Vector2(138,55)
-	status.add_theme_font_size_override("font_size",8)
+	status.position=Vector2(17,49)
+	status.add_theme_font_size_override("font_size",11)
+	status.add_theme_color_override("font_color",Color("f2c79c"))
+	status.add_theme_color_override("font_outline_color",Color("241f1d"))
+	status.add_theme_constant_override("outline_size",3)
 	ui.add_child(status)
 	hint=Label.new()
 	hint.position=Vector2(24,327)
@@ -377,7 +379,6 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	if id!="": dialogues.record(id,title,text)
 	body.visible_characters=0 if animated and not seen and not comfort.instant_text else -1
 	type_progress=0
-	modal_age=0
 	for i in range(actions.size()):
 		var item=actions[i]
 		var button=Button.new()
@@ -511,6 +512,7 @@ func _new_game():
 	await cutscenes.play(self,"arrival",[{"kind":"sound"},{"kind":"move","actor":"vera","target":Vector2(600,630)},{"kind":"camera","offset":Vector2.ZERO,"duration":.5}])
 	_story("intro")
 func _load_game():
+	if loading_save or transitions.busy: return
 	if not saves.load_state(state):
 		_dialog("",t("Нет читаемого сохранения","No readable save"),t("Основной и резервный файлы не прошли проверку. Они не удалены.","Neither the main nor backup file passed validation. They were not deleted."),[choice("menu","В меню","Main menu",_main_menu)],false)
 		return
@@ -518,20 +520,22 @@ func _load_game():
 		state.language=comfort.language
 		state.volume=comfort.volume
 	_setup_services()
+	loading_save=true
 	var checkpoint=state.minigame.duplicate(true)
 	var event_checkpoint=state.event_state.duplicate(true)
 	in_menu=false
 	modal=false
 	shade.hide()
-	await _travel(state.zone,state.position)
+	await _travel(state.zone,state.position,false)
 	state.minigame=checkpoint
 	state.event_state=event_checkpoint
 	if state.flag("event_campaign"): events_controller.start(true)
 	elif state.flag("rift_mode") and not state.flag("rift_finished"): rift.start(self)
+	loading_save=false
 	_save(false)
 
 func _save(notify: bool=true):
-	if in_menu or not is_instance_valid(player): return
+	if loading_save or in_menu or not is_instance_valid(player): return
 	npcs.capture(self)
 	if state.flag("event_campaign") and is_instance_valid(events_controller) and not events_controller.preparing: state.event_state=events_controller.capture()
 	state.minigame=preload("res://after_silence/core/minigame_checkpoint.gd").capture(rift) if rift.active else {}
@@ -541,22 +545,23 @@ func _save(notify: bool=true):
 		dirty=false
 		if notify: _notify(t("История сохранена","Story saved"))
 	else: _notify(t("Не удалось сохранить. Предыдущая копия сохранена.","Save failed. The previous copy remains intact."))
-func _travel(id: String,p: Vector2):
+func _travel(id: String,p: Vector2,persist: bool=true):
 	if transitions.busy: return
 	modal=false
 	shade.hide()
+	if persist and id!=state.zone and is_instance_valid(player): audio.door(player.position,state.volume)
 	await transitions.transition(self,veil,func(): _build_world(id,p),comfort.reduce_motion)
 	if state.flag("event_campaign"):
 		var destination=""
 		for place in journey.places.values():
 			if place.zone==id: destination=journey.pair(place.name);break
 		if not destination.is_empty(): story_hud.announce(destination)
-	_save(false)
+	if persist: _save(false)
 	if id in Homes.IDS: _notify(Story.pair(Homes.NAMES[Homes.IDS.find(id)],state.language))
 func _build_world(id: String,p: Vector2):
 	if is_instance_valid(events_controller): events_controller.detach_activity()
 	npcs.detach(self)
-	if is_instance_valid(living): living.restore_camera()
+	if is_instance_valid(living): living.restore_camera(0.0)
 	if is_instance_valid(player) and player.has_meta("click_route"): player.remove_meta("click_route")
 	if is_instance_valid(player):
 		player.get_parent().remove_child(player)
@@ -574,6 +579,7 @@ func _build_world(id: String,p: Vector2):
 		player.visual_comfort=comfort
 		player.sheet=load("res://after_silence/assets/pechatai/player/walk.png")
 		player.footstep.connect(_footstep)
+		player.landed.connect(func():audio.landing(player.position,state.volume))
 		camera=Camera2D.new()
 		camera.position_smoothing_enabled=true
 		camera.position_smoothing_speed=6
@@ -657,11 +663,15 @@ func _physics_process(dt):
 	if not is_instance_valid(player): return
 	var enabled=not modal and not in_menu and not transitions.busy and not cutscenes.running and not battle.active and not rift.active and not adventure.expanded and not board_open
 	player.enabled=enabled
+	audio.set_listening(enabled and state.flag("event_campaign"))
 	if is_instance_valid(enemy):
 		enemy.active=enabled and state.flag("sonya_met") and not state.flag("returned")
 		enemy.visible=state.flag("sonya_met") and not state.flag("returned")
 		enemy.pressure=state.pressure
 	npcs.update(self,dt,enabled)
+	var danger=enabled and is_instance_valid(enemy) and enemy.active and enemy.position.distance_squared_to(player.position)<57600
+	if danger and not status.visible: status.text=t("Преследователь рядом","The watcher is close")
+	status.visible=danger
 	if not enabled: return
 	state.clock=fposmod(state.clock+dt/60,24)
 	state.play_seconds+=dt
@@ -682,12 +692,8 @@ func _physics_process(dt):
 	var night=state.clock>=20 or state.clock<7
 	var tint=ComfortTheme.world_light(state.zone,night,state.echo)
 	world.modulate=world.modulate.lerp(tint,minf(1,dt*2))
-	status.text=t("Отголоски: ","Echoes: ")+str(state.charges)+"/3 · "+t("Улики: ","Clues: ")+str(state.evidence.size())+"/"+str(State.CLUES.size())+" · "+("%02d:%02d"%[int(state.clock),int(fmod(state.clock,1)*60)])
 	var nearby=_nearest()
-	for prop in world.sorter.get_children():
-		if not prop.has_meta("hotspot_id"): continue
-		var focus=prop.get_meta("hotspot_id")==nearby
-		if prop.focused!=focus: prop.focused=focus;prop.queue_redraw()
+	world.focus_hotspot(nearby)
 	hint.text=t("E — ","E — ")+_object_name(nearby) if nearby!="" else ""
 	hint.size=Vector2(220,35)
 	if nearby!="":
@@ -695,25 +701,27 @@ func _physics_process(dt):
 		for spot in world.interactables:
 			if spot.id==nearby: p=spot.position
 		hint.position=((world.get_global_transform_with_canvas()*p)+Vector2(-110,18)).clamp(Vector2(8,58),Vector2(410,305))
-	if is_instance_valid(enemy) and enemy.active and enemy.position.distance_to(player.position)<240:
-		status.text+=" · "+t("Кто-то рядом. Ищите каменное укрытие.","Something is close. Find the stone shelter.")
-	hint_age=maxf(0,hint_age-dt)
-	if hint_age<=0: toast.text=""
 func _notify(text: String):
 	toast.text=text
 	if is_instance_valid(toast_tween): toast_tween.kill()
-	toast.modulate.a=0
+	toast.modulate.a=1.0 if comfort.reduce_motion else 0.0
 	toast_tween=create_tween()
-	if comfort.reduce_motion:
-		toast.modulate.a=1
-		toast_tween.tween_interval(3.4)
-		toast_tween.tween_property(toast,"modulate:a",0,0)
-		return
-	toast_tween.tween_property(toast,"modulate:a",1,.18)
-	toast_tween.tween_interval(2.8)
-	toast_tween.tween_property(toast,"modulate:a",0,.6)
-	hint_age=4
+	if not comfort.reduce_motion: toast_tween.tween_property(toast,"modulate:a",1.0,.18)
+	toast_tween.tween_interval(3.0)
+	if not comfort.reduce_motion: toast_tween.tween_property(toast,"modulate:a",0.0,.42)
+	toast_tween.tween_callback(func():toast.text="")
 func _footstep(loud: bool):
+	var surface="earth"
+	var position_on_ground: Vector2=player.position
+	if world.paths.is_empty() or preload("res://after_silence/world/watercourse.gd").crossing_at(state.zone,position_on_ground):
+		surface="wood"
+	else:
+		for feature in Landmarks.FEATURES.get(state.zone,[]):
+			if not feature[1].has_point(position_on_ground): continue
+			if feature[0] in ["stone","rune"]: surface="stone"
+			elif feature[0]=="plank": surface="wood"
+			break
+	audio.footstep(position_on_ground,surface,loud,state.volume)
 	if is_instance_valid(enemy): enemy.hear(player.position,loud and not state.flag("soft_steps"))
 func _nearest() -> String:
 	if rift.phase=="travel" and not state.flag("rift_finished") and rift.index<rift.STOPS.size() and state.zone=="town" and player.position.distance_to(rift.STOPS[rift.index])<52: return "rift_next"
@@ -831,7 +839,7 @@ func _toggle_zoom():
 	if not is_instance_valid(camera): return
 	camera.position=Vector2.ZERO
 	wide_camera=not wide_camera
-	camera.zoom=Vector2.ONE*(0.65 if wide_camera else 1.0)
+	living.restore_camera(.22)
 func _toggle_route_guide():
 	comfort.route_guide=not comfort.route_guide
 	_save_comfort()
@@ -867,7 +875,7 @@ func interact(id: String):
 		state.set_flag("visited_"+state.zone)
 		_dialog("note_"+state.zone,Story.pair(Homes.NAMES[index],state.language),notes[index],[choice("close","Закрыть","Close",_close)]);return
 	player.inspect_time=.6
-	audio.ping(state.volume)
+	audio.touch(player.position,state.volume)
 	if id in actors: _talk(id);return
 	if state.flag("rift_mode") and id not in ["to_library","to_forest","to_town","well"]:
 		return

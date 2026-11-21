@@ -8,6 +8,7 @@ const PROP_ART={"lamp":"wall_lamp","street_lamp":"street_lamp","trace":"way_lamp
 var dimensions = Vector2(1280,960)
 var sorter: Node2D
 var terrain: TileMapLayer
+var terrain_collision: StaticBody2D
 var grid: AStarGrid2D
 var obstacles: Array[Rect2] = []
 var interactables: Array = []
@@ -17,14 +18,18 @@ var story_mode=false
 var visual_comfort
 var paths: Array=[]
 var glow_texture: Texture2D
+var focused_hotspot=""
+var geometry_revision=0
 func build(id: String, distorted: bool):
 	grid=null
+	geometry_revision+=1
 	zone = id
 	echo = distorted
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
 	obstacles.clear()
+	focused_hotspot=""
 	interactables.clear()
 	dimensions = {"town":Vector2(1792,1280),"library":Vector2(960,720),"forest":Vector2(1792,1344)}.get(id,Vector2(640,480))
 	paths=[]
@@ -87,6 +92,9 @@ func build(id: String, distorted: bool):
 	add_child(detail)
 	detail.z_index=-2
 	terrain.z_index=-3
+	terrain_collision=StaticBody2D.new()
+	terrain_collision.name="TerrainCollision"
+	add_child(terrain_collision)
 	boundary(Rect2(0,0,dimensions.x,24))
 	boundary(Rect2(0,dimensions.y-24,dimensions.x,24))
 	boundary(Rect2(0,0,24,dimensions.y))
@@ -114,6 +122,7 @@ func build(id: String, distorted: bool):
 		mark_obstacle(r)
 func mark_obstacle(r: Rect2):
 	if grid==null: return
+	geometry_revision+=1
 	var a=Vector2i(r.position/16)
 	var b=Vector2i(r.end/16)
 	for y in range(maxi(0,a.y-1),mini(int(dimensions.y/16),b.y+2)):
@@ -141,14 +150,12 @@ func build_district():
 	prop("well",Vector2(600,420))
 func boundary(r: Rect2):
 	obstacles.append(r)
-	var body=StaticBody2D.new()
-	body.position=r.get_center()
 	var shape=CollisionShape2D.new()
+	shape.position=r.get_center()
 	var rect=RectangleShape2D.new()
 	rect.size=r.size
 	shape.shape=rect
-	body.add_child(shape)
-	add_child(body)
+	terrain_collision.add_child(shape)
 	mark_obstacle(r)
 func prop(kind: String, p: Vector2, variant: int=0):
 	if story_mode and kind in ["lamp","street_lamp","trace"]: kind="plant"
@@ -238,6 +245,16 @@ func spot(id: String,p: Vector2,kind: String="note"):
 	if kind!="none":
 		var node=prop(kind,p)
 		node.set_meta("hotspot_id",id)
+func focus_hotspot(id: String):
+	if id==focused_hotspot: return
+	focused_hotspot=id
+	for prop in sorter.get_children():
+		if not prop.has_meta("hotspot_id"): continue
+		var focused=prop.get_meta("hotspot_id")==id
+		if prop.focused==focused: continue
+		prop.focused=focused
+		prop.queue_redraw()
+
 func build_town():
 	for entry in Homes.exteriors("town",echo):
 		if entry[2] not in Homes.IDS: continue

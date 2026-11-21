@@ -8,6 +8,8 @@ var motes=[]
 var lamps=[]
 var changing=false
 var light_age=0.0
+var draw_age=0.0
+const DRAW_INTERVAL=1.0/30.0
 const Water=preload("res://after_silence/world/watercourse.gd")
 func _ready():
 	z_index=20
@@ -19,7 +21,7 @@ func _process(dt):
 		if changing:
 			for lamp in lamps: lamp.node.energy=lamp.base
 			changing=false
-		queue_redraw()
+			queue_redraw()
 		return
 	changing=true
 	age+=dt
@@ -34,7 +36,10 @@ func _process(dt):
 			else: lamp.node.energy=lamp.base
 	for mote in motes: mote.age+=dt
 	while not motes.is_empty() and motes[0].age>.35: motes.pop_front()
-	queue_redraw()
+	draw_age+=dt
+	if draw_age>=DRAW_INTERVAL:
+		draw_age=fmod(draw_age,DRAW_INTERVAL)
+		queue_redraw()
 
 func footstep(running: bool):
 	if game==null or game.comfort.reduce_motion or not is_instance_valid(anchor) or anchor.elevation>2: return
@@ -53,11 +58,11 @@ func landing():
 
 func _draw():
 	if game==null or game.comfort.reduce_motion or game.modal or game.in_menu or game.event_window.active: return
-	var count=34 if zone=="forest" else 16
+	var count=28 if zone=="forest" else 12 if zone in ["town","orchard","harbor"] else 4
 	for i in range(count):
 		var speed=110.0 if zone=="forest" else 7.0
 		var p=Vector2(fposmod(i*97.0-age*speed*.2,720)-360,fposmod(i*71.0+age*speed,440)-220)
-		if zone=="forest": draw_line(p,p+Vector2(-2,7),Color(.62,.76,.8,.13 if not echo else .22))
+		if zone=="forest": draw_line(p,p+Vector2(-2,7),Color(.62,.76,.8,.11 if not echo else .19))
 		else: draw_rect(Rect2(p.round(),Vector2(1,1)),Color("dfceb64e"))
 	if zone in ["town","harbor"]: _water_glints()
 	for mote in motes:

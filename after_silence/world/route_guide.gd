@@ -12,6 +12,10 @@ var sample_age=0.0
 var travel_age=0.0
 var last_zone=""
 var remaining=0.0
+var sampled_start=Vector2.INF
+var sampled_target=Vector2.INF
+var sampled_revision=-1
+var sampled_id=""
 var toggle: Button
 var tile_skin: StyleBoxFlat
 
@@ -35,21 +39,30 @@ func _process(dt):
 	toggle.tooltip_text=game.t("Скрыть маршрут · G","Hide route · G") if game.comfort.route_guide else game.t("Показать маршрут · G","Show route · G")
 	toggle.text="→ G" if game.comfort.route_guide else "G"
 	if not game.comfort.route_guide:
-		route.clear();target.clear();sample_age=0;queue_redraw();return
+		route.clear();target.clear();sample_age=0;sampled_revision=-1;queue_redraw();return
 	sample_age-=dt
 	if game.state.zone!=last_zone or sample_age<=0:
 		last_zone=game.state.zone
 		sample_age=INTERVAL
-		refresh()
+		refresh(false)
 	if not game.comfort.reduce_motion: travel_age=fmod(travel_age+dt,3.0)
 	queue_redraw()
 
-func refresh():
+func refresh(force: bool=true):
 	target=game.journey.guide_target()
-	route.clear();remaining=0
-	if target.is_empty(): return
+	if target.is_empty():
+		route.clear();remaining=0;sampled_revision=-1
+		return
 	var start: Vector2=game.player.position
 	var end: Vector2=target.point
+	var revision: int=game.world.geometry_revision
+	if not force and sampled_revision==revision and sampled_id==target.id and sampled_start.distance_squared_to(start)<144.0 and sampled_target.distance_squared_to(end)<64.0:
+		return
+	sampled_revision=revision
+	sampled_id=target.id
+	sampled_start=start
+	sampled_target=end
+	route.clear();remaining=0
 	var navigation=game.npcs.navigation
 	var geometry=game.npcs.nav(game.state.zone)
 	var best=PackedVector2Array()
