@@ -36,6 +36,9 @@ def package(target, binary, destination):
                  "SAVE_COMPATIBILITY.md", "PERFORMANCE_PRE_RELEASE.md", "KNOWN_ISSUES.md"):
         if (ROOT / name).is_file():
             docs.append((ROOT / name, name))
+    if target == "windows":
+        for name in ("Install-AfterSilence.cmd", "install.ps1"):
+            docs.append((ROOT / "tools/windows" / name, name))
     items = [(binary, binary.name), *docs]
     if target == "linux":
         binary.chmod(binary.stat().st_mode | 0o111)
