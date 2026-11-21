@@ -118,14 +118,14 @@ func _gui_input(event):
 func _process(delta):
 	if game.modal: return
 	if buffered_step!=Vector2i.ZERO:
-		buffer_left-=delta
-		if buffer_left<=0:
-			buffered_step=Vector2i.ZERO
-		elif not is_instance_valid(move_tween) or not move_tween.is_running():
+		if not is_instance_valid(move_tween) or not move_tween.is_running():
 			var move:=buffered_step
 			buffered_step=Vector2i.ZERO
 			_step(model.tile+move,true)
 			return
+		buffer_left-=delta
+		if buffer_left<=0:
+			buffered_step=Vector2i.ZERO
 	if not game.comfort.reduce_motion:
 		cycle=fposmod(cycle+delta,12.0)
 		portal_age+=delta

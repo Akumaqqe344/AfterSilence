@@ -104,12 +104,14 @@ func mouse_at(position: Vector2):
 		game.get_viewport().push_input(event,true)
 	await get_tree().process_frame
 func maze_key_path(model, target: Vector2i):
-	var path: Array=model.route(target)
-	for tile in path:
+	var previous_stage: int=model.stage
+	var was_reflected: bool=model.reflected
+	for attempt in range(64):
+		if model.stage!=previous_stage or model.reflected!=was_reflected: return
+		var path: Array=model.route(target)
+		if path.is_empty(): return
 		var start: Vector2i=model.tile
-		var previous_stage: int=model.stage
-		var was_reflected: bool=model.reflected
-		var delta: Vector2i=tile-model.tile
+		var delta: Vector2i=path.front()-start
 		var keycode=KEY_RIGHT if delta.x>0 else KEY_LEFT if delta.x<0 else KEY_DOWN if delta.y>0 else KEY_UP
 		await tap(keycode)
 		var elapsed:=0.0
