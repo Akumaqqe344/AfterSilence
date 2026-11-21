@@ -159,7 +159,8 @@ func prop(kind: String, p: Vector2, variant: int=0):
 	node.kind=kind
 	node.position=p
 	node.variant=variant
-	if Art.apply(node,kind,variant):
+	if kind=="flowers": node.size=Vector2(24,18)
+	elif Art.apply(node,kind,variant):
 		if kind=="tree" and echo: node.tint=Color("9fa5bc")
 	elif PROP_ART.has(kind):
 		node.tex=load("res://after_silence/assets/props091/"+PROP_ART[kind]+".png")
@@ -174,7 +175,7 @@ func prop(kind: String, p: Vector2, variant: int=0):
 	elif kind=="library":
 		node.tex=load("res://after_silence/assets/pechatai/world/house-2.png")
 		node.size=Vector2(176,170)
-	elif kind in ["flowers","rock","well","stone"]:
+	elif kind in ["rock","well","stone"]:
 		var file="sanctuary" if kind=="well" else "rock" if kind=="stone" else kind
 		node.tex=load("res://after_silence/assets/pechatai/world/"+file+".png")
 		node.size=Vector2(60,40) if kind in ["rock","stone"] else Vector2(100,70) if kind=="well" else Vector2(40,20)
@@ -215,11 +216,16 @@ func add_light(p: Vector2):
 	light.energy=.7 if echo else .35
 	add_child(light)
 func decorate():
-	if zone!="town" and zone!="forest": return
-	for y in range(80,int(dimensions.y)-50,64):
-		for x in range(150,int(dimensions.x)-100,92):
-			var p=Vector2(x+posmod(y,31),y+posmod(x,17))
-			if not on_path(p,18) and preload("res://after_silence/world/watercourse.gd").depth(zone,p)<-22 and posmod(x+y,11)<2: prop("flowers",p)
+	if zone not in ["town","forest","orchard","harbor"]: return
+	var water=preload("res://after_silence/world/watercourse.gd")
+	for y in range(86,int(dimensions.y)-48,67):
+		for x in range(110,int(dimensions.x)-85,91):
+			var seed_value=posmod(x*19349663^y*73856093,997)
+			var p=Vector2(x+seed_value%39-19,y+(seed_value/13)%37-18)
+			if seed_value%10>2 or on_path(p,15) or water.depth(zone,p)>-24: continue
+			if obstacles.any(func(bounds):return bounds.grow(22).has_point(p)): continue
+			if Landmarks.FEATURES.get(zone,[]).any(func(feature):return feature[1].grow(13).has_point(p)): continue
+			prop("flowers",p,seed_value%12)
 	if zone=="town":
 		prop("library",Vector2(600,145))
 		boundary(Rect2(526,72,148,73))

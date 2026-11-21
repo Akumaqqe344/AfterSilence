@@ -18,7 +18,7 @@ var tile_skin: StyleBoxFlat
 func _ready():
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
 	toggle=Button.new()
-	toggle.position=Vector2(12,323);toggle.size=Vector2(38,25)
+	toggle.position=Vector2(10,326);toggle.size=Vector2(37,22)
 	toggle.add_theme_font_size_override("font_size",11)
 	toggle.focus_mode=Control.FOCUS_NONE
 	toggle.pressed.connect(game._toggle_route_guide)
@@ -90,20 +90,20 @@ func _draw():
 	if target.is_empty() or not game.comfort.route_guide or not is_instance_valid(game.world): return
 	var transform=game.world.get_global_transform_with_canvas()
 	var dst: Vector2=transform*target.point
-	var viewport_bounds=Rect2(Vector2(19,78),size-Vector2(38,154))
+	var viewport_bounds=Rect2(Vector2(19,57),size-Vector2(38,115))
 	var close: bool=game.player.position.distance_to(target.point)<=target.range
 	var caption: String=target.label
 	var detail=game.t("Ищи проход рядом","Look for a nearby passage") if route.is_empty() else game.t("До цели · %d шаг.","To goal · %d steps")%ceili(remaining/16)
 	if close:
 		detail=game.t("E · взаимодействовать","E · interact") if target.action else game.t("Ты на месте","You're here")
-	draw_style_box(tile_skin,Rect2(55,314,221,34))
-	draw_string(get_theme_default_font(),Vector2(63,328),caption,HORIZONTAL_ALIGNMENT_LEFT,206,11,TRACE)
-	draw_string(get_theme_default_font(),Vector2(63,341),detail,HORIZONTAL_ALIGNMENT_LEFT,206,9,game.ComfortTheme.TEXT)
+	draw_style_box(tile_skin,Rect2(51,321,159,27))
+	draw_string(get_theme_default_font(),Vector2(57,332),caption,HORIZONTAL_ALIGNMENT_LEFT,149,11,TRACE)
+	draw_string(get_theme_default_font(),Vector2(57,343),detail,HORIZONTAL_ALIGNMENT_LEFT,149,9,game.ComfortTheme.TEXT)
 	if not route.is_empty() and not close:
 		var points=_markers(route,SPACING+(0 if game.comfort.reduce_motion else 14*travel_age/3))
 		for sample in points:
 			var at: Vector2=transform*sample.point
-			if viewport_bounds.has_point(at): _arrow(at,sample.direction,5,Color("eaca93"))
+			if viewport_bounds.has_point(at): _arrow(at,sample.direction,4,Color("eaca93"))
 		var guide_point: Vector2=transform*route[mini(1,route.size()-1)]
 		if not viewport_bounds.has_point(guide_point):
 			var mid=size*.5

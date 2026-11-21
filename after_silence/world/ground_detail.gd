@@ -28,6 +28,12 @@ func _draw():
 	if zone in ["town","harbor"]: draw_shore()
 	if zone.begins_with("home_") or zone=="shop":
 		for rect in [Rect2(0,0,640,64),Rect2(0,64,64,416),Rect2(576,64,64,416),Rect2(64,448,512,32)]: draw_rect(rect,Color("172126"))
+		if zone.begins_with("home_"):
+			draw_rect(Rect2(80,81,480,19),Color("ae8b6b"))
+			draw_rect(Rect2(80,99,480,3),Color("866349"))
+			for x in range(84,556,18): draw_rect(Rect2(x,83,1,16),Color("927255"))
+			draw_rect(Rect2(288,428,64,19),Color("634e42"))
+			draw_rect(Rect2(288,428,64,3),Color("ac8968"))
 		for rect in [Rect2(64,64,512,16),Rect2(64,80,16,352),Rect2(560,80,16,352),Rect2(80,432,208,16),Rect2(352,432,208,16)]:
 			draw_rect(rect,Color("574b45"))
 			draw_rect(Rect2(rect.position,Vector2(rect.size.x,3)),Color("bb9b79"))

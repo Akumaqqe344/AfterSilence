@@ -1,4 +1,5 @@
 extends Node2D
+const Garden=preload("res://after_silence/world/garden_pixels.gd")
 var kind = "tree"
 var tex: Texture2D
 var tint = Color.WHITE
@@ -11,6 +12,9 @@ func light_anchor() -> Vector2:
 	if kind=="trace": return Vector2(size.x*.29,-size.y*.54)
 	return Vector2(0,-size.y*.75)
 func _draw():
+	if kind=="flowers":
+		Garden.bunch(self,Vector2.ZERO,variant,0,4+variant%3)
+		return
 	if tex:
 		var color=tint
 		if not lit and kind in ["lamp","street_lamp","trace"]: color*=Color(.48,.55,.62)

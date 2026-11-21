@@ -1,5 +1,6 @@
 extends Node2D
 const Water=preload("res://after_silence/world/watercourse.gd")
+const Garden=preload("res://after_silence/world/garden_pixels.gd")
 var world
 
 func _draw():
@@ -52,13 +53,4 @@ func _meadow():
 				var green=Color("697b50") if world.zone!="forest" else Color("50694c")
 				draw_line(at,at+Vector2(-2,-4),green,1)
 				draw_line(at,at+Vector2(1,-6),green,1)
-				if (seed_value+i)%11<2: _wildflowers(at,seed_value+i)
-
-func _wildflowers(at: Vector2, seed_value: int):
-	var flower=[Color("d2a099"),Color("e8cf97"),Color("a9acc3")][seed_value%3]
-	for offset in [Vector2(-3,-2),Vector2(1,0),Vector2(4,1)]:
-		var bloom=at+offset+Vector2(0,-6)
-		draw_line(bloom+Vector2(0,1),at+offset+Vector2(1,0),Color("5c744a"),1)
-		draw_rect(Rect2(bloom-Vector2(1,0),Vector2(3,1)),flower)
-		draw_rect(Rect2(bloom-Vector2(0,1),Vector2(1,3)),flower)
-		draw_rect(Rect2(bloom,Vector2(1,1)),Color("ebd4a0"))
+				if (seed_value+i)%11<2: Garden.bunch(self,at,posmod(seed_value+i,12),0,3)

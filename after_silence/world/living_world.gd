@@ -35,9 +35,18 @@ func remember(npc: String, event: String):
 func populate():
 	var zone=game.state.zone
 	if data.homes.has(zone):
-		game.world.spot("home_storage",Vector2(220,370),"chest")
+		game.world.spot("home_storage",Vector2(224,391),"none")
 		for obj in data.homes[zone].objects:
-			game.world.spot("personal_"+obj[0],Vector2(obj[5],obj[6]),"personal_"+obj[0])
+			var id="personal_"+str(obj[0])
+			var area: Rect2=game.Homes.surface(zone,obj[0])
+			if not area.has_area():
+				game.world.spot(id,Vector2(obj[5],obj[6]),id)
+				continue
+			var x=area.get_center().x
+			game.world.spot(id,Vector2(x,area.end.y+17),"none")
+			var detail=game.world.prop(id,Vector2(x,area.position.y+minf(24.0,area.size.y-3)))
+			detail.size*=minf(1.0,24.0/maxf(detail.size.x,detail.size.y))
+			detail.set_meta("hotspot_id",id)
 	if zone in ["town","orchard","harbor"]:
 		game.world.spot("cache_supplies",Vector2(840,580) if zone=="town" else Vector2(800,540),"chest")
 	if zone=="orchard" and game.state.flag("delivery_arrived"):

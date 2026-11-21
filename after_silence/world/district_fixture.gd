@@ -9,7 +9,7 @@ var kind=""
 var variant=0
 
 func footprint() -> float:
-	return {"stall":52.0,"bench":44.0,"wagon":96.0,"crate":22.0,"barrel":15.0,"trellis":28.0,"marker":14.0,"sign":12.0}[kind]
+	return {"stall":52.0,"bench":44.0,"wagon":96.0,"crate":22.0,"barrel":15.0,"trellis":28.0,"marker":14.0,"sign":12.0,"logpile":49.0,"trough":36.0,"barrow":33.0,"buoys":28.0}[kind]
 
 func _draw():
 	var width=footprint()
@@ -23,6 +23,10 @@ func _draw():
 		"trellis": _trellis()
 		"marker": _marker()
 		"sign": _sign()
+		"logpile": _logs()
+		"trough": _trough()
+		"barrow": _barrow()
+		"buoys": _buoys()
 
 func _stall():
 	var cloth=Color("b77d66") if variant==0 else Color("6d9990")
@@ -113,3 +117,34 @@ func _sign():
 	draw_rect(Rect2(-7,-18,14,7),Color("b69264"))
 	draw_rect(Rect2(-5,-17,9,1),Color("ebcf95"))
 	draw_rect(Rect2(-4,-14,7,1),Color("72563e"))
+
+func _logs():
+	for i in range(3):
+		var p=Vector2(-24+i*4,-6-i*7)
+		draw_rect(Rect2(p,Vector2(48-i*8,7)),DARK)
+		draw_rect(Rect2(p+Vector2(1,1),Vector2(46-i*8,4)),WOOD)
+		draw_rect(Rect2(p+Vector2(40-i*8,1),Vector2(5,4)),LIGHT)
+		draw_rect(Rect2(p+Vector2(43-i*8,2),Vector2(1,2)),WOOD)
+
+func _trough():
+	draw_rect(Rect2(-19,-17,38,18),DARK)
+	draw_rect(Rect2(-17,-16,34,11),LIGHT)
+	draw_rect(Rect2(-14,-14,28,8),Color("67867e"))
+	draw_rect(Rect2(-10,-12,10,1),Color("a3b59a"))
+	draw_rect(Rect2(-16,-5,32,4),WOOD)
+
+func _barrow():
+	draw_rect(Rect2(-15,-15,28,12),METAL)
+	draw_rect(Rect2(-14,-15,26,2),Color("a4a088"))
+	draw_rect(Rect2(-10,-12,20,5),Color("887e60"))
+	draw_line(Vector2(10,-5),Vector2(22,0),WOOD,2)
+	draw_rect(Rect2(-15,-5,6,8),DARK)
+	draw_rect(Rect2(-13,-3,3,4),LIGHT)
+
+func _buoys():
+	for i in range(3):
+		var x=-12+i*9
+		draw_rect(Rect2(x,-16+i%2*4,8,13),DARK)
+		draw_rect(Rect2(x+1,-15+i%2*4,6,10),Color("aa7462") if i%2==0 else Color("799087"))
+		draw_rect(Rect2(x+1,-11+i%2*4,6,2),Color("d8bc91"))
+	draw_line(Vector2(-13,-4),Vector2(15,-2),LIGHT,2)

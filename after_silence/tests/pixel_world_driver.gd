@@ -115,6 +115,10 @@ func run():
 	for sample in [["town",Vector2(260,340),"01-home"],["town",Vector2(623,587),"02-market"],["orchard",Vector2(600,628),"03-orchard"],["harbor",Vector2(842,649),"04-harbor"],["home_nadia",Vector2(320,320),"05-interior"],["library",Vector2(480,400),"06-library"],["forest",Vector2(838,551),"07-forest"],["town",Vector2(1040,114),"08-pond"],["harbor",Vector2(1070,752),"09-pier"]]:
 		game._build_world(sample[0],sample[1]);game.camera.position_smoothing_enabled=false;game.camera.reset_smoothing()
 		await screenshot(sample[2])
+	await verify_rooms()
+	game._build_world("harbor",Vector2(1070,752))
+	game.camera.zoom=Vector2.ONE
+	game.camera.reset_smoothing()
 	game.ui.show()
 	game.toast.text=""
 	game.comfort.reduce_motion=false
@@ -131,3 +135,41 @@ func run():
 	game.queue_free();await get_tree().process_frame
 	await get_tree().create_timer(1.5,true,false,true).timeout
 	get_tree().quit(0 if failures.is_empty() else 1)
+
+func verify_rooms():
+	var doorway=Vector2(320,398)
+	for id in game.Homes.IDS:
+		game._build_world(id,doorway)
+		var geometry=game.npcs.nav(id)
+		var nav=game.npcs.navigation
+		var solids: Array[Rect2]=[]
+		for furnishing in game.Homes.COMMON+game.Homes.ROOMS[id]:
+			var area: Rect2=furnishing[1]
+			check(Rect2(80,82,480,349).encloses(area),"furnishing stays inside "+id+"/"+furnishing[0])
+			if furnishing[0] in ["window","rug"]: continue
+			check(solids.all(func(other):return not other.intersects(area)),"physical furniture does not overlap "+id+"/"+furnishing[0])
+			solids.append(area)
+		check(nav.clear_segment(geometry,doorway,Vector2(320,280)),"unbroken central aisle "+id)
+		for node in game.world.sorter.get_children():
+			var hotspot: String=node.get_meta("hotspot_id","")
+			if not hotspot.begins_with("personal_"): continue
+			var area: Rect2=game.Homes.surface(id,hotspot.trim_prefix("personal_"))
+			check(area.has_point(node.position) and maxf(node.size.x,node.size.y)<=24.01,"personal prop sits on its furniture "+id+"/"+hotspot)
+		for spot in game.world.interactables:
+			var reachable=false
+			for offset in [Vector2.ZERO,Vector2(0,26),Vector2(26,0),Vector2(-26,0),Vector2(0,-26)]:
+				var point: Vector2=spot.position+offset
+				if nav.clear_segment(geometry,point,point) and not nav.path(geometry,doorway,point).is_empty():
+					reachable=true
+					break
+			check(reachable,"furniture leaves interactable reachable "+id+"/"+spot.id)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		check(not game.player.test_move(Transform2D(0,doorway),Vector2(0,-118)),"live capsule crosses indoor aisle "+id)
+		var bed: Rect2=game.Homes.ROOMS[id].filter(func(piece):return piece[0]=="bed")[0][1]
+		var from_left=Vector2(bed.end.x+22,bed.get_center().y)
+		check(game.player.test_move(Transform2D(0,from_left),Vector2(-68,0)),"live capsule collides with bed "+id)
+		game.camera.zoom=Vector2(.75,.75)
+		game.player.position=Vector2(320,290)
+		game.camera.reset_smoothing()
+		await screenshot(id)

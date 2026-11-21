@@ -28,13 +28,55 @@ static func approaches(zone: String, echo: bool) -> Array:
 		result.append([Vector2(600,145),0,"to_library",Vector2(600,500)])
 		result.append([Vector2(1270,950),0,"riverside_rest",Vector2(1190,840)])
 	return result
+const WALLS=[Rect2(64,64,512,16),Rect2(64,80,16,352),Rect2(560,80,16,352),Rect2(80,432,208,16),Rect2(352,432,208,16)]
+const COMMON=[
+	["window",Rect2(272,89,96,43)],
+	["rug",Rect2(245,266,150,133)],
+	["table",Rect2(262,144,76,31)],
+	["chair",Rect2(229,162,23,24)],
+	["chair",Rect2(348,153,23,24)],
+	["storage",Rect2(208,351,31,23)]
+]
+const ROOMS={
+	"home_nadia":[["medicine",Rect2(420,104,125,47)],["bed",Rect2(97,205,102,111)],["stool",Rect2(212,278,24,24)],["wash",Rect2(428,205,103,31)],["blanket",Rect2(99,129,111,34)],["plant",Rect2(502,350,36,32)]],
+	"home_lev":[["tools",Rect2(418,103,124,48)],["forge",Rect2(96,106,107,63)],["bed",Rect2(94,264,100,108)],["bench",Rect2(429,212,110,52)],["wood",Rect2(94,197,102,36)],["toolbox",Rect2(447,320,84,42)]],
+	"home_pavel":[["rack",Rect2(412,90,132,21)],["bed",Rect2(100,210,104,110)],["chest",Rect2(99,134,111,36)],["stove",Rect2(465,202,74,46)],["boots",Rect2(468,331,68,33)],["stool",Rect2(215,273,24,24)]],
+	"home_sonya":[["books",Rect2(420,100,126,46)],["bed",Rect2(100,207,104,106)],["desk",Rect2(430,204,103,28)],["sofa",Rect2(414,338,126,42)],["plant",Rect2(98,127,37,33)],["art",Rect2(152,127,64,35)]]
+}
+const PERSONAL_SURFACES={
+	"home_nadia":{"medicine":"medicine","album":"table"},
+	"home_lev":{"tools":"bench","plan":"table"},
+	"home_pavel":{"medal":"rack","log":"table"},
+	"home_sonya":{"drawing":"table","letter":"desk"}
+}
+const ACCENTS={
+	"home_nadia":Color("72937e"),"home_lev":Color("9b8259"),
+	"home_pavel":Color("718b9a"),"home_sonya":Color("a5798a")
+}
+const Furnishing=preload("res://after_silence/world/home_furnishing.gd")
+
+static func surface(zone: String,id: String) -> Rect2:
+	var kind=PERSONAL_SURFACES.get(zone,{}).get(id,"")
+	for item in COMMON+ROOMS.get(zone,[]):
+		if item[0]==kind: return item[1]
+	return Rect2()
+
 static func build(world):
-	for rect in [Rect2(64,64,512,16),Rect2(64,80,16,352),Rect2(560,80,16,352),Rect2(80,432,208,16),Rect2(352,432,208,16)]: world.boundary(rect)
+	for rect in WALLS: world.boundary(rect)
 	world.spot("leave_home",Vector2(320,422),"trace")
 	world.spot("home_memory",Vector2(480,258),"none")
 	world.spot("hotspot_window",Vector2(320,135),"none")
 	world.spot("hotspot_furniture",Vector2(130,190),"none")
-	for item in [["window",Vector2(320,110)],["rug",Vector2(320,365)],["shelf",Vector2(130,170)],["desk",Vector2(480,220)],["plant",Vector2(520,400)],["bed",Vector2(140,360)],["table",Vector2(300,220)],["chair",Vector2(300,270)]]: world.prop(item[0],item[1])
-	for rect in [Rect2(100,330,70,25),Rect2(450,202,60,18),Rect2(265,202,70,18)]: world.boundary(rect)
-	if world.zone=="home_lev": world.prop("workbench",Vector2(480,330));world.boundary(Rect2(445,310,70,20))
-	if world.zone=="home_pavel": world.prop("shelf",Vector2(480,160))
+	for item in COMMON+ROOMS.get(world.zone,[]):
+		var piece=Furnishing.new()
+		piece.kind=item[0]
+		var area: Rect2=item[1]
+		piece.position=Vector2(area.get_center().x,area.end.y)
+		piece.extent=area.size
+		piece.tint=ACCENTS.get(world.zone,Color("8f8b72"))
+		piece.name="Furniture_"+piece.kind
+		world.sorter.add_child(piece,true)
+		if not piece.solid():
+			piece.z_index=-1
+			continue
+		world.boundary(area)

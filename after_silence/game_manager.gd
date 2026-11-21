@@ -223,8 +223,8 @@ func _setup_ui():
 	route_guide.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(route_guide)
 	objective=Label.new()
-	objective.position=Vector2(22,26)
-	objective.size=Vector2(339,40)
+	objective.position=Vector2(17,13)
+	objective.size=Vector2(235,34)
 	objective.max_lines_visible=2
 	objective.add_theme_constant_override("line_spacing",-2)
 	objective.add_theme_font_size_override("font_size",13 if comfort.large_text else 11)
@@ -233,14 +233,14 @@ func _setup_ui():
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(objective)
 	help_button=Button.new()
-	help_button.text="?  H"
+	help_button.text="? H"
 	help_button.tooltip_text=t("Помощь с текущей задачей","Help with your current goal")
-	help_button.position=Vector2(566,34)
-	help_button.size=Vector2(62,22)
+	help_button.position=Vector2(554,32)
+	help_button.size=Vector2(34,22)
 	help_button.add_theme_font_size_override("font_size",11)
 	help_button.pressed.connect(_quest_help)
 	ui.add_child(help_button)
-	help_button.size=Vector2(62,22)
+	help_button.size=Vector2(34,22)
 	status=Label.new()
 	status.hide()
 	status.position=Vector2(138,55)
@@ -310,7 +310,7 @@ func _setup_ui():
 	veil.add_child(loading)
 func choice(id: String,ru: String,en: String,action: Callable) -> Dictionary:
 	return {"id":id,"label":t(ru,en),"run":action}
-func _dialog(id: String,title: String,text: String,actions: Array,animated: bool=true,main_layout: bool=false):
+func _dialog(id: String,title: String,text: String,actions: Array,animated: bool=true,main_layout: bool=false,compact: bool=false):
 	modal=true
 	modal_back=Callable()
 	shade.show()
@@ -319,9 +319,10 @@ func _dialog(id: String,title: String,text: String,actions: Array,animated: bool
 	modal_backdrop.menu_mode=main_layout
 	modal_backdrop.finish_mark=id.ends_with("_decision")
 	modal_backdrop.configure_motion(not comfort.reduce_motion)
-	var target=Vector2(32,43) if main_layout else Vector2(61,31)
+	var card_size=Vector2(268,287) if main_layout else Vector2(388,272) if compact else Vector2(518,298)
+	var target=Vector2(32,43) if main_layout else (Vector2(640,360)-card_size)*.5
 	card.position=target
-	card.size=Vector2(268,287) if main_layout else Vector2(518,298)
+	card.size=card_size
 	var panel_style: StyleBox=ComfortTheme.panel()
 	if main_layout:
 		panel_style=StyleBoxEmpty.new()
@@ -578,14 +579,14 @@ func _build_world(id: String,p: Vector2):
 		camera.position_smoothing_speed=6
 		player.add_child(camera)
 		zoom_button=Button.new()
-		zoom_button.text="±  Z"
-		zoom_button.position=Vector2(566,60)
-		zoom_button.size=Vector2(62,22)
+		zoom_button.text="± Z"
+		zoom_button.position=Vector2(594,32)
+		zoom_button.size=Vector2(34,22)
 		zoom_button.add_theme_font_size_override("font_size",11)
 		zoom_button.tooltip_text=t("Приблизить или отдалить камеру","Zoom the camera in or out")
 		zoom_button.pressed.connect(_toggle_zoom)
 		ui.add_child(zoom_button)
-		zoom_button.size=Vector2(62,22)
+		zoom_button.size=Vector2(34,22)
 	world.sorter.add_child(player)
 	player.position=world.recover(p)
 	player.enabled=true
@@ -693,7 +694,7 @@ func _physics_process(dt):
 		var p=actors[nearby].position if actors.has(nearby) else player.position
 		for spot in world.interactables:
 			if spot.id==nearby: p=spot.position
-		hint.position=((world.get_global_transform_with_canvas()*p)+Vector2(-110,18)).clamp(Vector2(8,72),Vector2(410,305))
+		hint.position=((world.get_global_transform_with_canvas()*p)+Vector2(-110,18)).clamp(Vector2(8,58),Vector2(410,305))
 	if is_instance_valid(enemy) and enemy.active and enemy.position.distance_to(player.position)<240:
 		status.text+=" · "+t("Кто-то рядом. Ищите каменное укрытие.","Something is close. Find the stone shelter.")
 	hint_age=maxf(0,hint_age-dt)
@@ -1135,7 +1136,7 @@ func _item(id: String):
 		_dialog("",t("Красная лента","Red ribbon"),t("Обернуть лентой металлические пряжки? Она уменьшит слышимость бега, но Соня больше не получит её как знак обещания.","Wrap the ribbon around your buckles? Running becomes quieter, but you cannot give it to Sonya as a token of your promise."),[choice("use","Смягчить шаги","Soften footsteps",func():state.give("ribbon",-1);state.set_flag("soft_steps");_close()),choice("keep","Оставить для Сони","Keep for Sonya",func():state.set_flag("ribbon_kept");_close())])
 	else: _notify(t("Используйте предмет у подходящего объекта.","Use this item at the matching object."))
 func _pause():
-	_dialog("",t("Пауза","Pause"),"",[choice("resume","Продолжить","Resume",_close),choice("save","Сохранить","Save",func():_save();_close()),choice("load","Загрузить","Load",_load_game),choice("settings","Настройки","Settings",_settings),choice("menu","В меню","Main menu",func():_save(false);_main_menu())],false)
+	_dialog("",t("Пауза","Pause"),"",[choice("resume","Продолжить","Resume",_close),choice("save","Сохранить","Save",func():_save();_close()),choice("load","Загрузить","Load",_load_game),choice("settings","Настройки","Settings",_settings),choice("menu","В меню","Main menu",func():_save(false);_main_menu())],false,false,true)
 	var slot_button=Button.new()
 	slot_button.text=t("Три слота сохранения","Three save slots")
 	slot_button.custom_minimum_size=Vector2(0,32)
@@ -1204,7 +1205,7 @@ func _save_comfort():
 	comfort.fullscreen=DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN
 	if comfort.save_preferences()!=OK:
 		_notify(t("Не удалось сохранить настройки.","Could not save preferences."))
-	help_button.text="?  H"
+	help_button.text="? H"
 
 func _toggle_comfort(key: String):
 	comfort.set(key,not comfort.get(key))

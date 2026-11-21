@@ -23,10 +23,10 @@ const FEATURES={
 	"forest":[["rune",Rect2(755,458,165,124)]]
 }
 const FIXTURES={
-	"town":[["stall",Vector2(753,566),0],["stall",Vector2(817,630),1],["bench",Vector2(1054,48),0],["bench",Vector2(492,566),0],["crate",Vector2(857,637),0]],
-	"orchard":[["trellis",Vector2(384,563),0],["trellis",Vector2(826,563),1],["barrel",Vector2(568,571),0],["crate",Vector2(639,691),0]],
-	"harbor":[["wagon",Vector2(868,585),0],["crate",Vector2(963,619),1],["crate",Vector2(731,623),0],["barrel",Vector2(969,702),0]],
-	"forest":[["marker",Vector2(790,482),0],["marker",Vector2(877,465),1],["marker",Vector2(922,507),2],["marker",Vector2(920,560),1],["marker",Vector2(785,572),2]]
+	"town":[["stall",Vector2(753,566),0],["stall",Vector2(817,630),1],["bench",Vector2(1054,48),0],["bench",Vector2(492,566),0],["crate",Vector2(857,637),0],["trough",Vector2(426,530),0],["logpile",Vector2(1016,419),0]],
+	"orchard":[["trellis",Vector2(384,563),0],["trellis",Vector2(826,563),1],["barrel",Vector2(568,571),0],["crate",Vector2(639,691),0],["barrow",Vector2(573,682),0],["trough",Vector2(859,604),0]],
+	"harbor":[["wagon",Vector2(868,585),0],["crate",Vector2(963,619),1],["crate",Vector2(731,623),0],["barrel",Vector2(969,702),0],["buoys",Vector2(939,695),0],["bench",Vector2(889,659),0]],
+	"forest":[["marker",Vector2(790,482),0],["marker",Vector2(877,465),1],["marker",Vector2(922,507),2],["marker",Vector2(920,560),1],["marker",Vector2(785,572),2],["logpile",Vector2(660,708),0],["bench",Vector2(745,770),0]]
 }
 
 static func add_paths(world):
